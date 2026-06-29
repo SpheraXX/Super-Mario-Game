@@ -66,3 +66,16 @@ Implement the behaviors of specific characters, input controls, and enemy AI mec
 - [ ] Handle logic for switching between multiple characters (e.g., Mario and Luigi).
 - [ ] Apply the **Strategy Pattern** to implement basic AI behaviors for enemies (e.g., proximity-based chasing vs. simple patrolling).
 - [ ] Enforce Git rules for the team: Review PRs, ensure MVC structure is followed, and verify no raw pointers cause memory leaks.
+
+---
+
+## 🤝 Workflow & Peer Review Guidelines
+
+To maintain code quality and structural integrity during Phase 1:
+1. **Branching & PRs:** Each member must implement their issue on a separate feature branch (e.g., `feat/game-loop`). Pushing directly to `main` or `dev` is strictly prohibited.
+2. **Review Process:** Before any branch can be merged, the PR must be peer-reviewed by the Data Manager and/or Core Architect.
+3. **C++ Coding Standards:**
+   - Always use standard `#ifndef` / `#define` / `#endif` header guards. No `#pragma once`.
+   - Never use `using namespace std;` in any `.h` files.
+   - Enforce the **Rule of Three** for classes managing raw pointers to prevent memory leaks and dangling pointers.
+4. **AI Code Safety:** All code designed or assisted by AI models must be validated manually, compiled locally, and tested for performance before approval. Refer to the [AI_Usage_Declaration.md](file:///d:/Private%20Data/D_Downloads/Study/HCMUS/1st%20Year/Semester%203/Programming%20Systems/Mario/AI_Usage_Declaration.md) for individual guidelines.

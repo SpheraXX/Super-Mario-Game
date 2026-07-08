@@ -58,3 +58,6 @@ bin/
 # Build folder
 build/
 out/
+
+# Machine-specific CMake presets (local SFML path, etc.)
+CMakeUserPresets.json

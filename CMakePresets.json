@@ -1,0 +1,12 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default (MinGW Makefiles)",
+            "generator": "MinGW Makefiles",
+            "binaryDir": "${sourceDir}/build"
+        }
+    ]
+}

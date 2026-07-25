@@ -1,0 +1,14 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "local",
+            "displayName": "Local (this machine's SFML install)",
+            "inherits": "default",
+            "cacheVariables": {
+                "SFML_STATIC_LIBRARIES": "ON",
+                "CMAKE_PREFIX_PATH": "C:/SFML/SFML-3.0.2"
+            }
+        }
+    ]
+}

@@ -7,12 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Export compile_commands.json for Clangd and VS Code Intellisense
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Keep include flags inline in compile_commands.json instead of a @response
-# file, since editor tooling (e.g. the VS Code C/C++ extension) does not
-# expand response files when parsing the compile database.
-set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES OFF)
-
-# Find SFML package (minimum version 3.0)
+# Find SFML package
 find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
 
 # Include directory path

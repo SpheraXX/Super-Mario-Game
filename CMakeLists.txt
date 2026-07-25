@@ -7,8 +7,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Export compile_commands.json for Clangd and VS Code Intellisense
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Write includes directly in compile_commands.json (not in .rsp files)
+# so that Clangd / IntelliSense can resolve SFML headers
+set(CMAKE_USE_RESPONSE_FILE_FOR_INCLUDES OFF)
+
 # Find SFML package
-find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
+find_package(SFML 3.0 COMPONENTS Graphics Window System Audio REQUIRED)
 
 # Include directory path
 include_directories(include)
@@ -16,9 +20,6 @@ include_directories(include)
 # Collect all implementation source files
 file(GLOB_RECURSE SOURCES 
     src/*.cpp
-    src/Model/*.cpp
-    src/View/*.cpp
-    src/Controller/*.cpp
 )
 
 # Output directories configuration

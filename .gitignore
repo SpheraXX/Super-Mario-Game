@@ -59,5 +59,12 @@ bin/
 build/
 out/
 
+# Personal learning notes (not for commit)
+tempt.md
+PlanLearning.md
+DetailedEntity.md
+MyPlan.md
+CharacterPlan.md
+Task.md
 # Machine-specific CMake presets (local SFML path, etc.)
 CMakeUserPresets.json

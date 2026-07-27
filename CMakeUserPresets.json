@@ -7,7 +7,7 @@
             "inherits": "default",
             "cacheVariables": {
                 "SFML_STATIC_LIBRARIES": "ON",
-                "CMAKE_PREFIX_PATH": "C:/SFML/SFML-3.0.2"
+                "CMAKE_PREFIX_PATH": "C:/msys64/ucrt64"
             }
         }
     ]

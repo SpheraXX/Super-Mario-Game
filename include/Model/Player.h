@@ -14,7 +14,7 @@ public:
     ~Player() override;
 
     void update(float deltaTime) override;
-    void render() override;
+    void render(sf::RenderWindow& window) override;
 
     void handleInput();
     void onCollision(Entity* other) override;
@@ -22,6 +22,8 @@ public:
 
     void setState(std::unique_ptr<PlayerState> newState);
     PlayerState& getState();
+    const char* getStateName() const;
+    float getRemainingTime() const;
 
     void becomeSuper();
     void becomeFire();
@@ -40,9 +42,11 @@ protected:
     int score;
     int coins;
     int lives;
+    float damageCooldown;
 
 private:
     void syncAnimation();
+    static constexpr float DamageCooldownTime = 0.5f;
 };
 
 }

@@ -1,6 +1,8 @@
 #include "Model/Character.h"
 #include "Model/TileMap.h"
 
+#include <SFML/Graphics/RenderWindow.hpp>
+
 namespace model {
 
 Character::Character(Vector2 position, Vector2 size)
@@ -24,7 +26,7 @@ void Character::update(float deltaTime) {
     setPosition(pos);
 }
 
-void Character::render() {
+void Character::render(sf::RenderWindow& /* window */) {
 }
 
 void Character::onCollision(Entity* /* other */) {

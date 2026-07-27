@@ -4,6 +4,8 @@
 #include "Model/Entity.h"
 #include "Model/CollisionResult.h"
 
+namespace sf { class RenderWindow; }
+
 namespace model {
 
 enum class AnimState {
@@ -23,7 +25,7 @@ public:
     ~Character() override = default;
 
     void update(float deltaTime) override;
-    virtual void render();
+    virtual void render(sf::RenderWindow& window);
 
     virtual void onCollision(Entity* other);
     virtual void takeDamage(int amount);
@@ -46,9 +48,10 @@ public:
     bool isFacingRight() const;
     void setFacingRight(bool right);
 
+    void resolveTileCollisions();
+
 protected:
     void clampVelocity();
-    void resolveTileCollisions();
 
     Vector2 velocity;
     int direction;

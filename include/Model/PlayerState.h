@@ -27,6 +27,9 @@ public:
     virtual PlayerState* takeDamage(Player& player) = 0;
     virtual PlayerAnimState getAnimState(const Player& player) const = 0;
 
+    virtual const char* getStateName() const = 0;
+    virtual float getRemainingTime() const { return -1.0f; }
+
     virtual std::unique_ptr<PlayerState> checkExpiration();
 };
 
@@ -38,6 +41,7 @@ public:
 
     PlayerState* takeDamage(Player& player) override;
     PlayerAnimState getAnimState(const Player& player) const override;
+    const char* getStateName() const override { return "Small"; }
 };
 
 class SuperState : public PlayerState {
@@ -48,6 +52,7 @@ public:
 
     PlayerState* takeDamage(Player& player) override;
     PlayerAnimState getAnimState(const Player& player) const override;
+    const char* getStateName() const override { return "Super"; }
 };
 
 class FireState : public PlayerState {
@@ -61,6 +66,8 @@ public:
 
     bool canShoot() const;
     void shoot();
+
+    const char* getStateName() const override { return "Fire"; }
 
 private:
     float fireCooldown = 0.0f;
@@ -79,6 +86,9 @@ public:
     PlayerAnimState getAnimState(const Player& player) const override;
 
     std::unique_ptr<PlayerState> checkExpiration() override;
+
+    const char* getStateName() const override { return "Star"; }
+    float getRemainingTime() const override { return duration; }
 
 private:
     float duration;

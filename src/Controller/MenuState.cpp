@@ -47,6 +47,7 @@ void MenuState::update(float deltaTime) {
 }
 
 void MenuState::render(sf::RenderWindow& window) {
+    std :: cout << "Rendering MenuState" << std :: endl;
     window.clear(sf::Color(20, 20, 60));
 
     if (!fontLoaded) {

@@ -39,6 +39,7 @@ void GameOverState::update(float deltaTime) {
 }
 
 void GameOverState::render(sf::RenderWindow& window) {
+    std :: cerr << "Rendering GameOverState" << std :: endl;
     window.clear(sf::Color(60, 10, 10));
 
     if (!fontLoaded) {

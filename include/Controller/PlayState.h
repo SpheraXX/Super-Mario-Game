@@ -4,19 +4,17 @@
 #include "Controller/GameState.h"
 #include "Model/TileMap.h"
 #include "View/TileMapRenderer.h"
+#include "Model/Entity.h"
+#include "Model/CollisionManager.h"
 
 #include <SFML/Graphics/Font.hpp>
+#include <SFML/Graphics/Texture.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace controller {
 
-// Active gameplay screen. Phase 1 loads and renders the level tilemap as proof of life.
-//
-// SEAM (Issues 3/4/5): this state will own a `World` (entities + physics). Issue 4's
-// LevelLoader/EntityFactory will populate it in onEnter() for the current level; update()
-// will step physics and delegate input to the Player; when GameManager reports game over
-// the state transitions to GameOverState.
 class PlayState : public GameState {
 public:
     void onEnter() override;
@@ -26,11 +24,18 @@ public:
 
 private:
     model::TileMap map;
-    std::unique_ptr<view::TileMapRenderer> renderer; // built in onEnter (may fail to load)
+    std::unique_ptr<view::TileMapRenderer> renderer;
     bool mapLoaded = false;
 
     sf::Font font;
     bool fontLoaded = false;
+
+    sf::Texture charsTexture;
+    sf::Texture enemiesTexture;
+    sf::Texture blocksTexture;  // Bug 5 Fix: used to draw CoinBlock with real art
+
+    std::unique_ptr<model::CollisionManager> collisionManager;
+    std::vector<std::unique_ptr<model::Entity>> entities;
 };
 
 }

@@ -31,11 +31,11 @@ public:
     virtual void takeDamage(int amount);
 
     void applyGravity(float deltaTime);
+    virtual void move();
+    virtual void die();
+    
     bool isOnGround() const;
     void setMap(const TileMap* map);
-
-    Vector2 getVelocity() const;
-    void setVelocity(Vector2 v);
 
     int getDirection() const;
     void setDirection(int d);
@@ -53,7 +53,6 @@ public:
 protected:
     void clampVelocity();
 
-    Vector2 velocity;
     int direction;
     int health;
     bool alive;

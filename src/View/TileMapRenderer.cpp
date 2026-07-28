@@ -1,5 +1,6 @@
 #include "View/TileMapRenderer.h"
 
+#include <cmath>
 #include <stdexcept>
 
 namespace view {
@@ -8,6 +9,7 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath) {
     if (!tilesetTexture.loadFromFile(tilesetPath)) {
         throw std::runtime_error("Could not load tileset: " + tilesetPath);
     }
+    tilesetTexture.setSmooth(false);
 
     registerTile('#', 17, 7);
     registerTile('C', 5, 7);
@@ -47,8 +49,8 @@ void TileMapRenderer::render(sf::RenderWindow& window, const model::TileMap& map
 
             tileSprite.setTextureRect(tileRect->second);
             tileSprite.setPosition({
-                static_cast<float>(column * model::TileMap::TileWidth),
-                static_cast<float>((map.getRows() - row - 1) * model::TileMap::TileHeight)
+                std::round(static_cast<float>(column * model::TileMap::TileWidth)),
+                std::round(static_cast<float>((map.getRows() - row - 1) * model::TileMap::TileHeight))
             });
             window.draw(tileSprite);
         }

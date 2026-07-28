@@ -1,12 +1,11 @@
 #ifndef MODEL_ENTITY_H
 #define MODEL_ENTITY_H
 
-namespace model {
+#include "Model/Vector2.h"
+#include "Model/Hitbox.h"
+#include "Model/CollisionResult.h"
 
-struct Vector2 {
-    float x;
-    float y;
-};
+namespace model {
 
 class Entity {
 public:
@@ -14,10 +13,21 @@ public:
     virtual ~Entity() = default;
 
     virtual void update(float deltaTime);
+    virtual void onCollision(Entity& other, CollisionType side);
+    virtual void onTileCollision(char tile, CollisionType side);
 
     Vector2 getPosition() const;
     Vector2 getSize() const;
     void setPosition(Vector2 newPosition);
+    void setSize(Vector2 newSize);
+
+    Vector2 getVelocity() const;
+    void setVelocity(Vector2 v);
+
+    Hitbox hitbox;
+    Vector2 velocity;
+    bool isActive;
+    bool isGrounded;
 
 private:
     Vector2 position;

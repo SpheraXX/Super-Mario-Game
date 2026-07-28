@@ -7,7 +7,6 @@ namespace model {
 
 Character::Character(Vector2 position, Vector2 size)
     : Entity(position, size),
-      velocity{0.0f, 0.0f},
       direction(1),
       health(1),
       alive(true),
@@ -35,15 +34,24 @@ void Character::onCollision(Entity* /* other */) {
 void Character::takeDamage(int amount) {
     health -= amount;
     if (health <= 0) {
-        alive = false;
-        animState = AnimState::Die;
+        die();
     }
 }
 
+void Character::move() {
+}
+
+void Character::die() {
+    alive = false;
+    animState = AnimState::Die;
+}
+
 void Character::applyGravity(float deltaTime) {
-    velocity.y += Gravity * deltaTime;
-    if (velocity.y > MaxFallSpeed) {
-        velocity.y = MaxFallSpeed;
+    if (!isGrounded) {
+        velocity.y += Gravity * deltaTime;
+        if (velocity.y > MaxFallSpeed) {
+            velocity.y = MaxFallSpeed;
+        }
     }
 }
 
@@ -52,31 +60,7 @@ void Character::setMap(const TileMap* map) {
 }
 
 bool Character::isOnGround() const {
-    if (!mapPtr) return false;
-
-    Vector2 pos = getPosition();
-    Vector2 sz = getSize();
-
-    float footY = pos.y + sz.y;
-    float centerX = pos.x + sz.x / 2.0f;
-
-    std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
-    std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
-
-    if (col >= TileMap::Columns || row >= TileMap::Rows) {
-        return false;
-    }
-
-    char tile = mapPtr->getTile(row, col);
-    return tile != '.';
-}
-
-Vector2 Character::getVelocity() const {
-    return velocity;
-}
-
-void Character::setVelocity(Vector2 v) {
-    velocity = v;
+    return isGrounded;
 }
 
 int Character::getDirection() const {

@@ -1,10 +1,11 @@
 #include "Controller/AppEngine.h"
 
-#include "Controller/MenuState.h"
+#include "Controller/PlayState.h"
 #include "Model/TileMap.h"
 
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/VideoMode.hpp>
+#include <SFML/Graphics/View.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -26,7 +27,7 @@ AppEngine::AppEngine()
     : window(sf::VideoMode({ScreenWidth, ScreenHeight}), "CS202 Super Mario") {
     window.setFramerateLimit(60);
 
-    states.pushState(std::make_unique<MenuState>());
+    states.pushState(std::make_unique<PlayState>());
     states.applyPending(); // make the initial state live before the loop starts
 }
 
@@ -56,6 +57,26 @@ void AppEngine::processInput() {
         if (event->is<sf::Event::Closed>()) {
             window.close();
             return;
+        }
+        if (const auto* resize = event->getIf<sf::Event::Resized>()) {
+            float windowRatio = static_cast<float>(resize->size.x) / static_cast<float>(resize->size.y);
+            float viewRatio = static_cast<float>(ScreenWidth) / static_cast<float>(ScreenHeight);
+            float sizeX = 1.0f;
+            float sizeY = 1.0f;
+            float posX = 0.0f;
+            float posY = 0.0f;
+
+            if (windowRatio > viewRatio) {
+                sizeX = viewRatio / windowRatio;
+                posX = (1.0f - sizeX) / 2.0f;
+            } else {
+                sizeY = windowRatio / viewRatio;
+                posY = (1.0f - sizeY) / 2.0f;
+            }
+
+            sf::View view = window.getView();
+            view.setViewport(sf::FloatRect({posX, posY}, {sizeX, sizeY}));
+            window.setView(view);
         }
         states.handleEvent(*event);
     }

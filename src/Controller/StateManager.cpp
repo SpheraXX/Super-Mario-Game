@@ -2,6 +2,8 @@
 
 #include <SFML/Graphics/RenderWindow.hpp>
 
+#include <iostream>
+
 #include <utility>
 
 namespace controller {
@@ -76,6 +78,8 @@ void StateManager::render(sf::RenderWindow& window) {
         return;
     }
 
+    std :: cerr << "Rendering state stack of size: " << stack.size() << std :: endl;
+
     // Find the lowest state that must be drawn: walk down while states are transparent,
     // then render from that state up so overlays composite over what is beneath them.
     std::size_t bottom = stack.size() - 1;
@@ -84,7 +88,9 @@ void StateManager::render(sf::RenderWindow& window) {
     }
 
     for (std::size_t index = bottom; index < stack.size(); ++index) {
+        std :: cerr << "The type of the state at index " << index << " is: " << typeid(*stack[index]).name() << std :: endl;
         stack[index]->render(window);
+        std :: cerr << "Rendered state at index: " << index << std :: endl;
     }
 }
 

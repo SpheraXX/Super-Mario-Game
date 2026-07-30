@@ -18,14 +18,19 @@
 #include <cstdio>
 
 int main() {
-    try {
-        
+    freopen("log.txt", "w", stderr);
+
+    std :: cerr << "START" << std :: endl;
+
+    try {    
         controller::AppEngine engine;
         engine.run();
     } catch (const std::exception& exception) {
-        std::cerr << exception.what() << '\n';
+        std :: cerr << exception.what() << std :: endl;
         return 1;
     }
+
+    std :: cerr << "END" << std :: endl;
 
     return 0;
 }

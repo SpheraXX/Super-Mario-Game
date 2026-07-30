@@ -39,6 +39,7 @@ void Player::update(float deltaTime) {
 }
 
 void Player::render(sf::RenderWindow& window) {
+    return;
     if (!alive) return;
 
     Vector2 pos = getPosition();

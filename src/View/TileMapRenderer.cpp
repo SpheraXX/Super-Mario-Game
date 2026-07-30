@@ -31,8 +31,8 @@ void TileMapRenderer::registerTile(char symbol, unsigned int atlasColumn, unsign
 void TileMapRenderer::render(sf::RenderWindow& window, const model::TileMap& map) const {
     sf::Sprite tileSprite(tilesetTexture);
     tileSprite.setScale({
-        static_cast<float>(model::TileMap::TileWidth) / static_cast<float>(SourceTileSize),
-        static_cast<float>(model::TileMap::TileHeight) / static_cast<float>(SourceTileSize)
+        static_cast<float>(model::TileMap::TileWidth / SourceTileSize),
+        static_cast<float>(model::TileMap::TileHeight / SourceTileSize)
     });
 
     for (std::size_t row = 0; row < map.getRows(); ++row) {
@@ -49,8 +49,8 @@ void TileMapRenderer::render(sf::RenderWindow& window, const model::TileMap& map
 
             tileSprite.setTextureRect(tileRect->second);
             tileSprite.setPosition({
-                std::round(static_cast<float>(column * model::TileMap::TileWidth)),
-                std::round(static_cast<float>((map.getRows() - row - 1) * model::TileMap::TileHeight))
+                static_cast<float>(column * model::TileMap::TileWidth),
+                static_cast<float>((map.getRows() - row - 1) * model::TileMap::TileHeight)
             });
             window.draw(tileSprite);
         }

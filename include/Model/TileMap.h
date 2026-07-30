@@ -11,8 +11,8 @@ class TileMap {
 public:
     static constexpr std::size_t Rows = 16;
     static constexpr std::size_t Columns = 32;
-    static constexpr unsigned int TileWidth = 64;
-    static constexpr unsigned int TileHeight = 48;
+    static constexpr unsigned int TileWidth = 32;
+    static constexpr unsigned int TileHeight = 32;
 
     void loadFromFile(const std::string& filePath);
 

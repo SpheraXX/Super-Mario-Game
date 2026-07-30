@@ -136,7 +136,7 @@ void PlayState::update(float deltaTime) {
 }
 
 void PlayState::render(sf::RenderWindow& window) {
-    std :: cerr << "PlayState::render() called with " << entities.size() << " entities." << std :: endl;
+    // std :: cerr << "PlayState::render() called with " << entities.size() << " entities." << std :: endl;
 
     const sf::Color skyBlue(92, 148, 252);
     window.clear(skyBlue);
@@ -158,7 +158,7 @@ void PlayState::render(sf::RenderWindow& window) {
     // Scale to match tile dimensions.
     blockSprite.setScale({SpriteScaleX, SpriteScaleY});
 
-    std :: cerr << "Number of entities to render: " << entities.size() << std :: endl;
+    // std :: cerr << "Number of entities to render: " << entities.size() << std :: endl;
 
     for (const auto& e : entities) {
         if (!e->isActive) continue;
@@ -189,9 +189,9 @@ void PlayState::render(sf::RenderWindow& window) {
             // Bug 3 Fix: enemies.png is 436x261. Goomba frames are 16x16 at row 0.
             // Squished goomba (hitbox.isTrigger = true after stomp) uses frame 2.
             if (g->hitbox.isTrigger) {
-                enemySprite.setTextureRect({32, 0, 16, 16});
+                // enemySprite.setTextureRect({32, 0, 16, 16});
             } else {
-                enemySprite.setTextureRect({0, 0, 16, 16});
+                // enemySprite.setTextureRect({0, 0, 16, 16});
             }
             enemySprite.setScale({SpriteScaleX, SpriteScaleY});
             enemySprite.setPosition({snappedX, snappedY});
@@ -202,10 +202,10 @@ void PlayState::render(sf::RenderWindow& window) {
             // Bug 3 Fix: Koopa walking frames are 16x24 at row 0, col 6 (x=96).
             // Shell idle is 16x16 at row 0, col 10 (x=160).
             if (k->getSize().y <= 16.0f) {
-                enemySprite.setTextureRect({160, 0, 16, 16});
+                // enemySprite.setTextureRect({160, 0, 16, 16});
                 enemySprite.setScale({SpriteScaleX, SpriteScaleY});
             } else {
-                enemySprite.setTextureRect({96, 0, 16, 24});
+                // enemySprite.setTextureRect({96, 0, 16, 24});
                 // Koopa is taller: scale Y covers 24 src px → 1.5 world tiles
                 enemySprite.setScale({SpriteScaleX,
                     static_cast<float>(model::TileMap::TileHeight) * 1.5f / 24.0f});
@@ -217,9 +217,9 @@ void PlayState::render(sf::RenderWindow& window) {
         } else if (dynamic_cast<model::CoinBlock*>(e.get())) {
             // Bug 5 Fix: Use the real block texture (question block = col 0, row 0 of blocks.png).
             // blocks.png tiles are the same 16px source size as everything else.
-            blockSprite.setTextureRect({0, 0, 16, 16});
+            // blockSprite.setTextureRect({0, 0, 16, 16});
             blockSprite.setPosition({snappedX, snappedY});
-            std :: cerr << "Rendering Coin Block at (" << snappedX << ", " << snappedY << ")" << endl;
+            std :: cerr << "Rendering Coin Block at (" << snappedX << ", " << snappedY << ")" << std :: endl;
             window.draw(blockSprite);
         }
     }

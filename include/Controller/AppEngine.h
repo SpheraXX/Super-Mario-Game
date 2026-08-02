@@ -17,24 +17,26 @@ public:
     AppEngine();
     void run();
 
-    // Locked logical resolution: the game always renders at this size. If the window is
-    // resized, the view is letterboxed so the original resolution still fits, centred in
-    // the middle of the window. This keeps every tile/sprite on integer pixels.
+    // Locked logical resolution: the game always renders at this size, so every
+    // tile/sprite stays on integer pixels.
     static constexpr unsigned int ScreenWidth = 20 * model::TileMap::TileWidth;
     static constexpr unsigned int ScreenHeight = model::TileMap::Rows * model::TileMap::TileHeight;
+
+    // The window is fixed (non-resizable) at the logical resolution scaled by this factor.
+    // Set to 2 on larger monitors to double the size; the logical resolution never changes.
+    static constexpr unsigned int WindowScale = 1;
 
 private:
     void processInput();
     void update(float deltaTime);
     void render();
-    void applyLetterbox();
 
     // Physics/update run at a fixed rate so collision (Issue 3) stays deterministic.
     static constexpr float TimeStep = 1.0f / 60.0f;
 
     sf::RenderWindow window;
     StateManager states;
-    sf::View letterboxView;  // always ScreenWidth x ScreenHeight, viewport recomputed on resize
+    sf::View fixedView;  // always ScreenWidth x ScreenHeight, spans the whole window
 };
 
 }

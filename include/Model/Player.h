@@ -20,6 +20,11 @@ public:
     void onCollision(Entity* other) override;
     void takeDamage(int amount) override;
 
+    using Character::die;
+    // Full death: lose a life and play the pop/fall death animation. bounce=false is
+    // used for pit falls (the body just keeps dropping).
+    void die(bool bounce);
+
     void setState(std::unique_ptr<PlayerState> newState);
     PlayerState& getState();
     const char* getStateName() const;
@@ -41,8 +46,13 @@ protected:
     std::unique_ptr<PlayerState> state;
     int score;
     int coins;
-    int lives;
     float damageCooldown;
+    // Press-edge jump tracking: jumpHeld remembers the raw button state from the
+    // previous frame so a held key cannot re-trigger a jump on landing; playerInitiatedJump
+    // marks the current ascent as started by the player (so releasing it cuts the jump,
+    // but a stomp bounce is never cut).
+    bool jumpHeld = false;
+    bool playerInitiatedJump = false;
 
 private:
     void syncAnimation();

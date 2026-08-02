@@ -86,8 +86,23 @@ void PlayState::onEnter() {
     }
     enemiesTexture.setSmooth(false);
 
+    if (!blocksTexture.loadFromFile("assets/blocks.png")) {
+        std::cerr << "Failed to load blocks.png\n";
+    }
+    blocksTexture.setSmooth(false);
+
     // Initialize collision manager
     collisionManager = std::make_unique<model::CollisionManager>(&map);
+
+    // Spawn the initial set of entities (also used for respawns after a death).
+    resetLevel();
+}
+
+// (Re)build the entity list from scratch: a fresh Mario plus the level's enemies and
+// blocks. Called on enter and after every death (the whole level restarts).
+void PlayState::resetLevel() {
+    entities.clear();
+    player = nullptr;
 
     // Spawn Player — place on ground row (row 1 = y = (Rows-2)*TileHeight)
     // Ground is at tilemap rows 0-1 (bottom). In world coords bottom row 0 is at
@@ -105,19 +120,15 @@ void PlayState::onEnter() {
     auto koopa = std::make_unique<model::Koopa>(model::Vector2{768.0f, groundY});
     entities.push_back(std::move(koopa));
 
-    // Bug 5 Fix: Spawn CoinBlock using block texture, not a red rect.
-    // Position it 5 tiles above ground in world coords.
+    // Spawn CoinBlock using block texture, not a red rect.
+    // Position it 5 tiles above ground in world coords. One world tile in size so its
+    // hitbox matches the tile art it renders with.
     const float blockY = groundY - 5.0f * model::TileMap::TileHeight;
     auto coinBlock = std::make_unique<model::CoinBlock>(
         model::Vector2{320.0f, blockY},
-        model::Vector2{16.0f, 16.0f});
+        model::Vector2{static_cast<float>(model::TileMap::TileWidth),
+                       static_cast<float>(model::TileMap::TileHeight)});
     entities.push_back(std::move(coinBlock));
-
-    // Also load block texture for CoinBlock rendering
-    if (!blocksTexture.loadFromFile("assets/blocks.png")) {
-        std::cerr << "Failed to load blocks.png\n";
-    }
-    blocksTexture.setSmooth(false);
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
@@ -127,10 +138,10 @@ void PlayState::handleEvent(const sf::Event& event) {
                 manager->replaceState(std::make_unique<MenuState>());
                 break;
             case sf::Keyboard::Key::G:
-                model::GameManager::instance().addScore(500);
-                model::GameManager::instance().loseLife();
-                model::GameManager::instance().loseLife();
-                model::GameManager::instance().loseLife();
+                // Debug: kill the player through the normal death flow.
+                if (player && !player->isDying()) {
+                    player->die(true);
+                }
                 break;
             default:
                 break;
@@ -159,21 +170,63 @@ void PlayState::update(float deltaTime) {
         collisionManager->update(activeEntities, deltaTime);
     }
 
-    // Illegal to leave the map: clamp every entity inside its bounds (both side edges
-    // and the top/bottom, e.g. so a fall into a pit cannot leave the world).
+    // World bounds handling: the player stays inside the map (and falling past the
+    // bottom is a pit death); enemies despawn once they leave the world. Dying bodies
+    // ignore the bounds entirely and fall away until they are removed.
     const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
     const float mapHeight = static_cast<float>(map.getRows()) * model::TileMap::TileHeight;
+
+    bool playerFinishedDeathFall = false;
     for (const auto& e : entities) {
         if (!e->isActive) continue;
         model::Vector2 pos = e->getPosition();
         const model::Vector2 sz = e->getSize();
-        pos.x = std::clamp(pos.x, 0.0f, std::max(0.0f, mapWidth - sz.x));
-        pos.y = std::clamp(pos.y, 0.0f, std::max(0.0f, mapHeight - sz.y));
-        e->setPosition(pos);
+
+        auto* character = dynamic_cast<model::Character*>(e.get());
+
+        // Bodies that finished their (non-animated) death are gone for good, e.g.
+        // squished Goombas after their despawn timer.
+        if (character && !character->isAlive() && !character->isDying()) {
+            e->isActive = false;
+            continue;
+        }
+
+        // Dying bodies fall through the world; once past the bottom they are removed.
+        if (character && character->isDying()) {
+            if (pos.y > mapHeight) {
+                if (e.get() == player) {
+                    playerFinishedDeathFall = true;
+                }
+                e->isActive = false;
+            }
+            continue;
+        }
+
+        if (e.get() == player) {
+            // The player cannot leave the map; a fall past the bottom is a pit death.
+            if (pos.y > mapHeight) {
+                player->die(false); // no bounce: the body just keeps dropping
+                continue;
+            }
+            pos.x = std::clamp(pos.x, 0.0f, std::max(0.0f, mapWidth - sz.x));
+            pos.y = std::clamp(pos.y, 0.0f, std::max(0.0f, mapHeight - sz.y));
+            e->setPosition(pos);
+        } else {
+            // Hostiles/others: despawn once they leave the world bounds (walked off
+            // the map edge, which is also off camera, or fell into a pit).
+            if (pos.x + sz.x < 0.0f || pos.x > mapWidth || pos.y > mapHeight) {
+                e->isActive = false;
+            }
+        }
     }
 
-    if (model::GameManager::instance().isGameOver()) {
-        manager->replaceState(std::make_unique<GameOverState>());
+    // The player's death fall is over: either the run is over or the level restarts.
+    if (playerFinishedDeathFall) {
+        if (model::GameManager::instance().isGameOver()) {
+            manager->replaceState(std::make_unique<GameOverState>());
+        } else {
+            resetLevel();
+        }
     }
 }
 
@@ -240,11 +293,13 @@ void PlayState::render(sf::RenderWindow& window) {
             enemySprite.setPosition({snappedX, snappedY});
             window.draw(enemySprite);
 
-        } else if (dynamic_cast<model::CoinBlock*>(e.get())) {
+        } else if (auto* coinBlock = dynamic_cast<model::CoinBlock*>(e.get())) {
             // Block tiles in blocks.png are 16x16 source pixels (one tile), unlike the
             // 16x32 character frames. (5, 7) is the same coin-block tile the map renderer
-            // uses for 'C' tiles, so the entity matches the level art.
-            blockSprite.setTextureRect({{5 * 16, 7 * 16}, {16, 16}});
+            // uses for 'C' tiles, so the entity matches the level art; once its coin is
+            // collected it swaps to the plain (used) block at (6, 7).
+            const int atlasCol = coinBlock->hasCoin() ? 5 : 6;
+            blockSprite.setTextureRect({{atlasCol * 16, 7 * 16}, {16, 16}});
             blockSprite.setScale({SpriteScaleX, SpriteScaleY});
             blockSprite.setOrigin({0.0f, 0.0f});
             blockSprite.setPosition({snappedX, snappedY});

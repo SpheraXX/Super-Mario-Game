@@ -13,10 +13,16 @@ Enemy::Enemy(Vector2 position, Vector2 size)
 
 void Enemy::update(float deltaTime) {
     if (!alive) return;
-    
+
+    // Dying bodies just fall; no AI, no stomp state, no squish timer.
+    if (isDying()) {
+        Character::update(deltaTime);
+        return;
+    }
+
     updateAI(deltaTime);
     Character::update(deltaTime);
-    
+
     if (isStomped) {
         despawnTimer -= deltaTime;
         if (despawnTimer <= 0.0f) {
@@ -31,7 +37,12 @@ void Enemy::onStomped(Player& /* player */) {
 }
 
 void Enemy::onHit(Entity& /* source */) {
-    die();
+    // Knocked out (e.g. by a spinning shell): pop up and fall away.
+    beginDying(true);
+}
+
+int Enemy::getDamageValue() const {
+    return damageValue;
 }
 
 }

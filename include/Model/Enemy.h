@@ -18,6 +18,8 @@ public:
     virtual void onStomped(Player& player);
     virtual void onHit(Entity& source);
 
+    int getDamageValue() const;
+
 protected:
     int damageValue;
     bool isStomped;

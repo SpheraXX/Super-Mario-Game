@@ -8,6 +8,8 @@ namespace model {
 
 class Entity;
 class TileMap;
+class Block;
+class Player;
 
 class CollisionManager {
 public:
@@ -23,6 +25,11 @@ private:
 
     void processTileCollisions(Entity* entity, float deltaTime);
     void processEntityCollisions(std::vector<Entity*>& entities);
+
+    // Push the player out of a solid block and handle the bump interaction
+    // (e.g. collecting a coin when the block is hit from below).
+    void pushOutOfBlock(Player& player, Block& block, CollisionType playerSide);
+    void bumpBlock(Block& block);
 };
 
 }

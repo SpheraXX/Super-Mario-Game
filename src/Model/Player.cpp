@@ -1,6 +1,7 @@
 #include "Model/Player.h"
 #include "Model/Mario.h"
 #include "Model/Luigi.h"
+#include "Model/GameManager.h"
 
 #include <cmath>
 
@@ -15,13 +16,19 @@ Player::Player(Vector2 position, Vector2 size)
       state(std::make_unique<SmallState>()),
       score(0),
       coins(0),
-      lives(3),
       damageCooldown(0.0f) {
 }
 
 Player::~Player() = default;
 
 void Player::update(float deltaTime) {
+    // A player-initiated ascent only owns the rising half of the jump: once the apex is
+    // passed the flag is cleared, so a stomp bounce (which happens while falling) can
+    // never be cut by a released jump key.
+    if (velocity.y >= 0.0f) {
+        playerInitiatedJump = false;
+    }
+
     state->update(*this, deltaTime);
     Character::update(deltaTime);
     syncAnimation();
@@ -78,24 +85,21 @@ void Player::handleInput() {
     float runSpeed = 320.0f;
     float jumpForce = -450.0f;
 
-    if (auto* mario = dynamic_cast<Mario*>(this)) {
+    if (dynamic_cast<Mario*>(this)) {
         walkSpeed = Mario::WalkSpeed;
         runSpeed = Mario::RunSpeed;
         jumpForce = Mario::JumpForce;
-    } else if (auto* luigi = dynamic_cast<Luigi*>(this)) {
+    } else if (dynamic_cast<Luigi*>(this)) {
         walkSpeed = Luigi::WalkSpeed;
         runSpeed = Luigi::RunSpeed;
         jumpForce = Luigi::JumpForce;
     }
 
-    float currentSpeed = 0.0f;
-
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift)) {
-        currentSpeed = runSpeed;
-    } else {
-        currentSpeed = walkSpeed;
-    }
+    // Sprint: hold Shift to move at run speed.
+    const bool sprinting =
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+    const float currentSpeed = sprinting ? runSpeed : walkSpeed;
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
@@ -109,41 +113,51 @@ void Player::handleInput() {
         velocity.x = 0.0f;
     }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) ||
+    const bool jumpPressed =
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) {
-        if (isOnGround()) {
-            velocity.y = jumpForce;
-        }
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
+
+    // No jump buffering: a jump fires only on the press edge while grounded, so holding
+    // the key does nothing until it is released and pressed again.
+    if (jumpPressed && !jumpHeld && isOnGround()) {
+        velocity.y = jumpForce;
+        playerInitiatedJump = true;
     }
+
+    // Jump cut: releasing the key mid-ascent kills the upward velocity for a snappy,
+    // Mario-like feel (hold to jump higher).
+    if (!jumpPressed && playerInitiatedJump && velocity.y < 0.0f) {
+        velocity.y = 0.0f;
+        playerInitiatedJump = false;
+    }
+
+    jumpHeld = jumpPressed;
 }
 
 void Player::onCollision(Entity* /* other */) {
 }
 
 void Player::takeDamage(int amount) {
-    if (!alive || damageCooldown > 0.0f) return;
+    if (!alive || isDying() || damageCooldown > 0.0f) return;
 
     PlayerState* newState = state->takeDamage(*this);
     if (newState == nullptr) {
-        lives--;
-        if (lives <= 0) {
-            alive = false;
-            animState = AnimState::Die;
-        } else {
-            setPosition({200.0f, 600.0f});
-            setVelocity({0.0f, 0.0f});
-            state->onExit(*this);
-            state = std::make_unique<SmallState>();
-            state->onEnter(*this);
-            damageCooldown = DamageCooldownTime;
-        }
+        // Small Mario with no power-up left to lose: full death.
+        die(true);
     } else if (newState != state.get()) {
+        // Downgrade (e.g. Super -> Small): keep playing with brief invulnerability.
         state->onExit(*this);
         state.reset(newState);
         state->onEnter(*this);
         damageCooldown = DamageCooldownTime;
     }
+}
+
+void Player::die(bool bounce) {
+    if (!alive || isDying()) return;
+    model::GameManager::instance().loseLife();
+    beginDying(bounce);
 }
 
 void Player::setState(std::unique_ptr<PlayerState> newState) {
@@ -191,12 +205,12 @@ void Player::addCoin() {
     coins++;
     if (coins >= 100) {
         coins -= 100;
-        lives++;
+        model::GameManager::instance().addLife();
     }
 }
 
 void Player::addLife() {
-    lives++;
+    model::GameManager::instance().addLife();
 }
 
 int Player::getScore() const {
@@ -208,7 +222,7 @@ int Player::getCoins() const {
 }
 
 int Player::getLives() const {
-    return lives;
+    return model::GameManager::instance().getLives();
 }
 
 void Player::syncAnimation() {

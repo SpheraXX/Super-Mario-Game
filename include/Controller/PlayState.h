@@ -27,6 +27,8 @@ public:
     void render(sf::RenderWindow& window) override;
 
 private:
+    void resetLevel();
+
     model::TileMap map;
     std::unique_ptr<view::TileMapRenderer> renderer;
     bool mapLoaded = false;

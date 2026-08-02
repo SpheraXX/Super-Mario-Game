@@ -10,7 +10,7 @@ public:
     Mario(Vector2 position);
 
     static constexpr float WalkSpeed = 180.0f;
-    static constexpr float RunSpeed = 320.0f;
+    static constexpr float RunSpeed = 400.0f;
     static constexpr float JumpForce = -450.0f;
 };
 

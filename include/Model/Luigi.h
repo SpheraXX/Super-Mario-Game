@@ -10,7 +10,7 @@ public:
     Luigi(Vector2 position);
 
     static constexpr float WalkSpeed = 160.0f;
-    static constexpr float RunSpeed = 280.0f;
+    static constexpr float RunSpeed = 350.0f;
     static constexpr float JumpForce = -540.0f;
 };
 

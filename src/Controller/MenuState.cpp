@@ -1,5 +1,6 @@
 #include "Controller/MenuState.h"
 
+#include "Controller/AppEngine.h"
 #include "Controller/PlayState.h"
 #include "Controller/StateManager.h"
 #include "Model/GameManager.h"
@@ -55,24 +56,25 @@ void MenuState::render(sf::RenderWindow& window) {
         return;
     }
 
-    const sf::Vector2u windowSize = window.getSize();
+    const float centerX = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    const float centerY = static_cast<float>(AppEngine::ScreenHeight);
 
     sf::Text title(font, "SUPER MARIO", 56);
     title.setFillColor(sf::Color(230, 90, 30));
     centerOrigin(title);
-    title.setPosition({windowSize.x / 2.f, windowSize.y * 0.35f});
+    title.setPosition({centerX, centerY * 0.35f});
     window.draw(title);
 
     sf::Text startHint(font, "Press ENTER or SPACE to Start", 24);
     startHint.setFillColor(sf::Color::White);
     centerOrigin(startHint);
-    startHint.setPosition({windowSize.x / 2.f, windowSize.y * 0.55f});
+    startHint.setPosition({centerX, centerY * 0.55f});
     window.draw(startHint);
 
     sf::Text quitHint(font, "Press ESC to Quit", 20);
     quitHint.setFillColor(sf::Color(200, 200, 200));
     centerOrigin(quitHint);
-    quitHint.setPosition({windowSize.x / 2.f, windowSize.y * 0.65f});
+    quitHint.setPosition({centerX, centerY * 0.65f});
     window.draw(quitHint);
 }
 

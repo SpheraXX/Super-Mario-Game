@@ -1,5 +1,6 @@
 #include "Controller/GameOverState.h"
 
+#include "Controller/AppEngine.h"
 #include "Controller/MenuState.h"
 #include "Controller/StateManager.h"
 #include "Model/GameManager.h"
@@ -47,25 +48,26 @@ void GameOverState::render(sf::RenderWindow& window) {
         return;
     }
 
-    const sf::Vector2u windowSize = window.getSize();
+    const float centerX = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    const float centerY = static_cast<float>(AppEngine::ScreenHeight);
     const int score = model::GameManager::instance().getScore();
 
     sf::Text title(font, "GAME OVER", 56);
     title.setFillColor(sf::Color(230, 60, 60));
     centerOrigin(title);
-    title.setPosition({windowSize.x / 2.f, windowSize.y * 0.35f});
+    title.setPosition({centerX, centerY * 0.35f});
     window.draw(title);
 
     sf::Text scoreText(font, "Final Score: " + std::to_string(score), 26);
     scoreText.setFillColor(sf::Color::White);
     centerOrigin(scoreText);
-    scoreText.setPosition({windowSize.x / 2.f, windowSize.y * 0.55f});
+    scoreText.setPosition({centerX, centerY * 0.55f});
     window.draw(scoreText);
 
     sf::Text hint(font, "Press ENTER to return to Menu", 20);
     hint.setFillColor(sf::Color(200, 200, 200));
     centerOrigin(hint);
-    hint.setPosition({windowSize.x / 2.f, windowSize.y * 0.68f});
+    hint.setPosition({centerX, centerY * 0.68f});
     window.draw(hint);
 }
 

@@ -40,7 +40,7 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
         std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
 
-        if (col < TileMap::Columns && row < TileMap::Rows) {
+        if (col < tileMap->getColumns() && row < TileMap::Rows) {
             if (tileMap->getTile(row, col) != '.') {
                 pos.y = (TileMap::Rows - 1 - row) * TileMap::TileHeight - hb.height - hb.offset.y;
                 vel.y = 0.0f;
@@ -55,7 +55,7 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
         std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(headY / TileMap::TileHeight);
 
-        if (col < TileMap::Columns && row < TileMap::Rows) {
+        if (col < tileMap->getColumns() && row < TileMap::Rows) {
             if (tileMap->getTile(row, col) != '.') {
                 pos.y = (TileMap::Rows - row) * TileMap::TileHeight - hb.offset.y;
                 vel.y = 0.0f;
@@ -69,7 +69,7 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
         std::size_t col = static_cast<std::size_t>(leftX / TileMap::TileWidth);
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
 
-        if (col < TileMap::Columns && row < TileMap::Rows) {
+        if (col < tileMap->getColumns() && row < TileMap::Rows) {
             if (tileMap->getTile(row, col) != '.') {
                 pos.x = (col + 1) * TileMap::TileWidth - hb.offset.x;
                 vel.x = 0.0f;
@@ -83,7 +83,7 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
         std::size_t col = static_cast<std::size_t>(rightX / TileMap::TileWidth);
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
 
-        if (col < TileMap::Columns && row < TileMap::Rows) {
+        if (col < tileMap->getColumns() && row < TileMap::Rows) {
             if (tileMap->getTile(row, col) != '.') {
                 pos.x = col * TileMap::TileWidth - hb.width - hb.offset.x;
                 vel.x = 0.0f;

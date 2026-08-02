@@ -10,7 +10,6 @@ namespace model {
 class TileMap {
 public:
     static constexpr std::size_t Rows = 16;
-    static constexpr std::size_t Columns = 32;
     static constexpr unsigned int TileWidth = 32;
     static constexpr unsigned int TileHeight = 32;
 
@@ -22,6 +21,7 @@ public:
 
 private:
     std::vector<std::vector<char>> tiles;
+    std::size_t columns = 0;  // map width in tiles, read from the file
 };
 
 }

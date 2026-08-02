@@ -115,7 +115,7 @@ void Character::resolveTileCollisions() {
         std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
 
-        if (col < TileMap::Columns && row < TileMap::Rows) {
+        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
             if (mapPtr->getTile(row, col) != '.') {
                 pos.y = (TileMap::Rows - 1 - row) * TileMap::TileHeight - sz.y;
                 velocity.y = 0.0f;
@@ -127,7 +127,7 @@ void Character::resolveTileCollisions() {
         std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(headY / TileMap::TileHeight);
 
-        if (col < TileMap::Columns && row < TileMap::Rows) {
+        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
             if (mapPtr->getTile(row, col) != '.') {
                 pos.y = (TileMap::Rows - row) * TileMap::TileHeight;
                 velocity.y = 0.0f;
@@ -139,7 +139,7 @@ void Character::resolveTileCollisions() {
         std::size_t col = static_cast<std::size_t>(leftX / TileMap::TileWidth);
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
 
-        if (col < TileMap::Columns && row < TileMap::Rows) {
+        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
             if (mapPtr->getTile(row, col) != '.') {
                 pos.x = (col + 1) * TileMap::TileWidth;
                 velocity.x = 0.0f;
@@ -151,7 +151,7 @@ void Character::resolveTileCollisions() {
         std::size_t col = static_cast<std::size_t>(rightX / TileMap::TileWidth);
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
 
-        if (col < TileMap::Columns && row < TileMap::Rows) {
+        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
             if (mapPtr->getTile(row, col) != '.') {
                 pos.x = col * TileMap::TileWidth - sz.x;
                 velocity.x = 0.0f;

@@ -11,19 +11,25 @@ void TileMap::loadFromFile(const std::string& filePath) {
         throw std::runtime_error("Could not open map file: " + filePath);
     }
 
-    tiles.assign(Rows, std::vector<char>(Columns, '.'));
-
     std::string line;
     for (std::size_t row = 0; row < Rows; ++row) {
         if (!std::getline(input, line)) {
             throw std::runtime_error("Map file has fewer than 16 rows: " + filePath);
         }
 
-        if (line.size() < Columns) {
-            throw std::runtime_error("Map row is shorter than 32 columns: " + filePath);
+        if (row == 0) {
+            if (line.empty()) {
+                throw std::runtime_error("Map file has an empty first row: " + filePath);
+            }
+            columns = line.size();
+            tiles.assign(Rows, std::vector<char>(columns, '.'));
         }
 
-        for (std::size_t column = 0; column < Columns; ++column) {
+        if (line.size() < columns) {
+            throw std::runtime_error("Map row is shorter than the first row: " + filePath);
+        }
+
+        for (std::size_t column = 0; column < columns; ++column) {
             tiles[row][column] = line[column];
         }
     }
@@ -38,7 +44,7 @@ std::size_t TileMap::getRows() const {
 }
 
 std::size_t TileMap::getColumns() const {
-    return Columns;
+    return columns;
 }
 
 }

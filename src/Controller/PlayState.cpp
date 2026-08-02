@@ -1,5 +1,6 @@
 #include "Controller/PlayState.h"
 
+#include "Controller/AppEngine.h"
 #include "Controller/GameOverState.h"
 #include "Controller/MenuState.h"
 #include "Controller/StateManager.h"
@@ -15,8 +16,10 @@
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/View.hpp>
 #include <SFML/Window/Keyboard.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <exception>
 #include <iostream>
@@ -32,6 +35,31 @@ std::string mapPathForLevel(int level) {
 
 constexpr float SpriteScaleX = static_cast<float>(model::TileMap::TileWidth)  / 16.0f;
 constexpr float SpriteScaleY = static_cast<float>(model::TileMap::TileHeight) / 16.0f;
+
+// Source frames are assumed to be 16x32 (width x height). The atlas coordinates below are
+// PLACEHOLDERS so each entity picks a distinct frame — update them once the real
+// spritesheet layout is finalised by the graphics teammate.
+constexpr int MarioFrameCol = 0;
+constexpr int GoombaFrameCol = 0;
+constexpr int GoombaSquishedFrameCol = 1;
+constexpr int KoopaFrameCol = 2;
+constexpr int KoopaShellFrameCol = 3;
+
+// Configure a character sprite for one entity:
+//  - the 16x32 source frame is scaled up to one world tile per 16 source pixels;
+//  - the origin is lowered so the frame's bottom edge (the character's feet) sits exactly
+//    on the entity's bottom edge, instead of the sprite hanging below the hitbox;
+//  - the frame is mirrored horizontally when the entity faces left.
+void setupEntitySprite(sf::Sprite& sprite, const model::Vector2& entitySize, bool facingRight) {
+    const float originY = 32.0f - entitySize.y / SpriteScaleY;
+    if (facingRight) {
+        sprite.setScale({-SpriteScaleX, SpriteScaleY});
+        sprite.setOrigin({16.0f, originY});
+    } else {
+        sprite.setScale({SpriteScaleX, SpriteScaleY});
+        sprite.setOrigin({0.0f, originY});
+    }
+}
 }
 
 void PlayState::onEnter() {
@@ -67,6 +95,7 @@ void PlayState::onEnter() {
     const float groundY = static_cast<float>((model::TileMap::Rows - 2) * model::TileMap::TileHeight
                                              - model::TileMap::TileHeight);
     auto mario = std::make_unique<model::Mario>(model::Vector2{64.0f, groundY});
+    player = mario.get();
     entities.push_back(std::move(mario));
 
     // Spawn Hostiles — also on the ground level, to the right of Mario
@@ -130,12 +159,42 @@ void PlayState::update(float deltaTime) {
         collisionManager->update(activeEntities, deltaTime);
     }
 
+    // Illegal to leave the map: clamp every entity inside its bounds (both side edges
+    // and the top/bottom, e.g. so a fall into a pit cannot leave the world).
+    const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
+    const float mapHeight = static_cast<float>(map.getRows()) * model::TileMap::TileHeight;
+    for (const auto& e : entities) {
+        if (!e->isActive) continue;
+        model::Vector2 pos = e->getPosition();
+        const model::Vector2 sz = e->getSize();
+        pos.x = std::clamp(pos.x, 0.0f, std::max(0.0f, mapWidth - sz.x));
+        pos.y = std::clamp(pos.y, 0.0f, std::max(0.0f, mapHeight - sz.y));
+        e->setPosition(pos);
+    }
+
     if (model::GameManager::instance().isGameOver()) {
         manager->replaceState(std::make_unique<GameOverState>());
     }
 }
 
 void PlayState::render(sf::RenderWindow& window) {
+    // Camera: follows the player horizontally, but never pans past the map fringes; it is
+    // fixed vertically. The view keeps the letterbox viewport set by AppEngine.
+    const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
+    const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    float cameraX = halfWidth;
+    if (player) {
+        cameraX = player->getPosition().x + player->getSize().x / 2.0f;
+    }
+    cameraX = std::clamp(cameraX, halfWidth, std::max(halfWidth, mapWidth - halfWidth));
+
+    const sf::View baseView = window.getView();
+    sf::View cameraView = baseView;
+    cameraView.setSize({static_cast<float>(AppEngine::ScreenWidth),
+                        static_cast<float>(AppEngine::ScreenHeight)});
+    cameraView.setCenter({cameraX, static_cast<float>(AppEngine::ScreenHeight) / 2.0f});
+    window.setView(cameraView);
+
     const sf::Color skyBlue(92, 148, 252);
     window.clear(skyBlue);
 
@@ -144,13 +203,8 @@ void PlayState::render(sf::RenderWindow& window) {
     }
 
     sf::Sprite charSprite(charsTexture);
-    charSprite.setScale({SpriteScaleX, SpriteScaleY});
-
     sf::Sprite enemySprite(enemiesTexture);
-    enemySprite.setScale({SpriteScaleX, SpriteScaleY});
-
     sf::Sprite blockSprite(blocksTexture);
-    blockSprite.setScale({SpriteScaleX, SpriteScaleY});
 
     for (const auto& e : entities) {
         if (!e->isActive) continue;
@@ -159,58 +213,47 @@ void PlayState::render(sf::RenderWindow& window) {
         float snappedY = std::round(e->getPosition().y);
 
         if (auto* mario = dynamic_cast<model::Mario*>(e.get())) {
-            charSprite.setTextureRect({{0, 0}, {16, 32}});
-            if (!mario->isFacingRight()) {
-                charSprite.setScale({SpriteScaleX, SpriteScaleY});
-                charSprite.setOrigin({0.0f, 0.0f});
-            } else {
-                charSprite.setScale({-SpriteScaleX, SpriteScaleY});
-                charSprite.setOrigin({16.0f, 0.0f});
-            }
+            charSprite.setTextureRect({{MarioFrameCol * 16, 0}, {16, 32}});
+            setupEntitySprite(charSprite, mario->getSize(), mario->isFacingRight());
             charSprite.setPosition({snappedX, snappedY});
             window.draw(charSprite);
 
         } else if (auto* g = dynamic_cast<model::Goomba*>(e.get())) {
-            continue;
-            // Bug 3 Fix: enemies.png is 436x261. Goomba frames are 16x16 at row 0.
-            // Squished goomba (hitbox.isTrigger = true after stomp) uses frame 2.
             if (g->hitbox.isTrigger) {
-                // enemySprite.setTextureRect({32, 0, 16, 16});
+                // Squished Goomba: placeholder next frame in the sheet.
+                enemySprite.setTextureRect({{GoombaSquishedFrameCol * 16, 0}, {16, 32}});
             } else {
-                // enemySprite.setTextureRect({0, 0, 16, 16});
+                enemySprite.setTextureRect({{GoombaFrameCol * 16, 0}, {16, 32}});
             }
-            enemySprite.setScale({SpriteScaleX, SpriteScaleY});
+            setupEntitySprite(enemySprite, g->getSize(), g->isFacingRight());
             enemySprite.setPosition({snappedX, snappedY});
-            std :: cerr << "Rendering Goomba at (" << snappedX << ", " << snappedY << ")" << std :: endl;
             window.draw(enemySprite);
 
         } else if (auto* k = dynamic_cast<model::Koopa*>(e.get())) {
-            continue;
-            // Bug 3 Fix: Koopa walking frames are 16x24 at row 0, col 6 (x=96).
-            // Shell idle is 16x16 at row 0, col 10 (x=160).
             if (k->getSize().y <= 16.0f) {
-                // enemySprite.setTextureRect({160, 0, 16, 16});
-                enemySprite.setScale({SpriteScaleX, SpriteScaleY});
+                // Shell: placeholder next frame in the sheet.
+                enemySprite.setTextureRect({{KoopaShellFrameCol * 16, 0}, {16, 32}});
             } else {
-                // enemySprite.setTextureRect({96, 0, 16, 24});
-                // Koopa is taller: scale Y covers 24 src px → 1.5 world tiles
-                enemySprite.setScale({SpriteScaleX,
-                    static_cast<float>(model::TileMap::TileHeight) * 1.5f / 24.0f});
+                enemySprite.setTextureRect({{KoopaFrameCol * 16, 0}, {16, 32}});
             }
+            setupEntitySprite(enemySprite, k->getSize(), k->isFacingRight());
             enemySprite.setPosition({snappedX, snappedY});
-            std :: cerr << "Rendering Koopa at (" << snappedX << ", " << snappedY << ")" << std :: endl;
             window.draw(enemySprite);
 
         } else if (dynamic_cast<model::CoinBlock*>(e.get())) {
-            continue;
-            // Bug 5 Fix: Use the real block texture (question block = col 0, row 0 of blocks.png).
-            // blocks.png tiles are the same 16px source size as everything else.
-            // blockSprite.setTextureRect({0, 0, 16, 16});
+            // Block tiles in blocks.png are 16x16 source pixels (one tile), unlike the
+            // 16x32 character frames. (5, 7) is the same coin-block tile the map renderer
+            // uses for 'C' tiles, so the entity matches the level art.
+            blockSprite.setTextureRect({{5 * 16, 7 * 16}, {16, 16}});
+            blockSprite.setScale({SpriteScaleX, SpriteScaleY});
+            blockSprite.setOrigin({0.0f, 0.0f});
             blockSprite.setPosition({snappedX, snappedY});
-            std :: cerr << "Rendering Coin Block at (" << snappedX << ", " << snappedY << ")" << std :: endl;
             window.draw(blockSprite);
         }
     }
+
+    // Restore the fixed (non-scrolling) view so HUD text stays on the screen.
+    window.setView(baseView);
 
     if (fontLoaded) {
         sf::Text levelLabel(font, "DEBUG LEVEL", 22);
@@ -224,7 +267,7 @@ void PlayState::render(sf::RenderWindow& window) {
         hint.setFillColor(sf::Color::White);
         hint.setOutlineColor(sf::Color::Black);
         hint.setOutlineThickness(2.f);
-        hint.setPosition({10.f, static_cast<float>(window.getSize().y) - 26.f});
+        hint.setPosition({10.f, static_cast<float>(AppEngine::ScreenHeight) - 26.f});
         window.draw(hint);
     }
 }

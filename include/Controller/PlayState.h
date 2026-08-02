@@ -13,6 +13,10 @@
 #include <memory>
 #include <vector>
 
+namespace model {
+class Player;
+}
+
 namespace controller {
 
 class PlayState : public GameState {
@@ -36,6 +40,7 @@ private:
 
     std::unique_ptr<model::CollisionManager> collisionManager;
     std::vector<std::unique_ptr<model::Entity>> entities;
+    model::Player* player = nullptr;  // non-owning: the spawned player entity
 };
 
 }

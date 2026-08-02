@@ -30,8 +30,8 @@ std::string mapPathForLevel(int level) {
     return "assets/maps/debug.map";
 }
 
-constexpr float SpriteScaleX = static_cast<float>(model::TileMap::TileWidth)  / 32.0f; // 2.0
-constexpr float SpriteScaleY = static_cast<float>(model::TileMap::TileHeight) / 16.0f; // 3.0
+constexpr float SpriteScaleX = static_cast<float>(model::TileMap::TileWidth)  / 16.0f;
+constexpr float SpriteScaleY = static_cast<float>(model::TileMap::TileHeight) / 16.0f;
 }
 
 void PlayState::onEnter() {
@@ -136,8 +136,6 @@ void PlayState::update(float deltaTime) {
 }
 
 void PlayState::render(sf::RenderWindow& window) {
-    // std :: cerr << "PlayState::render() called with " << entities.size() << " entities." << std :: endl;
-
     const sf::Color skyBlue(92, 148, 252);
     window.clear(skyBlue);
 
@@ -145,8 +143,6 @@ void PlayState::render(sf::RenderWindow& window) {
         renderer->render(window, map);
     }
 
-    // Bug 1 Fix: Scale all entity sprites from 16px source to one world tile (64x48).
-    // Each sprite is constructed fresh per category to avoid stale setScale state.
     sf::Sprite charSprite(charsTexture);
     charSprite.setScale({SpriteScaleX, SpriteScaleY});
 
@@ -154,38 +150,28 @@ void PlayState::render(sf::RenderWindow& window) {
     enemySprite.setScale({SpriteScaleX, SpriteScaleY});
 
     sf::Sprite blockSprite(blocksTexture);
-    // Bug 5 Fix: blocks.png is 448x256 with 16px source tiles (same SourceTileSize).
-    // Scale to match tile dimensions.
     blockSprite.setScale({SpriteScaleX, SpriteScaleY});
-
-    // std :: cerr << "Number of entities to render: " << entities.size() << std :: endl;
 
     for (const auto& e : entities) {
         if (!e->isActive) continue;
 
-        // float snappedX = std::round(e->getPosition().x);
-        // float snappedY = std::round(e->getPosition().y);
-
-        float snappedX = 0;
-        float snappedY = 0;
+        float snappedX = std::round(e->getPosition().x);
+        float snappedY = std::round(e->getPosition().y);
 
         if (auto* mario = dynamic_cast<model::Mario*>(e.get())) {
-            // Bug 3 Fix: characters.png is 513x401, source frames are 32x16.
-            // Small Mario walk frame 0 starts at column 0, row 2 (y=32).
-            // Apply horizontal flip when facing left.
-            charSprite.setTextureRect({1, 1, 2 * SourceTileSize, SourceTileSize});
+            charSprite.setTextureRect({{0, 0}, {16, 32}});
             if (!mario->isFacingRight()) {
-                charSprite.setScale({-SpriteScaleX, SpriteScaleY});
-                charSprite.setOrigin({1.0f * SourceTileSize, 0.0f});
-            } else {
                 charSprite.setScale({SpriteScaleX, SpriteScaleY});
                 charSprite.setOrigin({0.0f, 0.0f});
+            } else {
+                charSprite.setScale({-SpriteScaleX, SpriteScaleY});
+                charSprite.setOrigin({16.0f, 0.0f});
             }
             charSprite.setPosition({snappedX, snappedY});
-            std :: cerr << "Rendering Mario at (" << snappedX << ", " << snappedY << ")" << std :: endl;
             window.draw(charSprite);
 
         } else if (auto* g = dynamic_cast<model::Goomba*>(e.get())) {
+            continue;
             // Bug 3 Fix: enemies.png is 436x261. Goomba frames are 16x16 at row 0.
             // Squished goomba (hitbox.isTrigger = true after stomp) uses frame 2.
             if (g->hitbox.isTrigger) {
@@ -199,6 +185,7 @@ void PlayState::render(sf::RenderWindow& window) {
             window.draw(enemySprite);
 
         } else if (auto* k = dynamic_cast<model::Koopa*>(e.get())) {
+            continue;
             // Bug 3 Fix: Koopa walking frames are 16x24 at row 0, col 6 (x=96).
             // Shell idle is 16x16 at row 0, col 10 (x=160).
             if (k->getSize().y <= 16.0f) {
@@ -215,6 +202,7 @@ void PlayState::render(sf::RenderWindow& window) {
             window.draw(enemySprite);
 
         } else if (dynamic_cast<model::CoinBlock*>(e.get())) {
+            continue;
             // Bug 5 Fix: Use the real block texture (question block = col 0, row 0 of blocks.png).
             // blocks.png tiles are the same 16px source size as everything else.
             // blockSprite.setTextureRect({0, 0, 16, 16});

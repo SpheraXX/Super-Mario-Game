@@ -12,6 +12,9 @@ public:
     bool hasCoin() const;
     void collectCoin();
 
+    // Bumped from below by the player: collects the coin once.
+    void onCollision(Entity& other, CollisionType side) override;
+
 private:
     bool coinAvailable;
 };

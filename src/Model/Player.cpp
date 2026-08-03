@@ -1,13 +1,9 @@
 #include "Model/Player.h"
-#include "Model/Mario.h"
-#include "Model/Luigi.h"
 #include "Model/GameManager.h"
 
 #include <cmath>
 
 #include <SFML/Window/Keyboard.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Graphics/RectangleShape.hpp>
 
 namespace model {
 
@@ -17,6 +13,9 @@ Player::Player(Vector2 position, Vector2 size)
       score(0),
       coins(0),
       damageCooldown(0.0f) {
+    // The collision layer drives the (type-check-free) routing in CollisionManager:
+    // exactly one entity per pair must be the player for the pair to resolve.
+    hitbox.layer = CollisionLayer::Player;
 }
 
 Player::~Player() = default;
@@ -45,55 +44,13 @@ void Player::update(float deltaTime) {
     }
 }
 
-void Player::render(sf::RenderWindow& window) {
-    return;
-    if (!alive) return;
-
-    Vector2 pos = getPosition();
-    Vector2 sz = getSize();
-
-    sf::RectangleShape rect({sz.x, sz.y});
-    rect.setPosition({pos.x, pos.y});
-
-    sf::Color baseColor = sf::Color::Red;
-    if (dynamic_cast<Luigi*>(this)) {
-        baseColor = sf::Color::Green;
-    }
-
-    if (dynamic_cast<StarState*>(state.get())) {
-        rect.setFillColor(sf::Color::Yellow);
-    } else if (dynamic_cast<FireState*>(state.get())) {
-        rect.setFillColor(sf::Color(255, 165, 0));
-    } else if (dynamic_cast<SuperState*>(state.get())) {
-        rect.setFillColor(sf::Color(200, 200, 200));
-    } else {
-        rect.setFillColor(baseColor);
-    }
-
-    if (!facingRight) {
-        rect.setScale({-1.0f, 1.0f});
-        rect.setOrigin({sz.x, 0.0f});
-    }
-
-    window.draw(rect);
-}
-
 void Player::handleInput() {
     if (!alive) return;
 
-    float walkSpeed = 180.0f;
-    float runSpeed = 320.0f;
-    float jumpForce = -450.0f;
-
-    if (dynamic_cast<Mario*>(this)) {
-        walkSpeed = Mario::WalkSpeed;
-        runSpeed = Mario::RunSpeed;
-        jumpForce = Mario::JumpForce;
-    } else if (dynamic_cast<Luigi*>(this)) {
-        walkSpeed = Luigi::WalkSpeed;
-        runSpeed = Luigi::RunSpeed;
-        jumpForce = Luigi::JumpForce;
-    }
+    // Movement tuning is polymorphic: each concrete character reports its own numbers.
+    const float walkSpeed = getWalkSpeed();
+    const float runSpeed = getRunSpeed();
+    const float jumpForce = getJumpForce();
 
     // Sprint: hold Shift to move at run speed.
     const bool sprinting =
@@ -180,17 +137,17 @@ float Player::getRemainingTime() const {
 }
 
 void Player::becomeSuper() {
-    if (dynamic_cast<SuperState*>(state.get()) || dynamic_cast<FireState*>(state.get()) || dynamic_cast<StarState*>(state.get())) return;
+    if (state->isSuper() || state->isFire() || state->isStar()) return;
     setState(std::make_unique<SuperState>());
 }
 
 void Player::becomeFire() {
-    if (dynamic_cast<FireState*>(state.get()) || dynamic_cast<StarState*>(state.get())) return;
+    if (state->isFire() || state->isStar()) return;
     setState(std::make_unique<FireState>());
 }
 
 void Player::becomeStar() {
-    if (dynamic_cast<StarState*>(state.get())) return;
+    if (state->isStar()) return;
     state->onExit(*this);
     auto prevState = std::move(state);
     state = std::make_unique<StarState>(std::move(prevState));

@@ -1,5 +1,4 @@
 #include "Model/Enemy.h"
-#include "Model/Player.h"
 
 namespace model {
 
@@ -31,7 +30,7 @@ void Enemy::update(float deltaTime) {
     }
 }
 
-void Enemy::onStomped(Player& /* player */) {
+void Enemy::onStomped(Entity& /* player */) {
     isStomped = true;
     despawnTimer = 1.0f; // Default 1 second before despawning after stomped
 }
@@ -43,6 +42,10 @@ void Enemy::onHit(Entity& /* source */) {
 
 int Enemy::getDamageValue() const {
     return damageValue;
+}
+
+bool Enemy::isSquished() const {
+    return isStomped;
 }
 
 }

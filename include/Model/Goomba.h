@@ -10,7 +10,7 @@ public:
     Goomba(Vector2 position);
 
     void updateAI(float deltaTime) override;
-    void onStomped(Player& player) override;
+    void onStomped(Entity& player) override;
     void onTileCollision(char tile, CollisionType side) override;
 
 private:

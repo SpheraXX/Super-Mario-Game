@@ -4,8 +4,6 @@
 #include "Model/Entity.h"
 #include "Model/CollisionResult.h"
 
-namespace sf { class RenderWindow; }
-
 namespace model {
 
 enum class AnimState {
@@ -25,16 +23,22 @@ public:
     ~Character() override = default;
 
     void update(float deltaTime) override;
-    virtual void render(sf::RenderWindow& window);
 
     virtual void onCollision(Entity* other);
-    virtual void takeDamage(int amount);
+    virtual void takeDamage(int amount) override;
 
     // Enter the death animation: the body pops up (if bounce) then falls away.
     // Dying bodies ignore tile collisions and stop all other interaction until the
     // level removes them after the fall.
     virtual void beginDying(bool bounce);
-    bool isDying() const;
+    bool isDying() const override;
+    bool isAlive() const override;
+
+    // Movement tuning: subclasses (Mario/Luigi) override with their own numbers so the
+    // player controller never needs to know which character it is driving.
+    virtual float getWalkSpeed() const;
+    virtual float getRunSpeed() const;
+    virtual float getJumpForce() const;
 
     void applyGravity(float deltaTime);
     virtual void move();
@@ -45,8 +49,6 @@ public:
 
     int getDirection() const;
     void setDirection(int d);
-
-    bool isAlive() const;
 
     AnimState getAnimState() const;
     void setAnimState(AnimState state);

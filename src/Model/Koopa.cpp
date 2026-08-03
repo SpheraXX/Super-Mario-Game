@@ -1,5 +1,4 @@
 #include "Model/Koopa.h"
-#include "Model/Player.h"
 
 namespace model {
 
@@ -25,15 +24,14 @@ void Koopa::updateAI(float /* deltaTime */) {
     }
 }
 
-void Koopa::onStomped(Player& player) {
+void Koopa::onStomped(Entity& player) {
     if (state == KoopaState::Walking) {
         state = KoopaState::ShellIdle;
         velocity.x = 0.0f;
         hitbox.height = 16.0f; // Shrink to shell size
         Vector2 sz = getSize();
         sz.y = 16.0f;
-        setSize(sz); // Wait, setSize doesn't exist in Entity, let me check. Entity has getSize but no setSize. I'll need to modify Entity.h to add setSize or just access size directly if protected. Wait, size is private in Entity. I'll just adjust position.
-        // I will add setSize to Entity or just use a workaround. Actually, let's just add setSize to Entity.
+        setSize(sz);
     } else if (state == KoopaState::ShellIdle) {
         state = KoopaState::ShellSpinning;
         // Kick direction based on player relative position
@@ -47,13 +45,15 @@ void Koopa::onStomped(Player& player) {
     }
 }
 
+bool Koopa::isShell() const {
+    return state != KoopaState::Walking;
+}
+
 void Koopa::onCollision(Entity& other, CollisionType /* side */) {
     if (state == KoopaState::ShellSpinning) {
-        if (auto* enemy = dynamic_cast<Enemy*>(&other)) {
-            // Note: avoid hitting self
-            if (enemy != this) {
-                enemy->onHit(*this);
-            }
+        // A spinning shell knocks out any other enemy it touches.
+        if (&other != this && other.hitbox.layer == CollisionLayer::Enemy) {
+            other.onHit(*this);
         }
     }
 }

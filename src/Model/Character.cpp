@@ -1,8 +1,6 @@
 #include "Model/Character.h"
 #include "Model/TileMap.h"
 
-#include <SFML/Graphics/RenderWindow.hpp>
-
 namespace model {
 
 Character::Character(Vector2 position, Vector2 size)
@@ -39,10 +37,19 @@ void Character::update(float deltaTime) {
     setPosition(pos);
 }
 
-void Character::render(sf::RenderWindow& /* window */) {
+void Character::onCollision(Entity* /* other */) {
 }
 
-void Character::onCollision(Entity* /* other */) {
+float Character::getWalkSpeed() const {
+    return 180.0f;
+}
+
+float Character::getRunSpeed() const {
+    return 320.0f;
+}
+
+float Character::getJumpForce() const {
+    return -450.0f;
 }
 
 void Character::takeDamage(int amount) {

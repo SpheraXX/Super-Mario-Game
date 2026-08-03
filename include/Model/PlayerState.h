@@ -27,6 +27,11 @@ public:
     virtual PlayerState* takeDamage(Player& player) = 0;
     virtual PlayerAnimState getAnimState(const Player& player) const = 0;
 
+    // Power-up queries so the player never checks concrete state types.
+    virtual bool isSuper() const { return false; }
+    virtual bool isFire() const { return false; }
+    virtual bool isStar() const { return false; }
+
     virtual const char* getStateName() const = 0;
     virtual float getRemainingTime() const { return -1.0f; }
 
@@ -52,6 +57,7 @@ public:
 
     PlayerState* takeDamage(Player& player) override;
     PlayerAnimState getAnimState(const Player& player) const override;
+    bool isSuper() const override { return true; }
     const char* getStateName() const override { return "Super"; }
 };
 
@@ -64,6 +70,7 @@ public:
     PlayerState* takeDamage(Player& player) override;
     PlayerAnimState getAnimState(const Player& player) const override;
 
+    bool isFire() const override { return true; }
     bool canShoot() const;
     void shoot();
 
@@ -87,6 +94,7 @@ public:
 
     std::unique_ptr<PlayerState> checkExpiration() override;
 
+    bool isStar() const override { return true; }
     const char* getStateName() const override { return "Star"; }
     float getRemainingTime() const override { return duration; }
 

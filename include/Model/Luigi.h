@@ -9,9 +9,13 @@ class Luigi : public Player {
 public:
     Luigi(Vector2 position);
 
+    float getWalkSpeed() const override;
+    float getRunSpeed() const override;
+    float getJumpForce() const override;
+
     static constexpr float WalkSpeed = 160.0f;
     static constexpr float RunSpeed = 350.0f;
-    static constexpr float JumpForce = -540.0f;
+    static constexpr float JumpForce = -720.0f;
 };
 
 }

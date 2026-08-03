@@ -4,11 +4,10 @@
 #include "Controller/GameState.h"
 #include "Model/TileMap.h"
 #include "View/TileMapRenderer.h"
+#include "View/EntityRendererRegistry.h"
+#include "View/HudRenderer.h"
 #include "Model/Entity.h"
 #include "Model/CollisionManager.h"
-
-#include <SFML/Graphics/Font.hpp>
-#include <SFML/Graphics/Texture.hpp>
 
 #include <memory>
 #include <vector>
@@ -33,12 +32,8 @@ private:
     std::unique_ptr<view::TileMapRenderer> renderer;
     bool mapLoaded = false;
 
-    sf::Font font;
-    bool fontLoaded = false;
-
-    sf::Texture charsTexture;
-    sf::Texture enemiesTexture;
-    sf::Texture blocksTexture;  // Bug 5 Fix: used to draw CoinBlock with real art
+    std::unique_ptr<view::EntityRendererRegistry> entityRenderers;
+    std::unique_ptr<view::HudRenderer> hudRenderer;
 
     std::unique_ptr<model::CollisionManager> collisionManager;
     std::vector<std::unique_ptr<model::Entity>> entities;

@@ -1,30 +1,15 @@
 #include "Model/CollisionManager.h"
 #include "Model/Entity.h"
 #include "Model/TileMap.h"
-#include "Model/Player.h"
-#include "Model/Enemy.h"
-#include "Model/Character.h"
-#include "Model/Block.h"
-#include "Model/CoinBlock.h"
-#include "Model/GameManager.h"
 
 namespace model {
-
-namespace {
-// Characters in their death animation ignore all collisions: they pop through the
-// world until the level removes them.
-bool isDyingBody(const Entity* entity) {
-    const auto* character = dynamic_cast<const Character*>(entity);
-    return character != nullptr && character->isDying();
-}
-}
 
 CollisionManager::CollisionManager(TileMap* tileMap) : tileMap(tileMap) {}
 
 void CollisionManager::update(std::vector<Entity*>& entities, float deltaTime) {
-    // Pass 1: Entity vs TileMap
+    // Pass 1: Entity vs TileMap. Dying bodies pop through the world, so they skip it.
     for (auto* entity : entities) {
-        if (!entity || !entity->isActive || isDyingBody(entity)) continue;
+        if (!entity || !entity->isActive || entity->isDying()) continue;
         entity->isGrounded = false;
         processTileCollisions(entity, deltaTime);
     }
@@ -112,11 +97,11 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
 void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
     for (std::size_t i = 0; i < entities.size(); ++i) {
         Entity* a = entities[i];
-        if (!a || !a->isActive || a->hitbox.isTrigger || isDyingBody(a)) continue;
+        if (!a || !a->isActive || a->hitbox.isTrigger || a->isDying()) continue;
 
         for (std::size_t j = i + 1; j < entities.size(); ++j) {
             Entity* b = entities[j];
-            if (!b || !b->isActive || b->hitbox.isTrigger || isDyingBody(b)) continue;
+            if (!b || !b->isActive || b->hitbox.isTrigger || b->isDying()) continue;
 
             if (a->hitbox.intersects(b->hitbox, a->getPosition(), b->getPosition())) {
                 CollisionType sideA = calculateSide(*a, *b);
@@ -144,7 +129,8 @@ CollisionType CollisionManager::calculateSide(const Entity& a, const Entity& b) 
 }
 
 void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionType sideA) {
-    // Notify both entities of the collision
+    // Notify both entities of the collision: each one reacts through its own hooks
+    // (e.g. CoinBlock collects its coin when bumped from below).
     a.onCollision(b, sideA);
     
     // Invert side for b
@@ -158,81 +144,61 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
     }
     b.onCollision(a, sideB);
 
-    // Resolve Player vs Enemy specifically
-    Player* player = dynamic_cast<Player*>(&a);
-    Enemy* enemy = dynamic_cast<Enemy*>(&b);
-    if (!player && !enemy) {
-        player = dynamic_cast<Player*>(&b);
-        enemy = dynamic_cast<Enemy*>(&a);
-    }
-    if (player && enemy) {
-        // Sides from the player's perspective
-        const CollisionType playerSide = (player == &a) ? sideA : sideB;
+    // Routing uses the collision layers instead of concrete types. Exactly one of the
+    // two entities is the player; the other decides how the pair interacts.
+    const bool aIsPlayer = a.hitbox.layer == CollisionLayer::Player;
+    const bool bIsPlayer = b.hitbox.layer == CollisionLayer::Player;
+    if (aIsPlayer == bIsPlayer) return;
+
+    Entity* player = aIsPlayer ? &a : &b;
+    Entity* other = aIsPlayer ? &b : &a;
+    const CollisionType playerSide = (player == &a) ? sideA : sideB;
+
+    if (other->hitbox.layer == CollisionLayer::Enemy) {
         if (playerSide == CollisionType::Bottom) {
-            // Player landed on top of the enemy: squish/stomp it and bounce.
-            enemy->onStomped(*player);
-            Vector2 vel = player->getVelocity();
-            vel.y = -350.0f; // Bounce force
-            player->setVelocity(vel);
+            // Player landed on top of the enemy: squash it and bounce.
+            other->onStomped(*player);
+            player->setVelocity({player->getVelocity().x, -350.0f}); // Bounce force
         } else {
             // Player hit the enemy from the side or from below: take damage.
-            player->takeDamage(enemy->getDamageValue());
+            player->takeDamage(other->getDamageValue());
         }
-        return;
-    }
-
-    // Resolve Player vs Block: solid blocks stop the player and react to bumps.
-    Player* blockPlayer = dynamic_cast<Player*>(&a);
-    Block* block = dynamic_cast<Block*>(&b);
-    if (!blockPlayer && !block) {
-        blockPlayer = dynamic_cast<Player*>(&b);
-        block = dynamic_cast<Block*>(&a);
-    }
-    if (blockPlayer && block && block->isSolid()) {
-        const CollisionType playerSide = (blockPlayer == &a) ? sideA : sideB;
-        pushOutOfBlock(*blockPlayer, *block, playerSide);
+    } else if (other->isSolid()) {
+        // Solid blocks stop the player (the bumped block reacts through onCollision).
+        pushOutOfBlock(*player, *other, playerSide);
     }
 }
 
-void CollisionManager::pushOutOfBlock(Player& player, Block& block, CollisionType playerSide) {
-    const Vector2 blockPos = block.getPosition();
-    const Hitbox& blockBox = block.hitbox;
+void CollisionManager::pushOutOfBlock(Entity& mover, const Entity& blocker, CollisionType moverSide) {
+    // Side semantics: moverSide is the side of the mover that is in contact, i.e.
+    // Bottom = the mover's bottom face rests on the blocker's top (stand on it),
+    // Top = the mover's top face hit the blocker's bottom (bump, stop the ascent).
+    const Vector2 blockerPos = blocker.getPosition();
+    const Hitbox& blockerBox = blocker.hitbox;
 
-    Vector2 newPos = player.getPosition();
-    switch (playerSide) {
-        case CollisionType::Top:
-            // Landed on the block: stand on top of it.
-            newPos.y = blockPos.y + blockBox.offset.y - player.hitbox.offset.y - player.hitbox.height;
-            player.setVelocity({player.getVelocity().x, 0.0f});
-            player.isGrounded = true;
-            break;
+    Vector2 newPos = mover.getPosition();
+    switch (moverSide) {
         case CollisionType::Bottom:
-            // Hit the block from below: bump it, stop the ascent.
-            newPos.y = blockPos.y + blockBox.offset.y + blockBox.height - player.hitbox.offset.y;
-            player.setVelocity({player.getVelocity().x, 0.0f});
-            bumpBlock(block);
+            newPos.y = blockerPos.y + blockerBox.offset.y - mover.hitbox.offset.y - mover.hitbox.height;
+            mover.setVelocity({mover.getVelocity().x, 0.0f});
+            mover.isGrounded = true;
+            break;
+        case CollisionType::Top:
+            newPos.y = blockerPos.y + blockerBox.offset.y + blockerBox.height - mover.hitbox.offset.y;
+            mover.setVelocity({mover.getVelocity().x, 0.0f});
             break;
         case CollisionType::Left:
-            newPos.x = blockPos.x + blockBox.offset.x - player.hitbox.offset.x - player.hitbox.width;
-            player.setVelocity({0.0f, player.getVelocity().y});
+            newPos.x = blockerPos.x + blockerBox.offset.x - mover.hitbox.offset.x - mover.hitbox.width;
+            mover.setVelocity({0.0f, mover.getVelocity().y});
             break;
         case CollisionType::Right:
-            newPos.x = blockPos.x + blockBox.offset.x + blockBox.width - player.hitbox.offset.x;
-            player.setVelocity({0.0f, player.getVelocity().y});
+            newPos.x = blockerPos.x + blockerBox.offset.x + blockerBox.width - mover.hitbox.offset.x;
+            mover.setVelocity({0.0f, mover.getVelocity().y});
             break;
         default:
             return;
     }
-    player.setPosition(newPos);
-}
-
-void CollisionManager::bumpBlock(Block& block) {
-    if (auto* coinBlock = dynamic_cast<CoinBlock*>(&block)) {
-        if (coinBlock->hasCoin()) {
-            coinBlock->collectCoin();
-            GameManager::instance().addScore(200);
-        }
-    }
+    mover.setPosition(newPos);
 }
 
 }

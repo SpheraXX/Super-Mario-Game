@@ -10,7 +10,7 @@ public:
     Block(Vector2 position, Vector2 size, char tileSymbol);
 
     char getTileSymbol() const;
-    bool isSolid() const;
+    bool isSolid() const override;
 
 private:
     char tileSymbol;

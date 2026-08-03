@@ -18,7 +18,7 @@ void Goomba::updateAI(float /* deltaTime */) {
     velocity.x = WalkSpeed * getDirection();
 }
 
-void Goomba::onStomped(Player& /* player */) {
+void Goomba::onStomped(Entity& /* player */) {
     isStomped = true;
     despawnTimer = 0.5f; // Squish sprite shows for 0.5 seconds
     hitbox.isTrigger = true; // Disable solid collision

@@ -2,12 +2,13 @@
 #define CONTROLLER_PLAYSTATE_H
 
 #include "Controller/GameState.h"
-#include "Model/TileMap.h"
-#include "View/TileMapRenderer.h"
-#include "View/EntityRendererRegistry.h"
+#include "Model/Map/TileMap.h"
+#include "View/Map/TileMapRenderer.h"
+#include "View/Base/EntityRendererRegistry.h"
+#include "View/HitboxRenderer.h"
 #include "View/HudRenderer.h"
 #include "Model/Entity.h"
-#include "Model/CollisionManager.h"
+#include "Model/Core/CollisionManager.h"
 
 #include <memory>
 #include <vector>
@@ -23,7 +24,7 @@ public:
     void onEnter() override;
     void handleEvent(const sf::Event& event) override;
     void update(float deltaTime) override;
-    void render(sf::RenderWindow& window) override;
+    void render(sf::RenderTarget& window) override;
 
 private:
     void resetLevel();
@@ -34,6 +35,10 @@ private:
 
     std::unique_ptr<view::EntityRendererRegistry> entityRenderers;
     std::unique_ptr<view::HudRenderer> hudRenderer;
+
+    // Debug hitbox overlay, toggled with H.
+    view::HitboxRenderer hitboxRenderer;
+    bool showHitboxes = true;
 
     std::unique_ptr<model::CollisionManager> collisionManager;
     std::vector<std::unique_ptr<model::Entity>> entities;

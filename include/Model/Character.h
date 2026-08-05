@@ -2,7 +2,7 @@
 #define MODEL_CHARACTER_H
 
 #include "Model/Entity.h"
-#include "Model/CollisionResult.h"
+#include "Model/Core/CollisionResult.h"
 
 namespace model {
 

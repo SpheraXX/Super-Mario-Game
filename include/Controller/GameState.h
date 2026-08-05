@@ -4,7 +4,7 @@
 #include <SFML/Window/Event.hpp>
 
 namespace sf {
-class RenderWindow;
+class RenderTarget;
 }
 
 namespace controller {
@@ -23,7 +23,7 @@ public:
 
     virtual void handleEvent(const sf::Event& event) = 0;
     virtual void update(float deltaTime) = 0;
-    virtual void render(sf::RenderWindow& window) = 0;
+    virtual void render(sf::RenderTarget& window) = 0;
 
     // When true, the state directly below this one is still rendered underneath
     // (used for overlay screens such as a future PauseState).

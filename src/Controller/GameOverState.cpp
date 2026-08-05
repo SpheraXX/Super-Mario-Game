@@ -3,11 +3,11 @@
 #include "Controller/AppEngine.h"
 #include "Controller/MenuState.h"
 #include "Controller/StateManager.h"
-#include "Model/GameManager.h"
+#include "Model/Core/GameManager.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Rect.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
 
 #include <memory>
@@ -40,7 +40,7 @@ void GameOverState::update(float deltaTime) {
     (void)deltaTime;
 }
 
-void GameOverState::render(sf::RenderWindow& window) {
+void GameOverState::render(sf::RenderTarget& window) {
     std :: cerr << "Rendering GameOverState" << std :: endl;
     window.clear(sf::Color(60, 10, 10));
 

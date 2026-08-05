@@ -8,7 +8,7 @@ namespace view {
 HudRenderer::HudRenderer() : fontLoaded(font.openFromFile("assets/fonts/Tuffy.ttf")) {
 }
 
-void HudRenderer::render(sf::RenderWindow& window) const {
+void HudRenderer::render(sf::RenderTarget& window) const {
     if (!fontLoaded) return;
 
     sf::Text levelLabel(font, "DEBUG LEVEL", 22);

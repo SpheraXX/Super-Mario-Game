@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace sf {
-class RenderWindow;
+class RenderTarget;
 }
 
 namespace controller {
@@ -27,7 +27,7 @@ public:
 
     void handleEvent(const sf::Event& event);
     void update(float deltaTime);
-    void render(sf::RenderWindow& window);
+    void render(sf::RenderTarget& window);
 
     bool empty() const;
 

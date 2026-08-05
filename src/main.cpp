@@ -1,7 +1,7 @@
-#include "Model/TileMap.h"
-#include "Model/Mario.h"
-#include "Model/Luigi.h"
-#include "View/TileMapRenderer.h"
+#include "Model/Map/TileMap.h"
+#include "Model/Player/Mario.h"
+#include "Model/Player/Luigi.h"
+#include "View/Map/TileMapRenderer.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>

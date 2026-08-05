@@ -1,5 +1,5 @@
 #include "Model/Character.h"
-#include "Model/TileMap.h"
+#include "Model/Map/TileMap.h"
 
 namespace model {
 

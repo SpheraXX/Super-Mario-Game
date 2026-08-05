@@ -1,6 +1,6 @@
 #include "Controller/StateManager.h"
 
-#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
 
 #include <iostream>
 
@@ -73,7 +73,7 @@ void StateManager::update(float deltaTime) {
     }
 }
 
-void StateManager::render(sf::RenderWindow& window) {
+void StateManager::render(sf::RenderTarget& window) {
     if (stack.empty()) {
         return;
     }

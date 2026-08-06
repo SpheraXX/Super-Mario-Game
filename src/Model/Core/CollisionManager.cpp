@@ -1,8 +1,34 @@
 #include "Model/Core/CollisionManager.h"
+#include "Model/Core/BlockHitEvent.h"
 #include "Model/Entity.h"
 #include "Model/Map/TileMap.h"
 
+#include <algorithm>
+#include <cmath>
+
 namespace model {
+
+namespace {
+// Side-detection bias in the player's favour: a collision counts as horizontal only when
+// the horizontal overlap is clearly dominant. Near-ties resolve as vertical, i.e. as a
+// stomp — so an enemy that clips the player's feet for one frame cannot flip into a
+// side hit (and damage) frame-to-frame.
+constexpr float StompBias = 0.75f;
+
+// A tile the player can stand on. The static ground is 'G', and block cells ('C'/'B'/'#')
+// always hold a static solid entity, so landing on them is equivalent. Grounding on these
+// cells keeps isGrounded stable on top of blocks (gravity + animation never flap).
+bool isGroundTile(char symbol) {
+    return symbol == 'G' || symbol == 'C' || symbol == 'B' || symbol == '#';
+}
+
+// Minimum upward speed (world units/s) for a top-face block contact to count as a bump.
+// A head that only grazes a block at the top of a jump is physically stopped (the push-out
+// below always applies) but is too weak to open it. Mario's full-hold jump touches a block
+// 5 tiles above his feet with only ~162px/s, while a real 4-tile bump lands at ~360px/s —
+// this gate is what keeps the "barely 4 blocks" jump from opening blocks 5 tiles up.
+constexpr float MinBumpSpeed = 200.0f;
+}
 
 CollisionManager::CollisionManager(TileMap* tileMap) : tileMap(tileMap) {}
 
@@ -33,17 +59,25 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
     float centerY = pos.y + hb.offset.y + hb.height / 2.0f;
     float centerX = pos.x + hb.offset.x + hb.width / 2.0f;
 
-    // Check downwards
+    // Check downwards. The foot spans several columns when running along block edges, so
+    // probe the left, centre and right edges of the foot — a single centre column let the
+    // player drop through corners and made isGrounded flap on platforms. Block cells act
+    // as ground here (see isGroundTile); the entity pass still does the real push-out.
     if (vel.y >= 0.0f) {
-        std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
+        const std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
 
-        if (col < tileMap->getColumns() && row < TileMap::Rows) {
-            if (TileMap::isSolidTile(tileMap->getTile(row, col))) {
-                pos.y = (TileMap::Rows - 1 - row) * TileMap::TileHeight - hb.height - hb.offset.y;
-                vel.y = 0.0f;
-                entity->isGrounded = true;
-                entity->onTileCollision(tileMap->getTile(row, col), CollisionType::Bottom);
+        if (row < TileMap::Rows) {
+            const float footProbes[3] = {leftX, centerX, rightX};
+            for (const float probeX : footProbes) {
+                const std::size_t col = static_cast<std::size_t>(probeX / TileMap::TileWidth);
+
+                if (col < tileMap->getColumns() && isGroundTile(tileMap->getTile(row, col))) {
+                    pos.y = (TileMap::Rows - 1 - row) * TileMap::TileHeight - hb.height - hb.offset.y;
+                    vel.y = 0.0f;
+                    entity->isGrounded = true;
+                    entity->onTileCollision(tileMap->getTile(row, col), CollisionType::Bottom);
+                    break;
+                }
             }
         }
     }
@@ -99,23 +133,81 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
         Entity* a = entities[i];
         if (!a || !a->isActive || a->hitbox.isTrigger || a->isDying()) continue;
 
+        // The player can overlap several solid blocks in one frame (a head pressed into a
+        // row of bricks). Only the deepest contact is resolved — ties go to the block that
+        // contains the player's centre — so a stale overlap with a neighbour can never
+        // shove the player sideways, and exactly one block gets bumped (the one above and
+        // in the middle of him, not the leftmost in spawn order).
+        Entity* bestBlock = nullptr;
+        float bestScore = 0.0f;
+        CollisionType bestSide = CollisionType::None;
+
         for (std::size_t j = i + 1; j < entities.size(); ++j) {
             Entity* b = entities[j];
             if (!b || !b->isActive || b->hitbox.isTrigger || b->isDying()) continue;
 
-            if (a->hitbox.intersects(b->hitbox, a->getPosition(), b->getPosition())) {
-                CollisionType sideA = calculateSide(*a, *b);
+            if (!a->hitbox.intersects(b->hitbox, a->getPosition(), b->getPosition())) continue;
+
+            const CollisionType sideA = calculateSide(*a, *b);
+            const bool playerInvolved =
+                a->hitbox.layer == CollisionLayer::Player || b->hitbox.layer == CollisionLayer::Player;
+            const bool blockInvolved = a->isSolid() || b->isSolid();
+
+            if (playerInvolved && blockInvolved) {
+                // Defer: remember the deepest candidate instead of resolving right away.
+                const Vector2 overlap =
+                    a->hitbox.getOverlap(b->hitbox, a->getPosition(), b->getPosition());
+                const float score = std::fabs(overlap.y);
+                bool candidate = false;
+                if (!bestBlock) {
+                    candidate = true;
+                } else if (score > bestScore + 0.001f) {
+                    candidate = true;
+                } else if (std::fabs(score - bestScore) <= 0.001f) {
+                    // Tie: prefer the block containing the player's centre.
+                    const Entity* player = a->hitbox.layer == CollisionLayer::Player ? a : b;
+                    const Entity* other = (player == a) ? b : a;
+                    const float playerCenterX =
+                        player->getPosition().x + player->hitbox.offset.x + player->hitbox.width / 2.0f;
+                    const float bestLeft = bestBlock->getPosition().x + bestBlock->hitbox.offset.x;
+                    const float newLeft = other->getPosition().x + other->hitbox.offset.x;
+                    const bool bestContains =
+                        playerCenterX >= bestLeft && playerCenterX < bestLeft + bestBlock->hitbox.width;
+                    const bool newContains =
+                        playerCenterX >= newLeft && playerCenterX < newLeft + other->hitbox.width;
+                    candidate = newContains && !bestContains;
+                }
+                if (candidate) {
+                    bestBlock = b;
+                    bestScore = score;
+                    bestSide = sideA;
+                }
+            } else {
                 resolveEntityInteraction(*a, *b, sideA);
             }
+        }
+
+        // Resolve the single best player-vs-block contact. Neighbouring blocks that only
+        // overlapped because of the pre-push positions are intentionally skipped.
+        if (bestBlock) {
+            resolveEntityInteraction(*a, *bestBlock, bestSide);
         }
     }
 }
 
 CollisionType CollisionManager::calculateSide(const Entity& a, const Entity& b) const {
     Vector2 overlap = a.hitbox.getOverlap(b.hitbox, a.getPosition(), b.getPosition());
-    
-    // The smaller overlap axis dictates the collision side
-    if (overlap.x < overlap.y) {
+
+    // Compare the penetration MAGNITUDES, not the signed values. getOverlap returns
+    // negative penetrations when two same-sized boxes are exactly aligned (e.g. a player
+    // perfectly under a block: overlap.x = -blockWidth), which previously made the signed
+    // comparison pick the horizontal axis and shove the player a full block sideways.
+    const float overlapX = std::fabs(overlap.x);
+    const float overlapY = std::fabs(overlap.y);
+
+    // The smaller overlap axis dictates the collision side; near-ties favour the vertical
+    // (stomp) reading so the player is never punished for a sub-pixel clip.
+    if (overlapX < overlapY * StompBias) {
         // Horizontal collision
         float aCenterX = a.getPosition().x + a.hitbox.offset.x + a.hitbox.width / 2.0f;
         float bCenterX = b.getPosition().x + b.hitbox.offset.x + b.hitbox.width / 2.0f;
@@ -164,8 +256,14 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
             player->takeDamage(other->getDamageValue());
         }
     } else if (other->isSolid()) {
-        // Solid blocks stop the player (the bumped block reacts through onCollision).
+        // Solid blocks stop the player (push-out). A bump from below also dispatches the
+        // block-hit event — but only when the head is moving into the block fast enough
+        // (a graze at the top of the arc is too weak to trigger it).
+        const float upwardSpeed = std::max(0.0f, -player->getVelocity().y);
         pushOutOfBlock(*player, *other, playerSide);
+        if (playerSide == CollisionType::Top && upwardSpeed >= MinBumpSpeed) {
+            other->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
+        }
     }
 }
 
@@ -180,23 +278,27 @@ void CollisionManager::pushOutOfBlock(Entity& mover, const Entity& blocker, Coll
     switch (moverSide) {
         case CollisionType::Bottom:
             newPos.y = blockerPos.y + blockerBox.offset.y - mover.hitbox.offset.y - mover.hitbox.height;
-            mover.setVelocity({mover.getVelocity().x, 0.0f});
+            // Only kill the velocity component that points INTO the block: a player
+            // brushing a block while moving the other way keeps his momentum (fixes the
+            // "jump at high speed loses all momentum" chain where a side graze and a
+            // stale vertical overlap each zeroed one axis).
+            if (mover.getVelocity().y > 0.0f) mover.setVelocity({mover.getVelocity().x, 0.0f});
             mover.isGrounded = true;
             break;
         case CollisionType::Top:
             newPos.y = blockerPos.y + blockerBox.offset.y + blockerBox.height - mover.hitbox.offset.y;
-            mover.setVelocity({mover.getVelocity().x, 0.0f});
+            if (mover.getVelocity().y < 0.0f) mover.setVelocity({mover.getVelocity().x, 0.0f});
             break;
         case CollisionType::Right:
             // The mover's right face is in contact: it sits to the LEFT of the blocker,
             // so its right edge is pinned to the blocker's left edge.
             newPos.x = blockerPos.x + blockerBox.offset.x - mover.hitbox.offset.x - mover.hitbox.width;
-            mover.setVelocity({0.0f, mover.getVelocity().y});
+            if (mover.getVelocity().x > 0.0f) mover.setVelocity({0.0f, mover.getVelocity().y});
             break;
         case CollisionType::Left:
             // The mover's left face is in contact: it sits to the RIGHT of the blocker.
             newPos.x = blockerPos.x + blockerBox.offset.x + blockerBox.width - mover.hitbox.offset.x;
-            mover.setVelocity({0.0f, mover.getVelocity().y});
+            if (mover.getVelocity().x < 0.0f) mover.setVelocity({0.0f, mover.getVelocity().y});
             break;
         default:
             return;

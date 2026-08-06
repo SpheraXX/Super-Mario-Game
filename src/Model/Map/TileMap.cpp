@@ -48,7 +48,10 @@ std::size_t TileMap::getColumns() const {
 }
 
 bool TileMap::isSolidTile(char symbol) {
-    return symbol != '.' && symbol != CloudSymbol && symbol != SmallTreeSymbol;
+    // Only the ground is static tile geometry now: 'C', 'B', 'M', 'E', 'K' and '#'
+    // spawn as entities (blocks and characters) that manage their own collision, and
+    // scenery ('O', 'T') is decorative.
+    return symbol == 'G';
 }
 
 }

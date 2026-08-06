@@ -7,27 +7,35 @@
 #include <SFML/Graphics/Sprite.hpp>
 
 #include <cmath>
+#include <cstdint>
 
 namespace view {
 
 namespace {
 // Atlas coordinates of the coin-block tiles in blocks.png (16x16 source tiles).
+// The opened (used) block sits 4 tiles to the right of the ? block in the atlas.
 constexpr int QuestionBlockAtlasCol = 5;
-constexpr int UsedBlockAtlasCol = 6;
+constexpr int UsedBlockAtlasCol = 9;
 constexpr int BlockAtlasRow = 7;
+
+// Coin sprite in super_mario_asset.png (16x16 source tile, gold circle with outline).
+constexpr int CoinAtlasX = 96;
+constexpr int CoinAtlasY = 532;
 }
 
-CoinBlockRenderer::CoinBlockRenderer() : textureLoaded(texture.loadFromFile("assets/blocks.png")) {
+CoinBlockRenderer::CoinBlockRenderer()
+    : textureLoaded(texture.loadFromFile("assets/blocks.png")),
+      coinTextureLoaded(coinTexture.loadFromFile("assets/super_mario_asset.png")) {
     texture.setSmooth(false);
+    coinTexture.setSmooth(false);
 }
 
 void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
                                     const model::CoinBlock& coinBlock) const {
     if (!textureLoaded) return;
 
-    // (5, 7) is the same coin-block tile the map renderer uses for 'C' tiles; once the
-    // coin is collected the block swaps to the plain used block at (6, 7).
-    const int atlasCol = coinBlock.hasCoin() ? QuestionBlockAtlasCol : UsedBlockAtlasCol;
+    // The ? block while it still holds a coin, the plain used block afterwards.
+    const int atlasCol = coinBlock.isOpened() ? UsedBlockAtlasCol : QuestionBlockAtlasCol;
 
     // Block tiles are 16x16 source pixels (one tile), unlike the 16x32 character frames.
     sf::Sprite sprite(texture);
@@ -35,8 +43,26 @@ void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
     sprite.setScale({SpriteScaleX, SpriteScaleY});
     sprite.setOrigin({0.0f, 0.0f});
     sprite.setPosition({std::round(coinBlock.getPosition().x),
-                        std::round(coinBlock.getPosition().y)});
+                        std::round(coinBlock.getPosition().y - coinBlock.getBounceOffsetY())});
     window.draw(sprite);
+
+    // The collected coin rises ~1.5 tiles out of the block and fades away as the pop
+    // animation finishes. The model owns the timer; the renderer only draws it.
+    if (coinTextureLoaded && coinBlock.isCoinPopping()) {
+        const float progress = coinBlock.getCoinPopProgress();
+        const float rise = progress * 48.0f;  // world units (one tile = 32)
+        sf::Sprite coin(coinTexture);
+        coin.setTextureRect({{CoinAtlasX, CoinAtlasY}, {16, 16}});
+        coin.setScale({SpriteScaleX, SpriteScaleY});
+        coin.setOrigin({0.0f, 0.0f});
+        coin.setPosition({std::round(coinBlock.getPosition().x),
+                          std::round(coinBlock.getPosition().y - rise)});
+        if (progress > 0.75f) {  // fade out over the last quarter
+            const float fade = (1.0f - progress) / 0.25f;
+            coin.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(fade * 255.0f)));
+        }
+        window.draw(coin);
+    }
 }
 
 }

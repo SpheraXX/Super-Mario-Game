@@ -24,10 +24,8 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath) {
     loadTileset(tilesetPath);
     loadTileset(MarioAssetPath);
 
-    registerTile('#', tilesetPath, 17 * SourceTileSize, 7 * SourceTileSize, SourceTileSize, SourceTileSize);
-    registerTile('C', tilesetPath, 5 * SourceTileSize, 7 * SourceTileSize, SourceTileSize, SourceTileSize);
-
-    // Indestructible ground block.
+    // Indestructible ground block. Note: 'C' (CoinBlock) and '#' (BrickBlock) are NOT
+    // registered here anymore — those symbols spawn as entities and render themselves.
     registerTile('G', MarioAssetPath, 0, 16, 16, 16);
     // Background scenery: passable (see TileMap::isSolidTile), color-keyed off the
     // tileset's blue backdrop.

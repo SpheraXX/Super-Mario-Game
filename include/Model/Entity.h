@@ -4,6 +4,7 @@
 #include "Model/Core/Vector2.h"
 #include "Model/Core/Hitbox.h"
 #include "Model/Core/CollisionResult.h"
+#include "Model/Core/BlockHitEvent.h"
 
 namespace model {
 
@@ -18,11 +19,14 @@ public:
 
     // Behaviour hooks with safe defaults: game code (Controller, CollisionManager) can
     // drive entities through these virtuals instead of checking concrete types.
-    virtual void handleInput() {}
+    virtual void handleInput(float deltaTime) { (void)deltaTime; }
     virtual void takeDamage(int amount) { (void)amount; }
     virtual void onStomped(Entity& stomper) { (void)stomper; }
     virtual void onHit(Entity& source) { (void)source; }
     virtual int getDamageValue() const { return 0; }
+
+    // The player bumped a solid block from below (see BlockHitEvent).
+    virtual void onBlockHit(const BlockHitEvent& event) { (void)event; }
 
     // Semantic state queries (Characters override; plain entities are alive and passable).
     virtual bool isAlive() const { return true; }

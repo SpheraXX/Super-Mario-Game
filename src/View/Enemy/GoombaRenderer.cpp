@@ -22,7 +22,10 @@ GoombaRenderer::GoombaRenderer() : SpriteEntityRenderer("assets/enemies.png") {
 }
 
 void GoombaRenderer::renderTyped(sf::RenderTarget& window, const model::Goomba& goomba) const {
-    const int frameCol = goomba.isSquished() ? GoombaSquishedFrameCol : GoombaFrameCol;
+    // A dying body shows the squished frame too, so a shell knock-out visibly changes
+    // the sprite while it pops up and falls away (a dead goomba has no walk animation).
+    const int frameCol =
+        (goomba.isSquished() || goomba.isDying()) ? GoombaSquishedFrameCol : GoombaFrameCol;
     drawCharacterFrame(window, goomba,
                        {{frameCol * 16, EnemyFrameTop}, {EnemyFrameSize, EnemyFrameSize}});
 }

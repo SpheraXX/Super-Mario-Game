@@ -35,10 +35,13 @@ public:
     bool isAlive() const override;
 
     // Movement tuning: subclasses (Mario/Luigi) override with their own numbers so the
-    // player controller never needs to know which character it is driving.
+    // player controller never needs to know which character it is driving. Jumps are
+    // continuous: the initial impulse is followed by a hold-time acceleration (getJumpAccel)
+    // capped at getMaxJumpSpeed, so a full-length hold rises exactly MaxJumpSpeed^2/2G.
     virtual float getWalkSpeed() const;
     virtual float getRunSpeed() const;
-    virtual float getJumpForce() const;
+    virtual float getMaxJumpSpeed() const;
+    virtual float getJumpAccel() const;
 
     void applyGravity(float deltaTime);
     virtual void move();

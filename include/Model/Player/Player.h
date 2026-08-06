@@ -15,7 +15,7 @@ public:
 
     void update(float deltaTime) override;
 
-    void handleInput() override;
+    void handleInput(float deltaTime) override;
     void onCollision(Entity* other) override;
     void takeDamage(int amount) override;
 
@@ -46,16 +46,36 @@ protected:
     int score;
     int coins;
     float damageCooldown;
-    // Press-edge jump tracking: jumpHeld remembers the raw button state from the
-    // previous frame so a held key cannot re-trigger a jump on landing; playerInitiatedJump
-    // marks the current ascent as started by the player (so releasing it cuts the jump,
-    // but a stomp bounce is never cut).
+    // Jump forgiveness: coyoteTime lets a jump fire shortly after leaving a platform,
+    // jumpBufferTime remembers a press made slightly before landing. Both are tiny
+    // windows (see constants) and make platforming feel far less brittle.
+    float coyoteTime = 0.0f;
+    float jumpBufferTime = 0.0f;
+    // Continuous-jump state: jumpHoldTime tracks how long the current ascent has been
+    // boosted; playerInitiatedJump marks the ascent as started by the player (so releasing
+    // the key stops the boost, but a stomp bounce is never boosted).
+    float jumpHoldTime = 0.0f;
     bool jumpHeld = false;
     bool playerInitiatedJump = false;
 
+protected:
+    static constexpr float DamageCooldownTime = 0.5f;
+    static constexpr float CoyoteTime = 0.1f;
+    static constexpr float JumpBufferTime = 0.1f;
+    static constexpr float MaxJumpHoldTime = 0.16f;
+    // First impulse of a jump (tap jump ≈ a small hop); the held key adds getJumpAccel()
+    // on top, capped at getMaxJumpSpeed(). The hold is short enough that even a full hold
+    // only rises barely over the 128px of a 4-tile wall (Mario: ≈136px) and stays clearly
+    // under the 160px of a 5-tile wall — the deliberate "barely 4 blocks" jump. The weak
+    // graze at the top of that arc is filtered by the bump-speed gate in CollisionManager.
+    static constexpr float JumpInitialSpeed = -220.0f;
+    // Horizontal inertia: velocity approaches the target speed, never snapping.
+    static constexpr float GroundAccel = 800.0f;
+    static constexpr float AirAccel = 600.0f;
+    static constexpr float Friction = 1600.0f;
+
 private:
     void syncAnimation();
-    static constexpr float DamageCooldownTime = 0.5f;
 };
 
 }

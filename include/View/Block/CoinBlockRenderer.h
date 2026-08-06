@@ -12,7 +12,8 @@ class CoinBlock;
 namespace view {
 
 // Draws a CoinBlock from the blocks tileset: the ? block while it still holds a coin,
-// the plain used block afterwards.
+// the plain used block afterwards. While the collected coin is popping out, the coin
+// sprite (from super_mario_asset.png) is drawn rising above the block.
 class CoinBlockRenderer : public TypedEntityRenderer<model::CoinBlock> {
 public:
     CoinBlockRenderer();
@@ -23,6 +24,8 @@ protected:
 private:
     sf::Texture texture;
     bool textureLoaded;
+    sf::Texture coinTexture;
+    bool coinTextureLoaded;
 };
 
 }

@@ -11,11 +11,13 @@ public:
 
     float getWalkSpeed() const override;
     float getRunSpeed() const override;
-    float getJumpForce() const override;
+    float getMaxJumpSpeed() const override;
+    float getJumpAccel() const override;
 
     static constexpr float WalkSpeed = 160.0f;
     static constexpr float RunSpeed = 350.0f;
-    static constexpr float JumpForce = -720.0f;
+    static constexpr float MaxJumpSpeed = 600.0f;
+    static constexpr float JumpAccel = 3400.0f;
 };
 
 }

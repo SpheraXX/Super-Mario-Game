@@ -11,7 +11,9 @@
 #include "Model/Enemy/Goomba.h"
 #include "Model/Enemy/Koopa.h"
 #include "Model/Block/CoinBlock.h"
+#include "Model/Block/BrickBlock.h"
 #include "View/Block/CoinBlockRenderer.h"
+#include "View/Block/BrickBlockRenderer.h"
 #include "View/Enemy/GoombaRenderer.h"
 #include "View/Enemy/KoopaRenderer.h"
 #include "View/Player/PlayerRenderer.h"
@@ -24,8 +26,10 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <fstream>
 #include <iostream>
 #include <string>
+#include <typeinfo>
 
 namespace controller {
 
@@ -33,6 +37,12 @@ namespace {
 std::string mapPathForLevel(int level) {
     (void)level;
     return "assets/maps/debug.map";
+}
+
+// TEMP trace instrumentation (removed after playtest).
+void trace(const std::string& msg) {
+    std::ofstream out("trace_log.txt", std::ios::app);
+    out << msg << '\n';
 }
 }
 
@@ -54,6 +64,7 @@ void PlayState::onEnter() {
     entityRenderers->registerRenderer<model::Goomba, view::GoombaRenderer>();
     entityRenderers->registerRenderer<model::Koopa, view::KoopaRenderer>();
     entityRenderers->registerRenderer<model::CoinBlock, view::CoinBlockRenderer>();
+    entityRenderers->registerRenderer<model::BrickBlock, view::BrickBlockRenderer>();
     hudRenderer = std::make_unique<view::HudRenderer>();
 
     // Initialize collision manager
@@ -61,40 +72,93 @@ void PlayState::onEnter() {
 
     // Spawn the initial set of entities (also used for respawns after a death).
     resetLevel();
+
+    // TEMP diagnostics (removed after playtest).
+    if (map.getColumns() > 0) {
+        trace("mapLoad cols=" + std::to_string(map.getColumns())
+              + " g00=" + std::string(1, map.getTile(0, 0))
+              + " m26=" + std::string(1, map.getTile(2, 6))
+              + " loaded=" + std::to_string(mapLoaded));
+    } else {
+        trace("mapLoad FAILED loaded=" + std::to_string(mapLoaded));
+    }
 }
 
-// (Re)build the entity list from scratch: a fresh Mario plus the level's enemies and
-// blocks. Called on enter and after every death (the whole level restarts).
+// (Re)build the entity list from scratch: the map file drives what spawns where.
+// 'M' = Mario, 'E' = Goomba, 'K' = Koopa, 'C' = CoinBlock, '#'/'B' = BrickBlock.
+// Every entity spawns exactly at its cell (row 0 is the bottom row), so the map
+// encodes both position and height precisely — no support scan, no surprises.
+// Called on enter and after every death (the whole level restarts).
 void PlayState::resetLevel() {
-    int TileHeight = model::TileMap::TileHeight;
+    const std::size_t tileWidth = model::TileMap::TileWidth;
+    const std::size_t tileHeight = model::TileMap::TileHeight;
+    const std::size_t rows = map.getRows();
+    const std::size_t columns = map.getColumns();
+
+    trace("resetLevel");
     entities.clear();
     player = nullptr;
 
-    // Spawn Player — place on ground row (row 1 = y = (Rows-2)*TileHeight)
-    // Ground is at tilemap rows 0-1 (bottom). In world coords bottom row 0 is at
-    // y = (Rows-1)*TileHeight. Spawn Mario one tile above ground.
-    const float groundY = static_cast<float>((model::TileMap::Rows - 2) * TileHeight
-                                             - TileHeight);
-    auto mario = std::make_unique<model::Mario>(model::Vector2{64.0f, groundY});
-    player = mario.get();
-    entities.push_back(std::move(mario));
+    bool marioSpawned = false;
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t column = 0; column < columns; ++column) {
+            const char symbol = map.getTile(row, column);
+            const model::Vector2 position{static_cast<float>(column * tileWidth),
+                                          static_cast<float>((rows - 1 - row) * tileHeight)};
+            const model::Vector2 size{static_cast<float>(tileWidth),
+                                      static_cast<float>(tileHeight)};
 
-    // Spawn Hostiles — also on the ground level, to the right of Mario
-    auto goomba = std::make_unique<model::Goomba>(model::Vector2{512.0f, groundY});
-    entities.push_back(std::move(goomba));
+            switch (symbol) {
+                case 'M':
+                    if (!marioSpawned) {
+                        trace("spawn " + std::string(typeid(model::Mario).name()) + " "
+                              + std::to_string(position.x) + " " + std::to_string(position.y));
+                        auto mario = std::make_unique<model::Mario>(position);
+                        player = mario.get();
+                        entities.push_back(std::move(mario));
+                        marioSpawned = true;
+                    }
+                    break;
+                case 'E': {
+                    trace("spawn " + std::string(typeid(model::Goomba).name()) + " "
+                          + std::to_string(position.x) + " " + std::to_string(position.y));
+                    auto goomba = std::make_unique<model::Goomba>(position);
+                    goomba->setMap(&map);  // for ledge detection
+                    entities.push_back(std::move(goomba));
+                    break;
+                }
+                case 'K': {
+                    trace("spawn " + std::string(typeid(model::Koopa).name()) + " "
+                          + std::to_string(position.x) + " " + std::to_string(position.y));
+                    auto koopa = std::make_unique<model::Koopa>(position);
+                    koopa->setMap(&map);  // for ledge detection
+                    entities.push_back(std::move(koopa));
+                    break;
+                }
+                case 'C':
+                    trace("spawn " + std::string(typeid(model::CoinBlock).name()) + " "
+                          + std::to_string(position.x) + " " + std::to_string(position.y));
+                    entities.push_back(std::make_unique<model::CoinBlock>(position, size));
+                    break;
+                case '#':
+                case 'B':
+                    trace("spawn " + std::string(typeid(model::BrickBlock).name()) + " "
+                          + std::to_string(position.x) + " " + std::to_string(position.y));
+                    entities.push_back(std::make_unique<model::BrickBlock>(position, size));
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
 
-    auto koopa = std::make_unique<model::Koopa>(model::Vector2{768.0f, groundY});
-    entities.push_back(std::move(koopa));
-
-    // Spawn CoinBlock using block texture, not a red rect.
-    // Position it 5 tiles above ground in world coords. One world tile in size so its
-    // hitbox matches the tile art it renders with.
-    const float blockY = groundY - 5.0f * TileHeight;
-    auto coinBlock = std::make_unique<model::CoinBlock>(
-        model::Vector2{320.0f, blockY},
-        model::Vector2{static_cast<float>(model::TileMap::TileWidth),
-                       static_cast<float>(model::TileMap::TileHeight)});
-    entities.push_back(std::move(coinBlock));
+    // Fallback: if the map has no 'M', keep the game playable with a fixed spawn.
+    if (!marioSpawned) {
+        const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
+        auto mario = std::make_unique<model::Mario>(model::Vector2{64.0f, groundY});
+        player = mario.get();
+        entities.push_back(std::move(mario));
+    }
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
@@ -127,7 +191,7 @@ void PlayState::update(float deltaTime) {
         // Input gathering is delegated polymorphically: only the player reacts.
         // It runs BEFORE entity->update() so gravity & integration see the correct
         // player-intended velocity, not stale values.
-        e->handleInput();
+        e->handleInput(deltaTime);
 
         e->update(deltaTime);
         activeEntities.push_back(e.get());
@@ -148,6 +212,14 @@ void PlayState::update(float deltaTime) {
         if (!e->isActive) continue;
         model::Vector2 pos = e->getPosition();
         const model::Vector2 sz = e->getSize();
+
+        // TEMP diagnostics (removed after playtest).
+        static int failFrame = 0;
+        if (!mapLoaded && ++failFrame % 10 == 0 && e.get() == player) {
+            trace("fail pos=" + std::to_string(pos.x) + "," + std::to_string(pos.y)
+                  + " g=" + std::to_string(e->isGrounded)
+                  + " vy=" + std::to_string(e->getVelocity().y));
+        }
 
         // Bodies that finished their (non-animated) death are gone for good, e.g.
         // squished Goombas after their despawn timer.

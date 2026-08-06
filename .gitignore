@@ -90,3 +90,4 @@ CMakeUserPresets.json
 /include/psa/
 /include/mbedtls/
 /log.txt
+/trace_log.txt

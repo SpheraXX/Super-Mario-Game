@@ -48,8 +48,12 @@ float Character::getRunSpeed() const {
     return 320.0f;
 }
 
-float Character::getJumpForce() const {
-    return -450.0f;
+float Character::getMaxJumpSpeed() const {
+    return 500.0f;
+}
+
+float Character::getJumpAccel() const {
+    return 3400.0f;
 }
 
 void Character::takeDamage(int amount) {

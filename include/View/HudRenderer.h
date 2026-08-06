@@ -2,7 +2,7 @@
 #define VIEW_HUDRENDERER_H
 
 #include <SFML/Graphics/Font.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
 
 namespace view {
 
@@ -11,7 +11,7 @@ namespace view {
 class HudRenderer {
 public:
     HudRenderer();
-    void render(sf::RenderWindow& window) const;
+    void render(sf::RenderTarget& window) const;
 
 private:
     sf::Font font;

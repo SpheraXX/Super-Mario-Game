@@ -1,9 +1,9 @@
 #ifndef MODEL_ENTITY_H
 #define MODEL_ENTITY_H
 
-#include "Model/Vector2.h"
-#include "Model/Hitbox.h"
-#include "Model/CollisionResult.h"
+#include "Model/Core/Vector2.h"
+#include "Model/Core/Hitbox.h"
+#include "Model/Core/CollisionResult.h"
 
 namespace model {
 

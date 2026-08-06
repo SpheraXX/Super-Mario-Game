@@ -3,11 +3,11 @@
 #include "Controller/AppEngine.h"
 #include "Controller/PlayState.h"
 #include "Controller/StateManager.h"
-#include "Model/GameManager.h"
+#include "Model/Core/GameManager.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Rect.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
 
 #include <memory>
@@ -48,7 +48,7 @@ void MenuState::update(float deltaTime) {
     (void)deltaTime;
 }
 
-void MenuState::render(sf::RenderWindow& window) {
+void MenuState::render(sf::RenderTarget& window) {
     std :: cerr << "Rendering MenuState" << std :: endl;
     window.clear(sf::Color(20, 20, 60));
 

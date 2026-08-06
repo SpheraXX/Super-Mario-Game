@@ -4,24 +4,25 @@
 #include "Controller/GameOverState.h"
 #include "Controller/MenuState.h"
 #include "Controller/StateManager.h"
-#include "Model/GameManager.h"
-#include "Model/Mario.h"
-#include "Model/Luigi.h"
-#include "Model/Player.h"
-#include "Model/Goomba.h"
-#include "Model/Koopa.h"
-#include "Model/CoinBlock.h"
-#include "View/CoinBlockRenderer.h"
-#include "View/GoombaRenderer.h"
-#include "View/KoopaRenderer.h"
-#include "View/PlayerRenderer.h"
+#include "Model/Core/GameManager.h"
+#include "Model/Player/Mario.h"
+#include "Model/Player/Luigi.h"
+#include "Model/Player/Player.h"
+#include "Model/Enemy/Goomba.h"
+#include "Model/Enemy/Koopa.h"
+#include "Model/Block/CoinBlock.h"
+#include "View/Block/CoinBlockRenderer.h"
+#include "View/Enemy/GoombaRenderer.h"
+#include "View/Enemy/KoopaRenderer.h"
+#include "View/Player/PlayerRenderer.h"
 
 #include <SFML/Graphics/Color.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/View.hpp>
 #include <SFML/Window/Keyboard.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <iostream>
 #include <string>
@@ -65,14 +66,15 @@ void PlayState::onEnter() {
 // (Re)build the entity list from scratch: a fresh Mario plus the level's enemies and
 // blocks. Called on enter and after every death (the whole level restarts).
 void PlayState::resetLevel() {
+    int TileHeight = model::TileMap::TileHeight;
     entities.clear();
     player = nullptr;
 
     // Spawn Player — place on ground row (row 1 = y = (Rows-2)*TileHeight)
     // Ground is at tilemap rows 0-1 (bottom). In world coords bottom row 0 is at
     // y = (Rows-1)*TileHeight. Spawn Mario one tile above ground.
-    const float groundY = static_cast<float>((model::TileMap::Rows - 2) * model::TileMap::TileHeight
-                                             - model::TileMap::TileHeight);
+    const float groundY = static_cast<float>((model::TileMap::Rows - 2) * TileHeight
+                                             - TileHeight);
     auto mario = std::make_unique<model::Mario>(model::Vector2{64.0f, groundY});
     player = mario.get();
     entities.push_back(std::move(mario));
@@ -87,7 +89,7 @@ void PlayState::resetLevel() {
     // Spawn CoinBlock using block texture, not a red rect.
     // Position it 5 tiles above ground in world coords. One world tile in size so its
     // hitbox matches the tile art it renders with.
-    const float blockY = groundY - 5.0f * model::TileMap::TileHeight;
+    const float blockY = groundY - 5.0f * TileHeight;
     auto coinBlock = std::make_unique<model::CoinBlock>(
         model::Vector2{320.0f, blockY},
         model::Vector2{static_cast<float>(model::TileMap::TileWidth),
@@ -106,6 +108,10 @@ void PlayState::handleEvent(const sf::Event& event) {
                 if (player && !player->isDying()) {
                     player->die(true);
                 }
+                break;
+            case sf::Keyboard::Key::H:
+                // Debug: toggle the collision-box overlay.
+                showHitboxes = !showHitboxes;
                 break;
             default:
                 break;
@@ -192,7 +198,7 @@ void PlayState::update(float deltaTime) {
     }
 }
 
-void PlayState::render(sf::RenderWindow& window) {
+void PlayState::render(sf::RenderTarget& window) {
     // Camera: follows the player horizontally, but never pans past the map fringes; it is
     // fixed vertically. The view keeps the fixed viewport set by AppEngine.
     const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
@@ -202,6 +208,11 @@ void PlayState::render(sf::RenderWindow& window) {
         cameraX = player->getPosition().x + player->getSize().x / 2.0f;
     }
     cameraX = std::clamp(cameraX, halfWidth, std::max(halfWidth, mapWidth - halfWidth));
+    // Snap the camera to a whole logical pixel. The world is composited into an offscreen
+    // target at the logical resolution and upscaled once, so logical pixels *are* the grid
+    // that matters here: integer camera positions keep every tile edge aligned (no seams)
+    // while the scroll rate stays perfectly even (WindowScale never enters this maths).
+    cameraX = std::round(cameraX);
 
     const sf::View baseView = window.getView();
     sf::View cameraView = baseView;
@@ -222,6 +233,19 @@ void PlayState::render(sf::RenderWindow& window) {
         for (const auto& e : entities) {
             if (e->isActive) {
                 entityRenderers->render(window, *e);
+            }
+        }
+    }
+
+    // Debug overlay: hitboxes go on top of the sprites, still in world space so they line
+    // up with what they bound. Solid tiles first, then entities over them.
+    if (showHitboxes) {
+        if (mapLoaded) {
+            hitboxRenderer.renderTiles(window, map);
+        }
+        for (const auto& e : entities) {
+            if (e->isActive) {
+                hitboxRenderer.render(window, *e);
             }
         }
     }

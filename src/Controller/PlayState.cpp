@@ -163,7 +163,10 @@ void PlayState::update(float deltaTime) {
 
         if (e.get() == player) {
             // The player cannot leave the map; a fall past the bottom is a pit death.
-            if (pos.y > mapHeight) {
+            // The FEET decide: the y-clamp below pins the player to mapHeight - size.y,
+            // so checking the top (pos.y) can never be exceeded and the death would
+            // never trigger.
+            if (pos.y + sz.y >= mapHeight) {
                 player->die(false); // no bounce: the body just keeps dropping
                 continue;
             }

@@ -7,6 +7,8 @@
 
 namespace model {
 
+class World;
+
 class Entity {
 public:
     Entity(Vector2 position, Vector2 size);
@@ -29,6 +31,20 @@ public:
     virtual bool isDying() const { return false; }
     virtual bool isSolid() const { return false; }
 
+    // False for anything that moves on its own rules rather than through the world's
+    // geometry: Lakitu drifting over terrain, a fireball passing through walls, a Piranha
+    // Plant that lives inside a solid pipe. Skips the tile pass entirely — blanking
+    // onTileCollision is not enough, because the push-out happens before that hook runs.
+    virtual bool usesTileCollision() const { return true; }
+
+    // False for enemies that hurt the player from above too (Spiny's spikes, Bowser), so
+    // the collision routing damages instead of squashing and bouncing.
+    virtual bool isStompable() const { return true; }
+
+    // The world an entity lives in: its channel for spawning (projectiles, transformations)
+    // and for asking about the player. Set when the level takes ownership of the entity.
+    void setWorld(World* w) { world = w; }
+
     Vector2 getPosition() const;
     Vector2 getSize() const;
     void setPosition(Vector2 newPosition);
@@ -39,8 +55,16 @@ public:
 
     Hitbox hitbox;
     Vector2 velocity;
+    // In play: false once the level has reclaimed the entity (died, or left the world).
     bool isActive;
+    // Placed but not yet woken: the camera has never come close enough. Dormant entities
+    // do not update, collide, or draw. Distinct from isActive — a dormant entity is a
+    // future participant, an inactive one is finished. Waking is one-way.
+    bool isDormant;
     bool isGrounded;
+
+protected:
+    World* world = nullptr;  // non-owning: the level outlives every entity in it
 
 private:
     Vector2 position;

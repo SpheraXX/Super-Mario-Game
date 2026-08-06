@@ -6,6 +6,7 @@ Entity::Entity(Vector2 position, Vector2 size)
     : hitbox({0.0f, 0.0f}, size.x, size.y, false, CollisionLayer::Environment),
       velocity({0.0f, 0.0f}),
       isActive(true),
+      isDormant(false),
       isGrounded(false),
       position(position),
       size(size) {

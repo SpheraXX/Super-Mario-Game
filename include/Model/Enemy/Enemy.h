@@ -3,7 +3,11 @@
 
 #include "Model/Character.h"
 
+#include <memory>
+
 namespace model {
+
+class Projectile;
 
 class Enemy : public Character {
 public:
@@ -17,13 +21,31 @@ public:
     virtual void onHit(Entity& source) override;
     int getDamageValue() const override;
 
+    // Factory Method. Enemies that attack override this to say *what* they throw; the
+    // cooldown and the handoff to the world are handled once, in updateAttack(). Returning
+    // nullptr (the default) simply means this enemy does not attack.
+    // Defined out of line: the default body would otherwise need Projectile complete here,
+    // and every enemy header would have to pull it in.
+    virtual std::unique_ptr<Projectile> createProjectile();
+
     // True while the enemy shows its squished sprite (stomped but not gone yet).
     bool isSquished() const;
 
 protected:
+    // Ticks the attack cooldown and fires createProjectile() into the world when it elapses.
+    // Inert unless a subclass sets attackCooldown.
+    void updateAttack(float deltaTime);
+
+    // Where the player is right now, or nullptr. For the few enemies that aim rather than
+    // patrol blindly (Hammer Bro, Lakitu).
+    const Entity* findPlayer() const;
+
     int damageValue;
     bool isStomped;
     float despawnTimer;
+
+    float attackCooldown = 0.0f;  // seconds between attacks; 0 disables attacking entirely
+    float attackTimer = 0.0f;     // counts down to the next attack
 };
 
 }

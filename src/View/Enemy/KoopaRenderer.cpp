@@ -1,29 +1,28 @@
 #include "View/Enemy/KoopaRenderer.h"
 
 #include "Model/Enemy/Koopa.h"
+#include "View/Enemy/EnemyAtlas.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
 
 namespace view {
 
-namespace {
-// Same tight-frame window as the Goomba: art occupies rows 4-19 of each 16x32 atlas cell.
-constexpr int EnemyFrameTop = 4;
-constexpr int EnemyFrameSize = 16;
-
-// Placeholder atlas columns; update once the real enemies spritesheet is finalised.
-// (Column 2 currently holds a Goomba frame, so the Koopa renders as one for now.)
-constexpr int KoopaFrameCol = 2;
-constexpr int KoopaShellFrameCol = 3;
-}
-
-KoopaRenderer::KoopaRenderer() : SpriteEntityRenderer("assets/enemies.png") {
+KoopaRenderer::KoopaRenderer()
+    : SpriteEntityRenderer(atlas::EnemySheet, atlas::EnemyColorKey) {
 }
 
 void KoopaRenderer::renderTyped(sf::RenderTarget& window, const model::Koopa& koopa) const {
-    const int frameCol = koopa.isShell() ? KoopaShellFrameCol : KoopaFrameCol;
-    drawCharacterFrame(window, koopa,
-                       {{frameCol * 16, EnemyFrameTop}, {EnemyFrameSize, EnemyFrameSize}});
+    // One renderer covers the whole demotion ladder, because it is all one entity:
+    // Paratroopa -> walking Koopa -> shell. The model shrinks its own box when it enters the
+    // shell (64 world units tall down to 32), so the frame and the box stay in proportion
+    // without the renderer having to compensate.
+    if (koopa.isShell()) {
+        drawCharacterFrame(window, koopa, atlas::KoopaShell);
+    } else if (koopa.isWinged()) {
+        drawCharacterFrame(window, koopa, atlas::KoopaParatroopa);
+    } else {
+        drawCharacterFrame(window, koopa, atlas::Koopa);
+    }
 }
 
 }

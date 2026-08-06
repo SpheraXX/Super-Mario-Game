@@ -1,5 +1,4 @@
-#include "Model/Character.h"
-#include "Model/Map/TileMap.h"
+﻿#include "Model/Character.h"
 
 namespace model {
 
@@ -16,6 +15,9 @@ void Character::update(float deltaTime) {
     if (!alive) {
         if (isDyingFlag) {
             // Death fall: gravity only. The body pops through tiles and never lands.
+            // Deliberately full gravity, ignoring gravityScale: the level only reclaims a
+            // dying body once it drops past the bottom of the world, so a floating enemy
+            // (scale 0) would otherwise hang there forever and never be removed.
             velocity.y += Gravity * deltaTime;
             if (velocity.y > MaxFallSpeed) {
                 velocity.y = MaxFallSpeed;
@@ -84,15 +86,19 @@ bool Character::isDying() const {
 
 void Character::applyGravity(float deltaTime) {
     if (!isGrounded) {
-        velocity.y += Gravity * deltaTime;
+        velocity.y += Gravity * gravityScale * deltaTime;
         if (velocity.y > MaxFallSpeed) {
             velocity.y = MaxFallSpeed;
         }
     }
 }
 
-void Character::setMap(const TileMap* map) {
-    mapPtr = map;
+float Character::getGravityScale() const {
+    return gravityScale;
+}
+
+void Character::setGravityScale(float scale) {
+    gravityScale = scale;
 }
 
 bool Character::isOnGround() const {
@@ -133,69 +139,4 @@ void Character::clampVelocity() {
     if (velocity.x < -400.0f) velocity.x = -400.0f;
     if (velocity.y > MaxFallSpeed) velocity.y = MaxFallSpeed;
 }
-
-void Character::resolveTileCollisions() {
-    if (!mapPtr) return;
-
-    Vector2 pos = getPosition();
-    Vector2 sz = getSize();
-
-    float footY = pos.y + sz.y;
-    float headY = pos.y;
-    float leftX = pos.x;
-    float rightX = pos.x + sz.x;
-    float centerY = pos.y + sz.y / 2.0f;
-    float centerX = pos.x + sz.x / 2.0f;
-
-    if (velocity.y >= 0.0f) {
-        std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
-
-        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
-            if (mapPtr->getTile(row, col) != '.') {
-                pos.y = (TileMap::Rows - 1 - row) * TileMap::TileHeight - sz.y;
-                velocity.y = 0.0f;
-            }
-        }
-    }
-
-    if (velocity.y < 0.0f) {
-        std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(headY / TileMap::TileHeight);
-
-        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
-            if (mapPtr->getTile(row, col) != '.') {
-                pos.y = (TileMap::Rows - row) * TileMap::TileHeight;
-                velocity.y = 0.0f;
-            }
-        }
-    }
-
-    if (velocity.x < 0.0f) {
-        std::size_t col = static_cast<std::size_t>(leftX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
-
-        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
-            if (mapPtr->getTile(row, col) != '.') {
-                pos.x = (col + 1) * TileMap::TileWidth;
-                velocity.x = 0.0f;
-            }
-        }
-    }
-
-    if (velocity.x > 0.0f) {
-        std::size_t col = static_cast<std::size_t>(rightX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
-
-        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
-            if (mapPtr->getTile(row, col) != '.') {
-                pos.x = col * TileMap::TileWidth - sz.x;
-                velocity.x = 0.0f;
-            }
-        }
-    }
-
-    setPosition(pos);
-}
-
 }

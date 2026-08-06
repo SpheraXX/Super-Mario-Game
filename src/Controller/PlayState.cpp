@@ -8,9 +8,19 @@
 #include "Model/Player/Mario.h"
 #include "Model/Player/Luigi.h"
 #include "Model/Player/Player.h"
+#include "Model/Enemy/Bowser.h"
+#include "Model/Enemy/EnemyFactory.h"
 #include "Model/Enemy/Goomba.h"
+#include "Model/Enemy/HammerBro.h"
 #include "Model/Enemy/Koopa.h"
+#include "Model/Enemy/Lakitu.h"
+#include "Model/Enemy/Spiny.h"
+#include "Model/Projectile/Fireball.h"
+#include "Model/Projectile/Hammer.h"
+#include "Model/Projectile/SpinyEgg.h"
 #include "Model/Block/CoinBlock.h"
+#include "View/Base/AtlasFrameRenderer.h"
+#include "View/Enemy/EnemyAtlas.h"
 #include "View/Block/CoinBlockRenderer.h"
 #include "View/Enemy/GoombaRenderer.h"
 #include "View/Enemy/KoopaRenderer.h"
@@ -54,6 +64,24 @@ void PlayState::onEnter() {
     entityRenderers->registerRenderer<model::Goomba, view::GoombaRenderer>();
     entityRenderers->registerRenderer<model::Koopa, view::KoopaRenderer>();
     entityRenderers->registerRenderer<model::CoinBlock, view::CoinBlockRenderer>();
+
+    // Everything below has a single pose and shares the generic atlas renderer; the frames
+    // themselves are named in View/Enemy/EnemyAtlas.h.
+    entityRenderers->registerRenderer<model::HammerBro,
+                                      view::AtlasFrameRenderer<model::HammerBro>>(view::atlas::HammerBro);
+    entityRenderers->registerRenderer<model::Lakitu,
+                                      view::AtlasFrameRenderer<model::Lakitu>>(view::atlas::Lakitu);
+    entityRenderers->registerRenderer<model::Spiny,
+                                      view::AtlasFrameRenderer<model::Spiny>>(view::atlas::Spiny);
+    entityRenderers->registerRenderer<model::Bowser,
+                                      view::AtlasFrameRenderer<model::Bowser>>(view::atlas::Bowser);
+    entityRenderers->registerRenderer<model::Hammer,
+                                      view::AtlasFrameRenderer<model::Hammer>>(view::atlas::Hammer);
+    entityRenderers->registerRenderer<model::SpinyEgg,
+                                      view::AtlasFrameRenderer<model::SpinyEgg>>(view::atlas::SpinyEgg);
+    entityRenderers->registerRenderer<model::Fireball,
+                                      view::AtlasFrameRenderer<model::Fireball>>(view::atlas::BowserFire);
+
     hudRenderer = std::make_unique<view::HudRenderer>();
 
     // Initialize collision manager
@@ -68,6 +96,7 @@ void PlayState::onEnter() {
 void PlayState::resetLevel() {
     int TileHeight = model::TileMap::TileHeight;
     entities.clear();
+    pendingEntities.clear();
     player = nullptr;
 
     // Spawn Player — place on ground row (row 1 = y = (Rows-2)*TileHeight)
@@ -77,24 +106,88 @@ void PlayState::resetLevel() {
                                              - TileHeight);
     auto mario = std::make_unique<model::Mario>(model::Vector2{64.0f, groundY});
     player = mario.get();
-    entities.push_back(std::move(mario));
+    addEntity(std::move(mario));
 
-    // Spawn Hostiles — also on the ground level, to the right of Mario
-    auto goomba = std::make_unique<model::Goomba>(model::Vector2{512.0f, groundY});
-    entities.push_back(std::move(goomba));
-
-    auto koopa = std::make_unique<model::Koopa>(model::Vector2{768.0f, groundY});
-    entities.push_back(std::move(koopa));
+    // Hostiles come entirely from the map. Nothing here decides where an enemy goes: the
+    // level author writes a digit into the map file and the factory turns it into an object.
+    for (const model::SpawnPoint& point : map.getSpawnPoints()) {
+        const model::Vector2 origin = model::TileMap::tileOrigin(point.row, point.column);
+        if (auto enemy = model::EnemyFactory::create(point.id, origin)) {
+            addEntity(std::move(enemy));
+        }
+    }
 
     // Spawn CoinBlock using block texture, not a red rect.
     // Position it 5 tiles above ground in world coords. One world tile in size so its
     // hitbox matches the tile art it renders with.
     const float blockY = groundY - 5.0f * TileHeight;
-    auto coinBlock = std::make_unique<model::CoinBlock>(
+    addEntity(std::make_unique<model::CoinBlock>(
         model::Vector2{320.0f, blockY},
         model::Vector2{static_cast<float>(model::TileMap::TileWidth),
-                       static_cast<float>(model::TileMap::TileHeight)});
-    entities.push_back(std::move(coinBlock));
+                       static_cast<float>(model::TileMap::TileHeight)}));
+
+    // Seed the camera from the freshly placed player, then put everything the view has not
+    // reached yet to sleep. Order matters: the frontier has to exist before it can be
+    // applied, and it restarts with the level so a retry re-arms every enemy.
+    activationFrontier = 0.0f;
+    updateCamera();
+    armDormancy();
+}
+
+// Camera: follows the player horizontally, but never pans past the map fringes; it is fixed
+// vertically. Runs at the END of update() so the position it reports is the settled one for
+// this frame — render() draws with it, and the next frame's wake check reads the same value.
+void PlayState::updateCamera() {
+    const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
+    const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+
+    float centre = halfWidth;
+    if (player) {
+        centre = player->getPosition().x + player->getSize().x / 2.0f;
+    }
+    centre = std::clamp(centre, halfWidth, std::max(halfWidth, mapWidth - halfWidth));
+    // Snap the camera to a whole logical pixel. The world is composited into an offscreen
+    // target at the logical resolution and upscaled once, so logical pixels *are* the grid
+    // that matters here: integer camera positions keep every tile edge aligned (no seams)
+    // while the scroll rate stays perfectly even (WindowScale never enters this maths).
+    cameraX = std::round(centre);
+
+    // The frontier only ever advances. Backtracking must not send woken enemies back to
+    // sleep, and an entity that outruns the camera (a kicked shell) must stay awake.
+    activationFrontier = std::max(activationFrontier, cameraX + halfWidth + ActivationMargin);
+}
+
+// Put every entity the camera has not reached yet to sleep. Called once per level build; the
+// map-driven spawner will inherit this for free rather than having to flag enemies itself.
+void PlayState::armDormancy() {
+    for (auto& e : entities) {
+        if (e.get() == player) continue;  // the player is never dormant
+        e->isDormant = e->getPosition().x > activationFrontier;
+    }
+}
+
+model::Entity* PlayState::addEntity(std::unique_ptr<model::Entity> entity) {
+    if (!entity) return nullptr;
+    entity->setWorld(this);
+    model::Entity* raw = entity.get();
+    entities.push_back(std::move(entity));
+    return raw;
+}
+
+// model::World. Called from inside the update loop (a Hammer Bro throwing, a Spiny Egg
+// hatching), so the entity is queued rather than appended: growing `entities` mid-iteration
+// would invalidate the loop walking it.
+void PlayState::spawn(std::unique_ptr<model::Entity> entity) {
+    if (!entity) return;
+    entity->setWorld(this);
+    // Spawned entities are born awake — they are created at the action, not placed ahead of
+    // the camera the way map enemies are.
+    entity->isDormant = false;
+    pendingEntities.push_back(std::move(entity));
+}
+
+const model::Entity* PlayState::getPlayer() const {
+    return player;
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
@@ -120,9 +213,17 @@ void PlayState::handleEvent(const sf::Event& event) {
 }
 
 void PlayState::update(float deltaTime) {
+    // Wake pass: anything the frontier has swept past joins the simulation from now on.
+    // Uses the frontier settled at the end of the previous frame.
+    for (auto& e : entities) {
+        if (e->isDormant && e->getPosition().x <= activationFrontier) {
+            e->isDormant = false;
+        }
+    }
+
     std::vector<model::Entity*> activeEntities;
     for (auto& e : entities) {
-        if (!e->isActive) continue;
+        if (!e->isActive || e->isDormant) continue;
 
         // Input gathering is delegated polymorphically: only the player reacts.
         // It runs BEFORE entity->update() so gravity & integration see the correct
@@ -145,7 +246,9 @@ void PlayState::update(float deltaTime) {
 
     bool playerFinishedDeathFall = false;
     for (const auto& e : entities) {
-        if (!e->isActive) continue;
+        // Dormant entities are exempt: they have not moved, so they cannot have left the
+        // world, and the despawn rules must not reclaim them before they ever wake.
+        if (!e->isActive || e->isDormant) continue;
         model::Vector2 pos = e->getPosition();
         const model::Vector2 sz = e->getSize();
 
@@ -176,6 +279,17 @@ void PlayState::update(float deltaTime) {
             pos.x = std::clamp(pos.x, 0.0f, std::max(0.0f, mapWidth - sz.x));
             pos.y = std::clamp(pos.y, 0.0f, std::max(0.0f, mapHeight - sz.y));
             e->setPosition(pos);
+        } else if (e->hitbox.layer == model::CollisionLayer::Projectile) {
+            // Projectiles are bound to the camera, not the map: a hammer thrown at the
+            // screen edge should not linger off-screen for the rest of the level.
+            // Horizontal only, deliberately — a hammer arcs *above* the top of the view at
+            // the peak of its throw, and a full screen-rect test would delete it mid-flight.
+            const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+            const float viewLeft = cameraX - halfWidth - DespawnMargin;
+            const float viewRight = cameraX + halfWidth + DespawnMargin;
+            if (pos.x + sz.x < viewLeft || pos.x > viewRight || pos.y > mapHeight) {
+                e->isActive = false;
+            }
         } else {
             // Hostiles/others: despawn once they leave the world bounds (walked off
             // the map edge, which is also off camera, or fell into a pit).
@@ -190,27 +304,25 @@ void PlayState::update(float deltaTime) {
         if (model::GameManager::instance().isGameOver()) {
             manager->replaceState(std::make_unique<GameOverState>());
         } else {
-            resetLevel();
+            resetLevel();  // rebuilds the camera and re-arms dormancy itself
         }
+        return;
     }
+
+    // Splice in anything spawned during this frame. Done here, after every loop over
+    // `entities` has finished, because appending mid-iteration invalidates them.
+    for (auto& spawned : pendingEntities) {
+        entities.push_back(std::move(spawned));
+    }
+    pendingEntities.clear();
+
+    // Settle the camera last, once every position for this frame is final.
+    updateCamera();
 }
 
 void PlayState::render(sf::RenderTarget& window) {
-    // Camera: follows the player horizontally, but never pans past the map fringes; it is
-    // fixed vertically. The view keeps the fixed viewport set by AppEngine.
-    const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
-    const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
-    float cameraX = halfWidth;
-    if (player) {
-        cameraX = player->getPosition().x + player->getSize().x / 2.0f;
-    }
-    cameraX = std::clamp(cameraX, halfWidth, std::max(halfWidth, mapWidth - halfWidth));
-    // Snap the camera to a whole logical pixel. The world is composited into an offscreen
-    // target at the logical resolution and upscaled once, so logical pixels *are* the grid
-    // that matters here: integer camera positions keep every tile edge aligned (no seams)
-    // while the scroll rate stays perfectly even (WindowScale never enters this maths).
-    cameraX = std::round(cameraX);
-
+    // Camera position is computed in update() (see updateCamera) and simply read back here,
+    // so the view keeps the fixed viewport set by AppEngine.
     const sf::View baseView = window.getView();
     sf::View cameraView = baseView;
     cameraView.setSize({static_cast<float>(AppEngine::ScreenWidth),
@@ -228,7 +340,7 @@ void PlayState::render(sf::RenderTarget& window) {
     }
     if (entityRenderers) {
         for (const auto& e : entities) {
-            if (e->isActive) {
+            if (e->isActive && !e->isDormant) {
                 entityRenderers->render(window, *e);
             }
         }
@@ -241,7 +353,7 @@ void PlayState::render(sf::RenderTarget& window) {
             hitboxRenderer.renderTiles(window, map);
         }
         for (const auto& e : entities) {
-            if (e->isActive) {
+            if (e->isActive && !e->isDormant) {
                 hitboxRenderer.render(window, *e);
             }
         }

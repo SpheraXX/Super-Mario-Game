@@ -41,11 +41,19 @@ public:
     virtual float getJumpForce() const;
 
     void applyGravity(float deltaTime);
+
+    // Per-character gravity multiplier. 1.0 is a normal walker; 0.0 pins a character to
+    // its own vertical logic (Piranha Plant riding its pipe, Lakitu hovering); small
+    // values read as buoyancy (underwater Cheep Cheep) or a lazy projectile arc.
+    // Does not affect the death fall, which always uses full gravity so every body
+    // reliably drops out of the world and gets cleaned up.
+    float getGravityScale() const;
+    void setGravityScale(float scale);
+
     virtual void move();
     virtual void die();
     
     bool isOnGround() const;
-    void setMap(const TileMap* map);
 
     int getDirection() const;
     void setDirection(int d);
@@ -55,8 +63,6 @@ public:
 
     bool isFacingRight() const;
     void setFacingRight(bool right);
-
-    void resolveTileCollisions();
 
 protected:
     void clampVelocity();
@@ -68,7 +74,7 @@ protected:
     float deathElapsed = 0.0f;
     AnimState animState;
     bool facingRight;
-    const TileMap* mapPtr = nullptr;
+    float gravityScale = 1.0f;
 
     static constexpr float Gravity = 1600.0f;
     static constexpr float MaxFallSpeed = 900.0f;

@@ -7,9 +7,11 @@ namespace model {
 CollisionManager::CollisionManager(TileMap* tileMap) : tileMap(tileMap) {}
 
 void CollisionManager::update(std::vector<Entity*>& entities, float deltaTime) {
-    // Pass 1: Entity vs TileMap. Dying bodies pop through the world, so they skip it.
+    // Pass 1: Entity vs TileMap. Dying bodies pop through the world, so they skip it, as do
+    // entities that drive their own position (fliers, projectiles that pass through walls).
     for (auto* entity : entities) {
         if (!entity || !entity->isActive || entity->isDying()) continue;
+        if (!entity->usesTileCollision()) continue;
         entity->isGrounded = false;
         processTileCollisions(entity, deltaTime);
     }
@@ -154,13 +156,21 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
     Entity* other = aIsPlayer ? &b : &a;
     const CollisionType playerSide = (player == &a) ? sideA : sideB;
 
+    if (other->hitbox.layer == CollisionLayer::Projectile) {
+        // Projectiles settle their own outcome in Projectile::onCollision, which already ran
+        // above — they check who fired them, so the same class serves Bowser and Mario.
+        // Deliberately no stomp branch: landing on a hammer must not bounce the player.
+        return;
+    }
+
     if (other->hitbox.layer == CollisionLayer::Enemy) {
-        if (playerSide == CollisionType::Bottom) {
+        if (playerSide == CollisionType::Bottom && other->isStompable()) {
             // Player landed on top of the enemy: squash it and bounce.
             other->onStomped(*player);
             player->setVelocity({player->getVelocity().x, -350.0f}); // Bounce force
         } else {
-            // Player hit the enemy from the side or from below: take damage.
+            // Player hit the enemy from the side or below — or landed on something that
+            // cannot be stomped at all (Spiny's spikes, Bowser): take damage.
             player->takeDamage(other->getDamageValue());
         }
     } else if (other->isSolid()) {

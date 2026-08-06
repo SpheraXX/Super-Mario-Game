@@ -8,6 +8,7 @@ namespace model {
 enum class CollisionLayer {
     Player,
     Enemy,
+    Projectile,
     Environment,
     Trigger
 };

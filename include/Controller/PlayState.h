@@ -4,6 +4,8 @@
 #include "Controller/GameState.h"
 #include "Model/TileMap.h"
 #include "View/TileMapRenderer.h"
+#include "Model/PlayerState.h"
+#include "Model/Mario.h"
 
 #include <SFML/Graphics/Font.hpp>
 
@@ -27,10 +29,12 @@ public:
 private:
     model::TileMap map;
     std::unique_ptr<view::TileMapRenderer> renderer; // built in onEnter (may fail to load)
+
     bool mapLoaded = false;
 
     sf::Font font;
     bool fontLoaded = false;
+    std::unique_ptr<model::Player> player;
 };
 
 }

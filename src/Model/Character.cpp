@@ -109,8 +109,8 @@ void Character::setFacingRight(bool right) {
 }
 
 void Character::clampVelocity() {
-    if (velocity.x > 400.0f) velocity.x = 400.0f;
-    if (velocity.x < -400.0f) velocity.x = -400.0f;
+    if (velocity.x > 500.0f) velocity.x = 500.0f;
+    if (velocity.x < -500.0f) velocity.x = -500.0f;
     if (velocity.y > MaxFallSpeed) velocity.y = MaxFallSpeed;
 }
 

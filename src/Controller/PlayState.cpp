@@ -38,6 +38,8 @@ void PlayState::onEnter() {
     }
 
     fontLoaded = font.openFromFile("assets/fonts/Tuffy.ttf");
+    player = std::make_unique<model::Mario>(model::Vector2{200.0f, 600.0f});
+    player->setMap(&map);
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
@@ -65,6 +67,14 @@ void PlayState::update(float deltaTime) {
     (void)deltaTime;
     // SEAM: step the World/physics and update the Player here (Issues 3/5).
 
+    if (player && player->isAlive())
+    {
+        player->handleInput();
+        player->update(deltaTime);
+        player->resolveTileCollisions();
+
+    }
+
     if (model::GameManager::instance().isGameOver()) {
         manager->replaceState(std::make_unique<GameOverState>());
     }
@@ -78,6 +88,8 @@ void PlayState::render(sf::RenderWindow& window) {
         renderer->render(window, map);
     }
     // SEAM: draw World entities / Player / HUD here (Issues 2/3/5).
+
+    player->render(window);
 
     if (fontLoaded) {
         const int level = model::GameManager::instance().getCurrentLevel();

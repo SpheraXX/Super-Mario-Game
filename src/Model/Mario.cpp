@@ -3,7 +3,7 @@
 namespace model {
 
 Mario::Mario(Vector2 position)
-    : Player(position, {16.0f, 16.0f}) {
+    : Player(position, {20.0f, 40.0f}) {
 }
 
 }

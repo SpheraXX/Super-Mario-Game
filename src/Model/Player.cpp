@@ -6,7 +6,7 @@
 
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/ConvexShape.hpp>
 
 namespace model {
 
@@ -44,8 +44,13 @@ void Player::render(sf::RenderWindow& window) {
     Vector2 pos = getPosition();
     Vector2 sz = getSize();
 
-    sf::RectangleShape rect({sz.x, sz.y});
-    rect.setPosition({pos.x, pos.y});
+    sf::ConvexShape shape(5);
+    shape.setPoint(0, {0.0f, 0.0f});
+    shape.setPoint(1, {sz.x*0.7f, 0.0f});
+    shape.setPoint(2, {sz.x, sz.y*0.5f});
+    shape.setPoint(3, {sz.x*0.7f, sz.y});
+    shape.setPoint(4, {0.0f, sz.y});
+    shape.setPosition({pos.x, pos.y});
 
     sf::Color baseColor = sf::Color::Red;
     if (dynamic_cast<Luigi*>(this)) {
@@ -53,21 +58,21 @@ void Player::render(sf::RenderWindow& window) {
     }
 
     if (dynamic_cast<StarState*>(state.get())) {
-        rect.setFillColor(sf::Color::Yellow);
+        shape.setFillColor(sf::Color::Yellow);
     } else if (dynamic_cast<FireState*>(state.get())) {
-        rect.setFillColor(sf::Color(255, 165, 0));
+        shape.setFillColor(sf::Color(255, 165, 0));
     } else if (dynamic_cast<SuperState*>(state.get())) {
-        rect.setFillColor(sf::Color(200, 200, 200));
+        shape.setFillColor(sf::Color(200, 200, 200));
     } else {
-        rect.setFillColor(baseColor);
+        shape.setFillColor(baseColor);
     }
 
     if (!facingRight) {
-        rect.setScale({-1.0f, 1.0f});
-        rect.setOrigin({sz.x, 0.0f});
+        shape.setScale({-1.0f, 1.0f});
+        shape.setOrigin({sz.x, 0.0f});
     }
 
-    window.draw(rect);
+    window.draw(shape);
 }
 
 void Player::handleInput() {
@@ -88,6 +93,15 @@ void Player::handleInput() {
     }
 
     float currentSpeed = 0.0f;
+
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1))
+    {
+        becomeSuper();
+    } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2)) {
+        becomeFire();
+    } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num3)) {
+        becomeStar();
+    }
 
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift)) {

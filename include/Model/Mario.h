@@ -9,9 +9,9 @@ class Mario : public Player {
 public:
     Mario(Vector2 position);
 
-    static constexpr float WalkSpeed = 180.0f;
-    static constexpr float RunSpeed = 320.0f;
-    static constexpr float JumpForce = -450.0f;
+    static constexpr float WalkSpeed = 300.0f;
+    static constexpr float RunSpeed = 420.0f;
+    static constexpr float JumpForce = -900.0f;
 };
 
 }

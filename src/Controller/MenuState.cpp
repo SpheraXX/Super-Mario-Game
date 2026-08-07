@@ -4,6 +4,7 @@
 #include "Controller/PlayState.h"
 #include "Controller/StateManager.h"
 #include "Model/Core/GameManager.h"
+#include "View/AssetManager.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Rect.hpp>
@@ -25,7 +26,8 @@ void centerOrigin(sf::Text& text) {
 void MenuState::onEnter() {
     // Entering the menu means a fresh run: clear score/lives/level.
     model::GameManager::instance().reset();
-    fontLoaded = font.openFromFile("assets/fonts/Tuffy.ttf");
+    font = view::AssetManager::instance().getUiFont();
+    fontLoaded = view::AssetManager::instance().isFontLoaded();
 }
 
 void MenuState::handleEvent(const sf::Event& event) {

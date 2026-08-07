@@ -1,5 +1,8 @@
 #include "Model/Character.h"
 #include "Model/Map/TileMap.h"
+#include "Model/World/World.h"
+
+#include <algorithm>
 
 namespace model {
 
@@ -16,9 +19,9 @@ void Character::update(float deltaTime) {
     if (!alive) {
         if (isDyingFlag) {
             // Death fall: gravity only. The body pops through tiles and never lands.
-            velocity.y += Gravity * deltaTime;
-            if (velocity.y > MaxFallSpeed) {
-                velocity.y = MaxFallSpeed;
+            velocity.y += getGravity() * deltaTime;
+            if (velocity.y > getMaxFallSpeed()) {
+                velocity.y = getMaxFallSpeed();
             }
             Vector2 pos = getPosition();
             pos.x += velocity.x * deltaTime;
@@ -27,6 +30,11 @@ void Character::update(float deltaTime) {
             deathElapsed += deltaTime;
         }
         return;
+    }
+
+    // Underwater worlds drag horizontal motion so characters settle instead of skating.
+    if (isUnderwater() && velocity.x != 0.0f) {
+        velocity.x *= std::max(0.0f, 1.0f - getHorizontalDrag() * deltaTime);
     }
 
     applyGravity(deltaTime);
@@ -88,15 +96,35 @@ bool Character::isDying() const {
 
 void Character::applyGravity(float deltaTime) {
     if (!isGrounded) {
-        velocity.y += Gravity * deltaTime;
-        if (velocity.y > MaxFallSpeed) {
-            velocity.y = MaxFallSpeed;
+        velocity.y += getGravity() * deltaTime;
+        if (velocity.y > getMaxFallSpeed()) {
+            velocity.y = getMaxFallSpeed();
         }
     }
 }
 
 void Character::setMap(const TileMap* map) {
     mapPtr = map;
+}
+
+void Character::setWorld(const World& world) {
+    worldPtr = &world;
+}
+
+float Character::getGravity() const {
+    return worldPtr ? DefaultGravity * worldPtr->getGravityScale() : DefaultGravity;
+}
+
+float Character::getMaxFallSpeed() const {
+    return worldPtr ? DefaultMaxFallSpeed * worldPtr->getMaxFallScale() : DefaultMaxFallSpeed;
+}
+
+float Character::getHorizontalDrag() const {
+    return worldPtr ? worldPtr->getHorizontalDrag() : 0.0f;
+}
+
+bool Character::isUnderwater() const {
+    return worldPtr != nullptr && worldPtr->getType() == WorldType::Underwater;
 }
 
 bool Character::isOnGround() const {
@@ -135,7 +163,7 @@ void Character::setFacingRight(bool right) {
 void Character::clampVelocity() {
     if (velocity.x > 400.0f) velocity.x = 400.0f;
     if (velocity.x < -400.0f) velocity.x = -400.0f;
-    if (velocity.y > MaxFallSpeed) velocity.y = MaxFallSpeed;
+    if (velocity.y > getMaxFallSpeed()) velocity.y = getMaxFallSpeed();
 }
 
 void Character::resolveTileCollisions() {

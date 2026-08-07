@@ -20,8 +20,6 @@ void trace(const std::string& msg) {
 Player::Player(Vector2 position, Vector2 size)
     : Character(position, size),
       state(std::make_unique<SmallState>()),
-      score(0),
-      coins(0),
       damageCooldown(0.0f) {
     // The collision layer drives the (type-check-free) routing in CollisionManager:
     // exactly one entity per pair must be the player for the pair to resolve.
@@ -145,6 +143,16 @@ void Player::handleInput(float deltaTime) {
         }
     }
 
+    // Underwater swim (simplified): holding jump pushes the player upward continuously,
+    // no ground/coyote requirement. Weaker than a land jump and capped low, so the
+    // player drifts up slowly instead of leaping out of the water.
+    if (isUnderwater() && jumpPressed) {
+        velocity.y -= SwimAccel * deltaTime;
+        if (velocity.y < -SwimMaxSpeed) {
+            velocity.y = -SwimMaxSpeed;
+        }
+    }
+
     jumpHeld = jumpPressed;
 }
 
@@ -212,15 +220,11 @@ void Player::becomeStar() {
 }
 
 void Player::addScore(int points) {
-    score += points;
+    model::GameManager::instance().addScore(points);
 }
 
 void Player::addCoin() {
-    coins++;
-    if (coins >= 100) {
-        coins -= 100;
-        model::GameManager::instance().addLife();
-    }
+    model::GameManager::instance().addCoin();
 }
 
 void Player::addLife() {
@@ -228,11 +232,11 @@ void Player::addLife() {
 }
 
 int Player::getScore() const {
-    return score;
+    return model::GameManager::instance().getScore();
 }
 
 int Player::getCoins() const {
-    return coins;
+    return model::GameManager::instance().getCoins();
 }
 
 int Player::getLives() const {

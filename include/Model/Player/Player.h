@@ -37,14 +37,14 @@ public:
     void addCoin();
     void addLife();
 
+    // Score/coins/lives are owned by GameManager (single source of truth for the HUD);
+    // the Player API keeps thin wrappers so gameplay code never touches the singleton.
     int getScore() const;
     int getCoins() const;
     int getLives() const;
 
 protected:
     std::unique_ptr<PlayerState> state;
-    int score;
-    int coins;
     float damageCooldown;
     // Jump forgiveness: coyoteTime lets a jump fire shortly after leaving a platform,
     // jumpBufferTime remembers a press made slightly before landing. Both are tiny
@@ -73,6 +73,11 @@ protected:
     static constexpr float GroundAccel = 800.0f;
     static constexpr float AirAccel = 600.0f;
     static constexpr float Friction = 1600.0f;
+
+    // Underwater (simplified): holding the jump key continuously swims upward. The
+    // world's scaled gravity + drag then keep the motion floaty instead of jumpy.
+    static constexpr float SwimAccel = 900.0f;
+    static constexpr float SwimMaxSpeed = 220.0f;
 
 private:
     void syncAnimation();

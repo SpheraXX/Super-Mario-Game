@@ -6,6 +6,9 @@
 
 namespace model {
 
+class TileMap;
+class World;
+
 enum class AnimState {
     Idle,
     Walk,
@@ -50,6 +53,15 @@ public:
     bool isOnGround() const;
     void setMap(const TileMap* map);
 
+    // The world this character lives in (set by PlayState at spawn, like setMap). It
+    // carries the gravity/fall/drag tuning the physics below reads; with no world set
+    // the classic land constants apply, so existing tests keep their exact numbers.
+    void setWorld(const World& world);
+    float getGravity() const;
+    float getMaxFallSpeed() const;
+    float getHorizontalDrag() const;
+    bool isUnderwater() const;
+
     int getDirection() const;
     void setDirection(int d);
 
@@ -72,9 +84,13 @@ protected:
     AnimState animState;
     bool facingRight;
     const TileMap* mapPtr = nullptr;
+    const World* worldPtr = nullptr;
 
-    static constexpr float Gravity = 1600.0f;
-    static constexpr float MaxFallSpeed = 900.0f;
+    // Land (Overworld) physics constants. Worlds scale these through their World
+    // descriptor; keeping them here means a character without a world behaves exactly
+    // like the tuned default.
+    static constexpr float DefaultGravity = 1600.0f;
+    static constexpr float DefaultMaxFallSpeed = 900.0f;
     // Small upward pop applied when a death animation starts (e.g. from enemy contact).
     static constexpr float DeathBounceSpeed = -400.0f;
 };

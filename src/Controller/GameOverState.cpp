@@ -4,6 +4,7 @@
 #include "Controller/MenuState.h"
 #include "Controller/StateManager.h"
 #include "Model/Core/GameManager.h"
+#include "View/AssetManager.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Rect.hpp>
@@ -24,7 +25,8 @@ void centerOrigin(sf::Text& text) {
 }
 
 void GameOverState::onEnter() {
-    fontLoaded = font.openFromFile("assets/fonts/Tuffy.ttf");
+    font = view::AssetManager::instance().getUiFont();
+    fontLoaded = view::AssetManager::instance().isFontLoaded();
 }
 
 void GameOverState::handleEvent(const sf::Event& event) {

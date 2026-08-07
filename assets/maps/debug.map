@@ -1,3 +1,6 @@
+; name=DEBUG
+; world=overworld
+; next=assets/maps/debug2.map
 GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG......GGGGGGGGGGGGGGGG
 GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG......GGGGGGGGGGGGGGGG
 ......M.........E.K.............................................

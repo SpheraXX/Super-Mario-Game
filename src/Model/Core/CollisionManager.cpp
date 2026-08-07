@@ -28,6 +28,14 @@ bool isGroundTile(char symbol) {
 // 5 tiles above his feet with only ~162px/s, while a real 4-tile bump lands at ~360px/s —
 // this gate is what keeps the "barely 4 blocks" jump from opening blocks 5 tiles up.
 constexpr float MinBumpSpeed = 200.0f;
+
+// Landing tolerance for the downward snap. The feet only snap onto a tile when they crossed
+// its top edge this frame (foot above the top at the start, on/below it at the end). A
+// player brushing a block's side mid-jump has his foot inside the tile without ever having
+// been above it — snapping him up there is the "rounded up, standing on the block" bug. The
+// epsilon absorbs float noise so the resting-on-ground case (prevFoot == tile top, vel.y = 0)
+// keeps grounding every frame.
+constexpr float LandingEpsilon = 1.0f;
 }
 
 CollisionManager::CollisionManager(TileMap* tileMap) : tileMap(tileMap) {}
@@ -44,7 +52,7 @@ void CollisionManager::update(std::vector<Entity*>& entities, float deltaTime) {
     processEntityCollisions(entities);
 }
 
-void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime */) {
+void CollisionManager::processTileCollisions(Entity* entity, float deltaTime) {
     if (!tileMap) return;
 
     Vector2 pos = entity->getPosition();
@@ -63,16 +71,24 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
     // probe the left, centre and right edges of the foot — a single centre column let the
     // player drop through corners and made isGrounded flap on platforms. Block cells act
     // as ground here (see isGroundTile); the entity pass still does the real push-out.
+    //
+    // A tile only counts as landing when the foot was above its top at the START of this
+    // frame (prevFootY). If the foot is already inside the tile — a block hit from the side
+    // mid-jump — snapping up to the top would teleport the player onto the block; those
+    // contacts are resolved by the horizontal checks and the entity pass instead.
     if (vel.y >= 0.0f) {
         const std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
 
         if (row < TileMap::Rows) {
+            const float tileTop = (TileMap::Rows - 1 - row) * TileMap::TileHeight;
+            const float prevFootY = footY - vel.y * deltaTime;
             const float footProbes[3] = {leftX, centerX, rightX};
             for (const float probeX : footProbes) {
                 const std::size_t col = static_cast<std::size_t>(probeX / TileMap::TileWidth);
 
                 if (col < tileMap->getColumns() && isGroundTile(tileMap->getTile(row, col))) {
-                    pos.y = (TileMap::Rows - 1 - row) * TileMap::TileHeight - hb.height - hb.offset.y;
+                    if (prevFootY > tileTop + LandingEpsilon) break;
+                    pos.y = tileTop - hb.height - hb.offset.y;
                     vel.y = 0.0f;
                     entity->isGrounded = true;
                     entity->onTileCollision(tileMap->getTile(row, col), CollisionType::Bottom);
@@ -131,7 +147,7 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
 void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
     for (std::size_t i = 0; i < entities.size(); ++i) {
         Entity* a = entities[i];
-        if (!a || !a->isActive || a->hitbox.isTrigger || a->isDying()) continue;
+        if (!a || !a->isActive || a->isDying()) continue;
 
         // The player can overlap several solid blocks in one frame (a head pressed into a
         // row of bricks). Only the deepest contact is resolved — ties go to the block that
@@ -144,9 +160,20 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
 
         for (std::size_t j = i + 1; j < entities.size(); ++j) {
             Entity* b = entities[j];
-            if (!b || !b->isActive || b->hitbox.isTrigger || b->isDying()) continue;
+            if (!b || !b->isActive || b->isDying()) continue;
 
             if (!a->hitbox.intersects(b->hitbox, a->getPosition(), b->getPosition())) continue;
+
+            // Trigger pass: trigger hitboxes never block or push; they only fire the
+            // onTriggerEnter hook when the other entity is the player (e.g. FlagPole).
+            if (a->hitbox.isTrigger || b->hitbox.isTrigger) {
+                Entity* trigger = a->hitbox.isTrigger ? a : b;
+                Entity* other = (trigger == a) ? b : a;
+                if (other->hitbox.layer == CollisionLayer::Player) {
+                    trigger->onTriggerEnter(*other);
+                }
+                continue;
+            }
 
             const CollisionType sideA = calculateSide(*a, *b);
             const bool playerInvolved =

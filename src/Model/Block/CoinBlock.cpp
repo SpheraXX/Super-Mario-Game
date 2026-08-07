@@ -50,8 +50,10 @@ void CoinBlock::onBlockHit(const BlockHitEvent& event) {
     if (coinAvailable) {
         coinAvailable = false;
         coinPopElapsed = 0.0f;  // start the pop-out animation
+        GameManager::instance().addCoin();
         GameManager::instance().addScore(200);
-        trace("coinCollected score=" + std::to_string(GameManager::instance().getScore()));
+        trace("coinCollected coins=" + std::to_string(GameManager::instance().getCoins())
+              + " score=" + std::to_string(GameManager::instance().getScore()));
         startBounce();
     }
 }

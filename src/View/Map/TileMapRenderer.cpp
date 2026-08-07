@@ -20,13 +20,27 @@ bool nearlyEqual(sf::Color a, sf::Color b, int tolerance) {
 }
 }
 
-TileMapRenderer::TileMapRenderer(const std::string& tilesetPath) {
+TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldType worldType) {
     loadTileset(tilesetPath);
     loadTileset(MarioAssetPath);
 
     // Indestructible ground block. Note: 'C' (CoinBlock) and '#' (BrickBlock) are NOT
     // registered here anymore — those symbols spawn as entities and render themselves.
-    registerTile('G', MarioAssetPath, 0, 16, 16, 16);
+    // The world theme picks which atlas rectangle stands in for the ground (all are
+    // 16x16 crops of existing tiles): the classic brown tile, a teal underwater tile,
+    // or a gray castle tile.
+    switch (worldType) {
+        case model::WorldType::Underwater:
+            registerTile('G', tilesetPath, 21 * 16, 13 * 16, 16, 16);
+            break;
+        case model::WorldType::Castle:
+            registerTile('G', tilesetPath, 19 * 16, 14 * 16, 16, 16);
+            break;
+        case model::WorldType::Overworld:
+        default:
+            registerTile('G', MarioAssetPath, 0, 16, 16, 16);
+            break;
+    }
     // Background scenery: passable (see TileMap::isSolidTile), color-keyed off the
     // tileset's blue backdrop.
     registerTile(model::TileMap::CloudSymbol, MarioAssetPath, 344, 632, 3 * 16, 2 * 16, SceneryBackdrop);

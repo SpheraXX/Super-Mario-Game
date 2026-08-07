@@ -2,6 +2,7 @@
 #define VIEW_TILEMAPRENDERER_H
 
 #include "Model/Map/TileMap.h"
+#include "Model/World/WorldType.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Image.hpp>
@@ -18,7 +19,10 @@ namespace view {
 
 class TileMapRenderer {
 public:
-    explicit TileMapRenderer(const std::string& tilesetPath);
+    // `worldType` selects the world's graphics theme: the ground tile and any themed
+    // tiles are registered from the matching tiles of the atlas (placeholder art).
+    explicit TileMapRenderer(const std::string& tilesetPath,
+                             model::WorldType worldType = model::WorldType::Overworld);
 
     // Loads an additional tileset image so tiles can be registered against it.
     // Loading the same path twice is a no-op.

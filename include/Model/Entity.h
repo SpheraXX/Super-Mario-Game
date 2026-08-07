@@ -25,6 +25,11 @@ public:
     virtual void onHit(Entity& source) { (void)source; }
     virtual int getDamageValue() const { return 0; }
 
+    // Fired when an entity with a trigger hitbox overlaps the player (see the trigger
+    // pass in CollisionManager). Default: nothing — trigger semantics live in the
+    // concrete type (e.g. FlagPole marks itself touched).
+    virtual void onTriggerEnter(Entity& other) { (void)other; }
+
     // The player bumped a solid block from below (see BlockHitEvent).
     virtual void onBlockHit(const BlockHitEvent& event) { (void)event; }
 

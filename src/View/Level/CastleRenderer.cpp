@@ -24,7 +24,8 @@ CastleRenderer::CastleRenderer()
 }
 
 void CastleRenderer::renderTyped(sf::RenderTarget& window,
-                                 const model::Castle& castle) const {
+                                 const model::Castle& castle,
+                                 const RenderContext& /* ctx */) const {
     if (!textureLoaded) return;
 
     const float x0 = castle.getPosition().x;

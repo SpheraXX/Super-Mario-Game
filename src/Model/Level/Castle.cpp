@@ -13,4 +13,8 @@ bool Castle::isSolid() const {
     return true;
 }
 
+bool Castle::isLandable() const {
+    return false;
+}
+
 }

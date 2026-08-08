@@ -22,6 +22,10 @@ public:
 
     void loadFromFile(const std::string& filePath);
 
+    // Load a pre-split grid (no header/metadata lines) of exactly Rows lines. Used by
+    // Level to assemble the per-area grids it parsed out of a multi-area map file.
+    void loadFromLines(const std::vector<std::string>& rows);
+
     // Append empty columns for the procedural level-completion zone (flagpole +
     // castle). Every new column mirrors the leftmost column's ground symbol ('G') so
     // the floor strip carries across the bonus area; everything else pads as air.

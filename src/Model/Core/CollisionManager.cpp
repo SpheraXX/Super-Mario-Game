@@ -287,7 +287,19 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         // block-hit event — but only when the head is moving into the block fast enough
         // (a graze at the top of the arc is too weak to trigger it).
         const float upwardSpeed = std::max(0.0f, -player->getVelocity().y);
-        pushOutOfBlock(*player, *other, playerSide);
+        CollisionType resolvedSide = playerSide;
+        if (playerSide == CollisionType::Bottom && !other->isLandable()) {
+            // A top that must not be stood on (e.g. the goal castle): turn the landing
+            // into a horizontal slide so the player falls back down the nearer side
+            // instead of resting on the roof.
+            const float playerCenterX = player->getPosition().x + player->hitbox.offset.x
+                                        + player->hitbox.width / 2.0f;
+            const float blockerCenterX = other->getPosition().x + other->hitbox.offset.x
+                                         + other->hitbox.width / 2.0f;
+            resolvedSide = (playerCenterX < blockerCenterX) ? CollisionType::Right
+                                                            : CollisionType::Left;
+        }
+        pushOutOfBlock(*player, *other, resolvedSide);
         if (playerSide == CollisionType::Top && upwardSpeed >= MinBumpSpeed) {
             other->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
         }

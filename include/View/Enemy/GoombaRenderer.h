@@ -15,7 +15,8 @@ public:
     GoombaRenderer();
 
 protected:
-    void renderTyped(sf::RenderTarget& window, const model::Goomba& goomba) const override;
+    void renderTyped(sf::RenderTarget& window, const model::Goomba& goomba,
+                     const RenderContext& ctx) const override;
 };
 
 }

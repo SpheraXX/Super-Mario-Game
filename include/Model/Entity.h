@@ -37,6 +37,9 @@ public:
     virtual bool isAlive() const { return true; }
     virtual bool isDying() const { return false; }
     virtual bool isSolid() const { return false; }
+    // Whether a solid entity may be stood ON (its top acts as a floor). False turns a
+    // top contact into a horizontal push, so e.g. the goal castle cannot be climbed on.
+    virtual bool isLandable() const { return true; }
 
     Vector2 getPosition() const;
     Vector2 getSize() const;

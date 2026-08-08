@@ -6,9 +6,9 @@
 #include "Controller/StateManager.h"
 #include "Model/Core/GameManager.h"
 #include "View/AssetManager.h"
+#include "View/TextUtils.h"
 
 #include <SFML/Graphics/Color.hpp>
-#include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
 
@@ -16,13 +16,6 @@
 #include <string>
 
 namespace controller {
-
-namespace {
-void centerOrigin(sf::Text& text) {
-    const sf::FloatRect bounds = text.getLocalBounds();
-    text.setOrigin({bounds.position.x + bounds.size.x / 2.f, bounds.position.y + bounds.size.y / 2.f});
-}
-}
 
 void LevelCompleteState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
@@ -55,30 +48,26 @@ void LevelCompleteState::render(sf::RenderTarget& window) {
     const float centerX = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
     const float centerY = static_cast<float>(AppEngine::ScreenHeight);
 
-    sf::Text title(font, "COURSE CLEAR!", 36);
+    sf::Text title(font, "COURSE CLEAR!", titleSize);
     title.setFillColor(sf::Color(255, 230, 90));
     title.setOutlineColor(sf::Color::Black);
-    title.setOutlineThickness(3.f);
-    centerOrigin(title);
-    title.setPosition({centerX, centerY * 0.30f});
-    window.draw(title);
+    title.setOutlineThickness(2.f);
+    view::text::drawCentered(window, title, centerX, centerY * 0.30f);
 
     const int bonus = model::GameManager::instance().getLevelClearBonus();
-    sf::Text bonusText(font, "BONUS: " + std::to_string(bonus), 20);
+    const std::string bonusString = "BONUS: " + std::to_string(bonus);
+    const unsigned int fitted = view::text::fitCharacterSize(font, bonusString, 600.0f, bonusSize);
+    sf::Text bonusText(font, bonusString, fitted);
     bonusText.setFillColor(sf::Color::White);
     bonusText.setOutlineColor(sf::Color::Black);
-    bonusText.setOutlineThickness(2.f);
-    centerOrigin(bonusText);
-    bonusText.setPosition({centerX, centerY * 0.45f});
-    window.draw(bonusText);
+    bonusText.setOutlineThickness(1.f);
+    view::text::drawCentered(window, bonusText, centerX, centerY * 0.45f);
 
-    sf::Text hint(font, "PRESS ENTER", 16);
+    sf::Text hint(font, "PRESS ENTER", hintSize);
     hint.setFillColor(sf::Color(200, 200, 200));
     hint.setOutlineColor(sf::Color::Black);
-    hint.setOutlineThickness(2.f);
-    centerOrigin(hint);
-    hint.setPosition({centerX, centerY * 0.58f});
-    window.draw(hint);
+    hint.setOutlineThickness(1.f);
+    view::text::drawCentered(window, hint, centerX, centerY * 0.58f);
 }
 
 }

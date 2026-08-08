@@ -15,7 +15,8 @@ public:
     KoopaRenderer();
 
 protected:
-    void renderTyped(sf::RenderTarget& window, const model::Koopa& koopa) const override;
+    void renderTyped(sf::RenderTarget& window, const model::Koopa& koopa,
+                     const RenderContext& ctx) const override;
 };
 
 }

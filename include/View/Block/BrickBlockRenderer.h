@@ -17,7 +17,8 @@ public:
     BrickBlockRenderer();
 
 protected:
-    void renderTyped(sf::RenderTarget& window, const model::BrickBlock& brickBlock) const override;
+    void renderTyped(sf::RenderTarget& window, const model::BrickBlock& brickBlock,
+                     const RenderContext& ctx) const override;
 
 private:
     sf::Texture texture;

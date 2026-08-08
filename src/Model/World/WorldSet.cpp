@@ -8,7 +8,7 @@ const World& WorldSet::forType(WorldType type) {
     static const std::map<WorldType, World> worlds{
         {WorldType::Overworld,
          World(WorldType::Overworld, sf::Color(92, 148, 252), "assets/blocks.png",
-               1.0f, 1.0f, 0.0f)},
+               1.0f, 1.0f, 0.4f)},
         // Simplified underwater: weaker gravity, a slower fall ceiling and horizontal
         // drag; the player swims with the held jump key (see Player::handleInput).
         {WorldType::Underwater,

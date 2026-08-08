@@ -20,7 +20,8 @@ constexpr int KoopaShellFrameCol = 3;
 KoopaRenderer::KoopaRenderer() : SpriteEntityRenderer("assets/enemies.png") {
 }
 
-void KoopaRenderer::renderTyped(sf::RenderTarget& window, const model::Koopa& koopa) const {
+void KoopaRenderer::renderTyped(sf::RenderTarget& window, const model::Koopa& koopa,
+                                const RenderContext& /* ctx */) const {
     const int frameCol = koopa.isShell() ? KoopaShellFrameCol : KoopaFrameCol;
     drawCharacterFrame(window, koopa,
                        {{frameCol * 16, EnemyFrameTop}, {EnemyFrameSize, EnemyFrameSize}});

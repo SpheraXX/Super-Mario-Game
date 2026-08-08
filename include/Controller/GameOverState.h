@@ -19,6 +19,9 @@ public:
 private:
     sf::Font font;
     bool fontLoaded = false;
+    unsigned int titleSize = 56;
+    unsigned int scoreSize = 26;
+    unsigned int hintSize = 20;
 };
 
 }

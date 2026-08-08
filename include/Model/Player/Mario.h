@@ -15,7 +15,10 @@ public:
     float getJumpAccel() const override;
 
     static constexpr float WalkSpeed = 180.0f;
-    static constexpr float RunSpeed = 400.0f;
+    // 400 was too hot on land: with the Overworld drag (0.4/s, see WorldSet) the effective
+    // top speed settles around 350px/s — fast enough for a snappy sprint, slow enough for
+    // the fixed 20-column camera to keep the player visibly ahead.
+    static constexpr float RunSpeed = 360.0f;
     // Safety ceiling only: with the hold window and accel below, the boost tops out near
     // 495px/s, so a full-length hold never reaches this cap.
     static constexpr float MaxJumpSpeed = 680.0f;

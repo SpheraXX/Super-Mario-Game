@@ -26,10 +26,11 @@ public:
 
     // Draw entity through the renderer registered for its dynamic type. Entities without
     // a registered renderer are simply not drawn (e.g. unspawned future types).
-    void render(sf::RenderTarget& window, const model::Entity& entity) const {
+    void render(sf::RenderTarget& window, const model::Entity& entity,
+                const RenderContext& ctx) const {
         const auto it = renderers.find(typeid(entity));
         if (it != renderers.end()) {
-            it->second->render(window, entity);
+            it->second->render(window, entity, ctx);
         }
     }
 

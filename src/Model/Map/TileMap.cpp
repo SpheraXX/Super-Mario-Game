@@ -39,22 +39,36 @@ void TileMap::loadFromFile(const std::string& filePath) {
     if (line.empty()) {
         throw std::runtime_error("Map file has an empty first row: " + filePath);
     }
-    columns = line.size();
+
+    std::vector<std::string> rows;
+    rows.push_back(line);
+    for (std::size_t row = 1; row < Rows; ++row) {
+        if (!std::getline(input, line)) {
+            throw std::runtime_error("Map file has fewer than 16 rows: " + filePath);
+        }
+        rows.push_back(line);
+    }
+    loadFromLines(rows);
+}
+
+void TileMap::loadFromLines(const std::vector<std::string>& rows) {
+    if (rows.size() < Rows) {
+        throw std::runtime_error("Area grid has fewer than 16 rows");
+    }
+
+    const std::size_t width = rows[0].size();
+    if (width == 0) {
+        throw std::runtime_error("Area grid has an empty first row");
+    }
+    columns = width;
     tiles.assign(Rows, std::vector<char>(columns, '.'));
 
     for (std::size_t row = 0; row < Rows; ++row) {
-        if (row > 0) {
-            if (!std::getline(input, line)) {
-                throw std::runtime_error("Map file has fewer than 16 rows: " + filePath);
-            }
+        if (rows[row].size() < columns) {
+            throw std::runtime_error("Area grid row is shorter than the first row");
         }
-
-        if (line.size() < columns) {
-            throw std::runtime_error("Map row is shorter than the first row: " + filePath);
-        }
-
         for (std::size_t column = 0; column < columns; ++column) {
-            tiles[row][column] = line[column];
+            tiles[row][column] = rows[row][column];
         }
     }
 }

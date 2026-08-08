@@ -19,7 +19,8 @@ public:
     FlagPoleRenderer();
 
 protected:
-    void renderTyped(sf::RenderTarget& window, const model::FlagPole& pole) const override;
+    void renderTyped(sf::RenderTarget& window, const model::FlagPole& pole,
+                     const RenderContext& ctx) const override;
 
 private:
     sf::Texture texture;

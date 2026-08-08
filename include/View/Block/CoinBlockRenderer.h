@@ -19,7 +19,8 @@ public:
     CoinBlockRenderer();
 
 protected:
-    void renderTyped(sf::RenderTarget& window, const model::CoinBlock& coinBlock) const override;
+    void renderTyped(sf::RenderTarget& window, const model::CoinBlock& coinBlock,
+                     const RenderContext& ctx) const override;
 
 private:
     sf::Texture texture;

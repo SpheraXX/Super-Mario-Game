@@ -2,6 +2,8 @@
 
 #include "Model/Core/Hitbox.h"
 
+#include <algorithm>
+
 namespace model {
 
 FlagPole::FlagPole(Vector2 position, Vector2 size)
@@ -17,6 +19,14 @@ void FlagPole::onTriggerEnter(Entity& other) {
 
 bool FlagPole::isTouched() const {
     return touched;
+}
+
+float FlagPole::getSlideProgress() const {
+    return slideProgress;
+}
+
+void FlagPole::setSlideProgress(float progress) {
+    slideProgress = std::clamp(progress, 0.0f, 1.0f);
 }
 
 }

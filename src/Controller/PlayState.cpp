@@ -13,6 +13,7 @@
 #include "Model/Enemy/Koopa.h"
 #include "Model/Level/Castle.h"
 #include "Model/Level/FlagPole.h"
+#include "Model/Level/Pipe.h"
 #include "Model/Player/Luigi.h"
 #include "Model/Player/Mario.h"
 #include "Model/Player/Player.h"
@@ -23,6 +24,7 @@
 #include "View/Enemy/KoopaRenderer.h"
 #include "View/Level/CastleRenderer.h"
 #include "View/Level/FlagPoleRenderer.h"
+#include "View/Level/PipeRenderer.h"
 #include "View/Player/PlayerRenderer.h"
 
 #include <SFML/Graphics/Color.hpp>
@@ -52,6 +54,11 @@ constexpr std::size_t CastleOffsetTiles = 13;
 constexpr float TimerStartSeconds = 400.0f;
 constexpr int FlagBonus = 5000;
 constexpr int TimeBonusPerSecond = 10;
+
+// Duration of the pole-slide segment before Mario walks on.
+constexpr float SlideDuration = 0.45f;
+// Auto-walk speed on the flat completion zone after the slide.
+constexpr float CinematicWalkSpeed = 220.0f;
 
 // TEMP trace instrumentation (removed after playtest).
 void trace(const std::string& msg) {
@@ -83,22 +90,19 @@ float groundTopAt(const model::TileMap& map, std::size_t column) {
 void PlayState::onEnter() {
     auto& game = model::GameManager::instance();
     try {
-        map.loadFromFile(game.getCurrentMapPath());
-        map.padRight(LevelPaddingTiles);
-        renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png", map.getWorldType());
-        mapLoaded = true;
+        level.loadFromFile(game.getCurrentMapPath());
+        loadArea(0);
     } catch (const std::exception& error) {
         std::cerr << "PlayState: failed to load level assets: " << error.what() << '\n';
         mapLoaded = false;
     }
 
-    worldType = map.getWorldType();
     timer.reset(TimerStartSeconds);
     levelComplete = false;
 
-    // Publish the map's metadata where the HUD and the completion flow read it.
-    game.setLevelName(map.getLevelName());
-    game.setNextMapPath(map.getNextMapPath());
+    // Publish the level's metadata where the HUD and the completion flow read it.
+    game.setLevelName(level.getLevelName());
+    game.setNextMapPath(level.getNextMapPath());
 
     // Build the view: one renderer per entity type + the screen-space HUD.
     entityRenderers = std::make_unique<view::EntityRendererRegistry>();
@@ -110,16 +114,14 @@ void PlayState::onEnter() {
     entityRenderers->registerRenderer<model::BrickBlock, view::BrickBlockRenderer>();
     entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
     entityRenderers->registerRenderer<model::Castle, view::CastleRenderer>();
+    entityRenderers->registerRenderer<model::Pipe, view::PipeRenderer>();
     hudRenderer = std::make_unique<view::HudRenderer>();
 
     // Initialize collision manager
     collisionManager = std::make_unique<model::CollisionManager>(&map);
 
-    // Spawn the initial set of entities (also used for respawns after a death).
-    resetLevel();
-
     // TEMP diagnostics (removed after playtest).
-    if (map.getColumns() > 0) {
+    if (mapLoaded && map.getColumns() > 0) {
         trace("mapLoad cols=" + std::to_string(map.getColumns())
               + " g00=" + std::string(1, map.getTile(0, 0))
               + " m26=" + std::string(1, map.getTile(2, 6))
@@ -128,6 +130,48 @@ void PlayState::onEnter() {
     } else {
         trace("mapLoad FAILED loaded=" + std::to_string(mapLoaded));
     }
+}
+
+// Instantiate the given area: copy its grid into the working map, rebuild the themed
+// renderer, append the completion zone on the FINAL area only, then spawn the area.
+void PlayState::loadArea(std::size_t areaIndex) {
+    currentArea = areaIndex;
+    worldType = level.areaWorld(areaIndex);
+    map = level.areaMap(areaIndex);
+    if (currentArea == level.areaCount() - 1) {
+        map.padRight(LevelPaddingTiles);
+    }
+    renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png", worldType);
+    mapLoaded = true;
+    resetLevel();
+}
+
+void PlayState::teleportToPortal(const model::Portal& portal) {
+    if (portal.destinationArea >= level.areaCount()) {
+        return;
+    }
+
+    // Rebuild the destination area and its entities, then place Mario either on the
+    // cap of the destination pipe (if the arrival column has one) or on the ground.
+    // The camera, HUD and timer all keep their state.
+    loadArea(portal.destinationArea);
+    if (!player) {
+        return;
+    }
+    const std::size_t tileWidth = model::TileMap::TileWidth;
+    const float groundTop = groundTopAt(map, portal.destinationColumn);
+    float landY = groundTop - player->getSize().y;
+    for (const auto& e : entities) {
+        auto* pipe = dynamic_cast<model::Pipe*>(e.get());
+        if (pipe && pipe->getSourceColumn() == portal.destinationColumn) {
+            landY = pipe->getPosition().y - player->getSize().y;
+            break;
+        }
+    }
+    player->setPosition({
+        static_cast<float>(portal.destinationColumn * tileWidth),
+        landY});
+    player->setVelocity({0.0f, 0.0f});
 }
 
 // (Re)build the entity list from scratch: the map file drives what spawns where.
@@ -145,6 +189,7 @@ void PlayState::resetLevel() {
     entities.clear();
     player = nullptr;
     flagPole = nullptr;
+    castle = nullptr;
 
     bool marioSpawned = false;
     for (std::size_t row = 0; row < rows; ++row) {
@@ -199,6 +244,33 @@ void PlayState::resetLevel() {
         }
     }
 
+    // Pipes: contiguous vertical runs of 'P' on one column become a single Pipe whose
+    // box covers the whole run (cap on the top cell, plain body below). The column is
+    // what links the entity to its level portal, if any.
+    for (std::size_t column = 0; column < columns; ++column) {
+        std::size_t runStart = 0;
+        while (runStart < rows) {
+            while (runStart < rows && map.getTile(runStart, column) != 'P') {
+                ++runStart;
+            }
+            if (runStart >= rows) {
+                break;
+            }
+            std::size_t runEnd = runStart;
+            while (runEnd + 1 < rows && map.getTile(runEnd + 1, column) == 'P') {
+                ++runEnd;
+            }
+            // Row 0 is the bottom row; the cap is the topmost row of the run.
+            const float pipeTop = static_cast<float>((rows - 1 - runEnd) * tileHeight);
+            const float pipeHeight = static_cast<float>((runEnd - runStart + 1) * tileHeight);
+            auto pipe = std::make_unique<model::Pipe>(
+                model::Vector2{static_cast<float>(column * tileWidth), pipeTop},
+                model::Vector2{static_cast<float>(tileWidth), pipeHeight}, column);
+            entities.push_back(std::move(pipe));
+            runStart = runEnd + 1;
+        }
+    }
+
     // Fallback: if the map has no 'M', keep the game playable with a fixed spawn.
     if (!marioSpawned) {
         const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
@@ -228,6 +300,7 @@ void PlayState::resetLevel() {
         model::Vector2{static_cast<float>((baseColumns + CastleOffsetTiles) * tileWidth),
                        groundTop - castleHeight},
         model::Vector2{3.0f * tileWidth, castleHeight}));
+    castle = static_cast<model::Castle*>(entities.back().get());
 
     // Every character obeys the current world's physics (gravity/fall/drag, swim).
     const model::World& world = model::WorldSet::forType(worldType);
@@ -236,6 +309,10 @@ void PlayState::resetLevel() {
             character->setWorld(world);
         }
     }
+
+    // A fresh level starts outside the clear sequence.
+    clearPhase = ClearPhase::None;
+    completionOverlayPushed = false;
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
@@ -261,9 +338,16 @@ void PlayState::handleEvent(const sf::Event& event) {
 }
 
 void PlayState::update(float deltaTime) {
-    // Once the flag is touched the level is frozen behind the LevelComplete overlay:
+    // Once the level is complete the game is frozen behind the completion overlay:
     // no timer, no input, no physics.
     if (levelComplete) {
+        return;
+    }
+
+    // After the flagpole is touched a short scripted clear play keeps updating the
+    // tableau (pole slide, walk to the castle) until the overlay is pushed.
+    if (clearPhase != ClearPhase::None) {
+        updateClearSequence(deltaTime);
         return;
     }
 
@@ -360,17 +444,41 @@ void PlayState::update(float deltaTime) {
         }
     }
 
-    // Flagpole touch: award the clear bonus (flag height + time remaining) and push the
-    // transparent completion overlay; update() above returns from now on, freezing the
-    // level behind it.
+    // Pipe entry: holding Down while standing on a pipe's cap and a portal is bound to
+    // that pipe's column teleports the player to the portal's area.
+    if (player && player->getInputDown() && !player->isDying() && !levelComplete &&
+        clearPhase == ClearPhase::None) {
+        for (const auto& e : entities) {
+            auto* pipe = dynamic_cast<model::Pipe*>(e.get());
+            if (!pipe || !pipe->isActive) continue;
+            const model::Portal* portal = nullptr;
+            for (const auto& p : level.portals(currentArea)) {
+                if (p.sourceColumn == pipe->getSourceColumn()) {
+                    portal = &p;
+                    break;
+                }
+            }
+            if (!portal) continue;
+
+            const model::Vector2& pPos = player->getPosition();
+            const float feetY = pPos.y + player->getSize().y;
+            const float onTop = std::abs(feetY - pipe->getPosition().y);
+            // Entry needs the player's feet resting on the cap and a real footprint
+            // overlap with it (slightly forgiving at the very edge).
+            const bool overlapsCap = pPos.x + player->getSize().x > pipe->getPosition().x + 2.0f &&
+                                     pPos.x < pipe->getPosition().x + pipe->getSize().x - 2.0f;
+            if (player->isGrounded && onTop < 8.0f && overlapsCap) {
+                teleportToPortal(*portal);
+                break;
+            }
+        }
+    }
+
+    // Flagpole touch: award the clear bonus (flag height + time remaining) and start the
+    // scripted clear play. update() keeps running the sequence (feeding the frozen
+    // tableau) until the completion overlay is finally pushed.
     if (flagPole && flagPole->isTouched() && player && !player->isDying()) {
-        levelComplete = true;
-        timer.pause();
-        const int timeBonus = timer.getRemainingSeconds() * TimeBonusPerSecond;
-        model::GameManager::instance().addScore(FlagBonus + timeBonus);
-        model::GameManager::instance().setLevelClearBonus(FlagBonus + timeBonus);
-        trace("levelComplete bonus=" + std::to_string(FlagBonus + timeBonus));
-        manager->pushState(std::make_unique<LevelCompleteState>());
+        beginLevelClear();
     }
 
     // HUD snapshot for the next frame.
@@ -379,6 +487,86 @@ void PlayState::update(float deltaTime) {
     hudData.coins = game.getCoins();
     hudData.levelName = game.getLevelName();
     hudData.time = timer.getRemainingSeconds();
+}
+
+void PlayState::beginLevelClear() {
+    if (!flagPole || !player) {
+        finishLevelClear();
+        return;
+    }
+
+    // Award the clear bonus immediately (flag + time remaining), like the timer path.
+    timer.pause();
+    const int timeBonus = timer.getRemainingSeconds() * TimeBonusPerSecond;
+    model::GameManager::instance().addScore(FlagBonus + timeBonus);
+    model::GameManager::instance().setLevelClearBonus(FlagBonus + timeBonus);
+    trace("clearBonus bonus=" + std::to_string(FlagBonus + timeBonus));
+
+    // Remember the geometry the sequence animates against.
+    const model::Vector2 poleTop = flagPole->getPosition();
+    poleGroundY = poleTop.y + flagPole->getSize().y;
+    poleSlideStartY = player->getPosition().y;
+    castleEntryX = (castle) ? castle->getPosition().x : 0.0f;
+
+    poleElapsed = 0.0f;
+    clearPhase = ClearPhase::SlideToPole;
+}
+
+void PlayState::updateClearSequence(float deltaTime) {
+    if (!player || !flagPole) {
+        finishLevelClear();
+        return;
+    }
+
+    switch (clearPhase) {
+        case ClearPhase::SlideToPole: {
+            poleElapsed += deltaTime;
+            const float progress = std::clamp(poleElapsed / SlideDuration, 0.0f, 1.0f);
+            flagPole->setSlideProgress(progress);
+
+            // Mario hugs the pole and slides with the pennant from where he touched it
+            // down to the ground. The horizontal position is fixed to the pole's column
+            // (centred), the vertical lerps to the flat completion-zone ground.
+            const float poleX = static_cast<float>(flagPole->getPosition().x);
+            const float targetY = poleGroundY - player->getSize().y;
+            player->setPosition({
+                poleX + (flagPole->getSize().x - player->getSize().x) / 2.0f,
+                poleSlideStartY + (targetY - poleSlideStartY) * progress});
+            player->setVelocity({0.0f, 0.0f});
+            player->isGrounded = true;
+            player->setFacingRight(true);
+
+            if (progress >= 1.0f) {
+                clearPhase = ClearPhase::WalkToCastle;
+            }
+            break;
+        }
+        case ClearPhase::WalkToCastle: {
+            // Auto-walk rightwards on the flat completion zone until the castle door.
+            const float marioLeft = player->getPosition().x;
+            player->setVelocity({CinematicWalkSpeed, 0.0f});
+            player->setFacingRight(true);
+            player->update(deltaTime);
+            if (marioLeft + player->getSize().x / 2.0f >= castleEntryX) {
+                player->setVelocity({0.0f, 0.0f});
+                clearPhase = ClearPhase::ReachedCastle;
+            }
+            break;
+        }
+        case ClearPhase::ReachedCastle:
+        case ClearPhase::None:
+            finishLevelClear();
+            break;
+    }
+}
+
+void PlayState::finishLevelClear() {
+    if (completionOverlayPushed) {
+        return;
+    }
+    completionOverlayPushed = true;
+    levelComplete = true;
+    manager->pushState(std::make_unique<LevelCompleteState>());
 }
 
 void PlayState::render(sf::RenderTarget& window) {
@@ -413,9 +601,10 @@ void PlayState::render(sf::RenderTarget& window) {
         renderer->render(window, map);
     }
     if (entityRenderers) {
+        const view::RenderContext ctx{worldType};
         for (const auto& e : entities) {
             if (e->isActive) {
-                entityRenderers->render(window, *e);
+                entityRenderers->render(window, *e, ctx);
             }
         }
     }

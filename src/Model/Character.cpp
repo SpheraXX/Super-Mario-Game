@@ -32,9 +32,12 @@ void Character::update(float deltaTime) {
         return;
     }
 
-    // Underwater worlds drag horizontal motion so characters settle instead of skating.
-    if (isUnderwater() && velocity.x != 0.0f) {
-        velocity.x *= std::max(0.0f, 1.0f - getHorizontalDrag() * deltaTime);
+    // Worlds with horizontal drag (Overworld, Underwater) bleed off lateral velocity so
+    // characters settle against their top speed instead of skating; the value is a decay
+    // per second (1.2 underwater keeps motion floaty, 0.4 on land trims a hot sprint).
+    const float drag = getHorizontalDrag();
+    if (drag > 0.0f && velocity.x != 0.0f) {
+        velocity.x *= std::max(0.0f, 1.0f - drag * deltaTime);
     }
 
     applyGravity(deltaTime);

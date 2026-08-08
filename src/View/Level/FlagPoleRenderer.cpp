@@ -24,7 +24,8 @@ FlagPoleRenderer::FlagPoleRenderer()
 }
 
 void FlagPoleRenderer::renderTyped(sf::RenderTarget& window,
-                                   const model::FlagPole& pole) const {
+                                   const model::FlagPole& pole,
+                                   const RenderContext& /* ctx */) const {
     if (!textureLoaded) return;
 
     const sf::Vector2f pos{pole.getPosition().x, pole.getPosition().y};
@@ -44,11 +45,14 @@ void FlagPoleRenderer::renderTyped(sf::RenderTarget& window,
     ball.setPosition({std::round(pos.x - 4.0f), std::round(pos.y - 32.0f)});
     window.draw(ball);
 
-    // Pennant waving on the pole.
+    // Pennant waving on the pole. During the level-clear cinematic the pennant slides
+    // down the pole with the player (slideProgress 0..1) — from a third of the way up at
+    // rest to just above the ground when the clear play ends.
     sf::Sprite flag(texture);
     flag.setTextureRect({{GoldTileX, GoldTileY}, {16, 16}});
     flag.setScale({2.0f, 2.0f});
-    flag.setPosition({std::round(pos.x + 8.0f), std::round(pos.y + size.y * 0.4f)});
+    const float pennantOffset = size.y * (0.4f + 0.55f * pole.getSlideProgress());
+    flag.setPosition({std::round(pos.x + 8.0f), std::round(pos.y + pennantOffset)});
     window.draw(flag);
 }
 

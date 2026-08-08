@@ -84,6 +84,11 @@ void Player::handleInput(float deltaTime) {
                       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left);
     bool movingRight = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) ||
                        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right);
+    inputMoving = movingLeft || movingRight;
+    // Down enters pipes: kept edge-free (held state) so the play state can warp while
+    // the player stands on the cap. Pipe entry is a hold action in SMB, not a press.
+    inputDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) ||
+                sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down);
     if (movingLeft) {
         setDirection(-1);
     } else if (movingRight) {
@@ -258,12 +263,25 @@ void Player::syncAnimation() {
         setFacingRight(false);
     }
 
+    const float speedX = std::abs(vel.x);
     if (!grounded) {
         setAnimState(vel.y < 0 ? AnimState::Jump : AnimState::Fall);
-    } else if (std::abs(vel.x) > 0.1f) {
-        setAnimState(std::abs(vel.x) > 200.0f ? AnimState::Run : AnimState::Walk);
     } else {
-        setAnimState(AnimState::Idle);
+        // Hysteresis so the sprite never flaps between Idle and Walk. Entering motion
+        // needs a real horizontal push (>IdleSpeed); leaving it only below a lower bar —
+        // and holding the run direction (inputMoving, e.g. pushing against a wall) keeps
+        // the walk pose even when the push-out has just zeroed the velocity.
+        const AnimState current = getAnimState();
+        const bool walking = (speedX > IdleSpeedThreshold)
+                             || ((current == AnimState::Walk || current == AnimState::Run)
+                                 && speedX > StoppedSpeedThreshold)
+                             || ((current == AnimState::Walk || current == AnimState::Run)
+                                 && inputMoving && speedX > 0.0f);
+        if (walking) {
+            setAnimState(speedX > RunSpeedThreshold ? AnimState::Run : AnimState::Walk);
+        } else {
+            setAnimState(AnimState::Idle);
+        }
     }
 }
 

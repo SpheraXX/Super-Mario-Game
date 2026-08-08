@@ -22,7 +22,8 @@ BrickBlockRenderer::BrickBlockRenderer()
 }
 
 void BrickBlockRenderer::renderTyped(sf::RenderTarget& window,
-                                     const model::BrickBlock& brickBlock) const {
+                                     const model::BrickBlock& brickBlock,
+                                     const RenderContext& /* ctx */) const {
     if (!textureLoaded) return;
 
     sf::Sprite sprite(texture);

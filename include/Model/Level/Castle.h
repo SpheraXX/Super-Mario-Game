@@ -7,12 +7,15 @@ namespace model {
 
 // The goal castle at the far right of every level (spawned in the 16-tile padded zone).
 // Solid and static: it caps the map so the player — who has already completed the level
-// at the flagpole in front of it — cannot walk out of the world.
+// at the flagpole in front of it — cannot walk out of the world. Its top is deliberately
+// NOT landable: a player touching the roof glides back down in front instead of standing
+// on it (and flipping his animation each frame between Walk and Idle).
 class Castle : public Entity {
 public:
     Castle(Vector2 position, Vector2 size);
 
     bool isSolid() const override;
+    bool isLandable() const override;
 };
 
 }

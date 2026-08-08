@@ -1,6 +1,8 @@
 #ifndef VIEW_ENTITYRENDERER_H
 #define VIEW_ENTITYRENDERER_H
 
+#include "View/Base/RenderContext.h"
+
 #include <SFML/Graphics/RenderTarget.hpp>
 
 namespace model {
@@ -11,12 +13,14 @@ namespace view {
 
 // Strategy interface: knows how to draw one concrete model entity type. Instances are
 // owned by an EntityRendererRegistry, which dispatches each entity to the renderer
-// registered for its exact runtime type.
+// registered for its exact runtime type. Every draw receives a RenderContext with the
+// world type so themed renderers can pick the right atlas row.
 class EntityRenderer {
 public:
     virtual ~EntityRenderer() = default;
 
-    virtual void render(sf::RenderTarget& window, const model::Entity& entity) const = 0;
+    virtual void render(sf::RenderTarget& window, const model::Entity& entity,
+                        const RenderContext& ctx) const = 0;
 };
 
 // Intermediate base that performs the single, guaranteed-safe downcast from the generic
@@ -26,12 +30,14 @@ public:
 template <typename T>
 class TypedEntityRenderer : public EntityRenderer {
 public:
-    void render(sf::RenderTarget& window, const model::Entity& entity) const final {
-        renderTyped(window, static_cast<const T&>(entity));
+    void render(sf::RenderTarget& window, const model::Entity& entity,
+                const RenderContext& ctx) const final {
+        renderTyped(window, static_cast<const T&>(entity), ctx);
     }
 
 protected:
-    virtual void renderTyped(sf::RenderTarget& window, const T& entity) const = 0;
+    virtual void renderTyped(sf::RenderTarget& window, const T& entity,
+                             const RenderContext& ctx) const = 0;
 };
 
 }

@@ -42,7 +42,8 @@ PlayerRenderer::PlayerRenderer()
     : SpriteEntityRenderer("assets/mario-luigi.png", /*sourceFacesRight=*/true) {
 }
 
-void PlayerRenderer::renderTyped(sf::RenderTarget& window, const model::Player& player) const {
+void PlayerRenderer::renderTyped(sf::RenderTarget& window, const model::Player& player,
+                                 const RenderContext& /* ctx */) const {
     // Big Mario is a 16x32 frame elsewhere in this sheet; wire it up here once the Super/
     // Fire states actually resize the player.
     drawCharacterFrame(window, player,

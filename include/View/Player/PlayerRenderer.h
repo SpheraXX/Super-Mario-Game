@@ -15,7 +15,8 @@ public:
     PlayerRenderer();
 
 protected:
-    void renderTyped(sf::RenderTarget& window, const model::Player& player) const override;
+    void renderTyped(sf::RenderTarget& window, const model::Player& player,
+                     const RenderContext& ctx) const override;
 };
 
 }

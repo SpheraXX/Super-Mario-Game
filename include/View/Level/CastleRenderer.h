@@ -18,7 +18,8 @@ public:
     CastleRenderer();
 
 protected:
-    void renderTyped(sf::RenderTarget& window, const model::Castle& castle) const override;
+    void renderTyped(sf::RenderTarget& window, const model::Castle& castle,
+                     const RenderContext& ctx) const override;
 
 private:
     sf::Texture texture;

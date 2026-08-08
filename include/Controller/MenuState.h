@@ -7,7 +7,8 @@
 
 namespace controller {
 
-// Opening screen. Enter/Space starts a new game; Escape quits.
+// Opening screen. Enter/Space starts a new game; Escape quits. Text is fitted to the
+// logical screen and snapped to whole pixels so the pixel font stays crisp.
 class MenuState : public GameState {
 public:
     void onEnter() override;
@@ -18,6 +19,9 @@ public:
 private:
     sf::Font font;
     bool fontLoaded = false;
+    unsigned int titleSize = 56;
+    unsigned int startHintSize = 24;
+    unsigned int quitHintSize = 20;
 };
 
 }

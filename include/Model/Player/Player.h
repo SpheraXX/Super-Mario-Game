@@ -43,6 +43,9 @@ public:
     int getCoins() const;
     int getLives() const;
 
+    // Down-input intent from the last handleInput() (see the protected member).
+    bool getInputDown() const { return inputDown; }
+
 protected:
     std::unique_ptr<PlayerState> state;
     float damageCooldown;
@@ -57,6 +60,13 @@ protected:
     float jumpHoldTime = 0.0f;
     bool jumpHeld = false;
     bool playerInitiatedJump = false;
+    // Horizontal-input intent from the last handleInput(): used by syncAnimation so that
+    // pushing against a wall (velocity keeps getting zeroed by the push-out) still reads
+    // as walking instead of flapping Walk/Idle every frame.
+    bool inputMoving = false;
+    // Down input intent from the last handleInput(): standing on a pipe and holding
+    // Down enters it (play state reads this to teleport to the portal target).
+    bool inputDown = false;
 
 protected:
     static constexpr float DamageCooldownTime = 0.5f;
@@ -73,6 +83,13 @@ protected:
     static constexpr float GroundAccel = 800.0f;
     static constexpr float AirAccel = 600.0f;
     static constexpr float Friction = 1600.0f;
+
+    // Animation hysteresis thresholds (self-explanatory in syncAnimation): entering walk
+    // needs >10px/s, leaving it needs to drop below 2px/s (or lose the input), and the
+    // walk/run split sits at 200px/s. The gaps stop the pose from flickering frame menus.
+    static constexpr float IdleSpeedThreshold = 10.0f;
+    static constexpr float StoppedSpeedThreshold = 2.0f;
+    static constexpr float RunSpeedThreshold = 200.0f;
 
     // Underwater (simplified): holding the jump key continuously swims upward. The
     // world's scaled gravity + drag then keep the motion floaty instead of jumpy.

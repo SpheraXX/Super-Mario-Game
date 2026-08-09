@@ -17,6 +17,8 @@ public:
 
 private:
     bool coinAvailable;
+    // Points for the coin itself; the extra-life tally is counted separately.
+    static constexpr int CoinScore = 200;
 };
 
 }

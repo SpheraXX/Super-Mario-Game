@@ -62,6 +62,7 @@ void Bowser::onHit(Entity& /* source */) {
     health -= 1;
     if (health <= 0) {
         beginDying(true);
+        awardScore();  // only the killing blow pays, not each of the five hits
     }
 }
 

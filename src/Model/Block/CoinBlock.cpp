@@ -24,7 +24,9 @@ void CoinBlock::onCollision(Entity& other, CollisionType side) {
     if (side == CollisionType::Bottom && other.hitbox.layer == CollisionLayer::Player) {
         if (coinAvailable) {
             collectCoin();
-            GameManager::instance().addScore(200);
+            // A coin counts twice over: score now, and towards the extra-life tally.
+            GameManager::instance().addScore(CoinScore);
+            GameManager::instance().addCoin();
         }
     }
 }

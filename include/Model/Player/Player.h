@@ -33,18 +33,17 @@ public:
     void becomeFire();
     void becomeStar();
 
+    // Convenience forwards to GameManager, which is the single owner of these counters:
+    // the player object does not survive a death, and the totals must. Coins are not here
+    // at all — coin sources talk to GameManager directly, so there is one rule and one path.
     void addScore(int points);
-    void addCoin();
     void addLife();
 
     int getScore() const;
-    int getCoins() const;
     int getLives() const;
 
 protected:
     std::unique_ptr<PlayerState> state;
-    int score;
-    int coins;
     float damageCooldown;
     // Press-edge jump tracking: jumpHeld remembers the raw button state from the
     // previous frame so a held key cannot re-trigger a jump on landing; playerInitiatedJump

@@ -6,6 +6,7 @@
 #include "Model/Enemy/HammerBro.h"
 #include "Model/Enemy/Koopa.h"
 #include "Model/Enemy/Lakitu.h"
+#include "Model/Enemy/PiranhaPlant.h"
 #include "Model/Enemy/Spiny.h"
 #include "Model/Map/TileMap.h"
 
@@ -39,8 +40,15 @@ std::unique_ptr<Enemy> EnemyFactory::create(int id, Vector2 tileOrigin) {
         case Spiny:           return make<model::Spiny>(tileOrigin);
         case Bowser:          return make<model::Bowser>(tileOrigin);
 
-        case CheepCheep:
         case PiranhaPlant:
+            // The odd one out: it is not stood on the marker tile, it hangs off the pipe
+            // below it. The marker goes in the empty cell directly above the pipe's top-left
+            // cell — it cannot go *on* the mouth, because the loader strips a spawn digit to
+            // an empty tile and that would punch a hole in the pipe.
+            return std::make_unique<model::PiranhaPlant>(
+                Vector2{tileOrigin.x, tileOrigin.y + TileMap::TileHeight});
+
+        case CheepCheep:
             std::cerr << "EnemyFactory: enemy id " << id
                       << " is not implemented yet; skipping this spawn point.\n";
             return nullptr;

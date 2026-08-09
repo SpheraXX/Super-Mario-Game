@@ -17,6 +17,7 @@ public:
     void onHit(Entity& source) override;
 
     bool isStompable() const override { return false; }
+    int getScoreValue() const override { return 5000; }
 
 private:
     float patrolCentreX;

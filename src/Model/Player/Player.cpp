@@ -10,8 +10,6 @@ namespace model {
 Player::Player(Vector2 position, Vector2 size)
     : Character(position, size),
       state(std::make_unique<SmallState>()),
-      score(0),
-      coins(0),
       damageCooldown(0.0f) {
     // The collision layer drives the (type-check-free) routing in CollisionManager:
     // exactly one entity per pair must be the player for the pair to resolve.
@@ -155,15 +153,7 @@ void Player::becomeStar() {
 }
 
 void Player::addScore(int points) {
-    score += points;
-}
-
-void Player::addCoin() {
-    coins++;
-    if (coins >= 100) {
-        coins -= 100;
-        model::GameManager::instance().addLife();
-    }
+    model::GameManager::instance().addScore(points);
 }
 
 void Player::addLife() {
@@ -171,11 +161,7 @@ void Player::addLife() {
 }
 
 int Player::getScore() const {
-    return score;
-}
-
-int Player::getCoins() const {
-    return coins;
+    return model::GameManager::instance().getScore();
 }
 
 int Player::getLives() const {

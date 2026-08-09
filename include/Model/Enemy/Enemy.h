@@ -28,10 +28,20 @@ public:
     // and every enemy header would have to pull it in.
     virtual std::unique_ptr<Projectile> createProjectile();
 
+    // Points for defeating this enemy. Overridden by the ones worth more than a foot soldier.
+    virtual int getScoreValue() const { return DefaultScoreValue; }
+
     // True while the enemy shows its squished sprite (stomped but not gone yet).
     bool isSquished() const;
 
 protected:
+    // Credit this enemy's value to the score. Called from wherever a subclass decides it has
+    // actually been defeated — which is not every stomp, since kicking a Koopa shell around
+    // is not a kill.
+    void awardScore() const;
+
+    static constexpr int DefaultScoreValue = 100;
+
     // Ticks the attack cooldown and fires createProjectile() into the world when it elapses.
     // Inert unless a subclass sets attackCooldown.
     void updateAttack(float deltaTime);

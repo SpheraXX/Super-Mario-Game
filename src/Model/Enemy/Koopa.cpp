@@ -38,12 +38,14 @@ void Koopa::onStomped(Entity& player) {
     // Koopa, and a second stomp is what produces the shell.
     if (winged) {
         winged = false;
+        awardScore();
         return;
     }
 
     if (state == KoopaState::Walking) {
         state = KoopaState::ShellIdle;
         velocity.x = 0.0f;
+        awardScore();  // only the retreat into the shell scores; kicking it later does not
 
         // The shell art is half the height of the standing Koopa, so the box shrinks with
         // it. Position is the top-left corner, so it has to drop by the difference too —

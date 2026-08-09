@@ -1,5 +1,6 @@
 #include "Model/Enemy/Enemy.h"
 
+#include "Model/Core/GameManager.h"
 #include "Model/Core/World.h"
 #include "Model/Projectile/Projectile.h"
 
@@ -42,11 +43,17 @@ void Enemy::update(float deltaTime) {
 void Enemy::onStomped(Entity& /* player */) {
     isStomped = true;
     despawnTimer = 1.0f; // Default 1 second before despawning after stomped
+    awardScore();
 }
 
 void Enemy::onHit(Entity& /* source */) {
     // Knocked out (e.g. by a spinning shell): pop up and fall away.
     beginDying(true);
+    awardScore();
+}
+
+void Enemy::awardScore() const {
+    GameManager::instance().addScore(getScoreValue());
 }
 
 int Enemy::getDamageValue() const {

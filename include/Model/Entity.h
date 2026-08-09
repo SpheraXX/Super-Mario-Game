@@ -41,6 +41,11 @@ public:
     // the collision routing damages instead of squashing and bouncing.
     virtual bool isStompable() const { return true; }
 
+    // True for entities drawn *before* the tile map, so the terrain covers them. A Piranha
+    // Plant has to slide out from behind its pipe; drawn in the normal pass it would hang
+    // visibly in front of the pipe at every retracted position.
+    virtual bool drawsBehindTerrain() const { return false; }
+
     // The world an entity lives in: its channel for spawning (projectiles, transformations)
     // and for asking about the player. Set when the level takes ownership of the entity.
     void setWorld(World* w) { world = w; }

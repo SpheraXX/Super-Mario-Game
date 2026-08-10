@@ -3,13 +3,11 @@
 
 #include "Model/Map/TileMap.h"
 #include "Model/World/WorldType.h"
+#include "View/Base/SpritePainter.h"
 
 #include <SFML/Graphics/Color.hpp>
-#include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
-#include <SFML/Graphics/Sprite.hpp>
-#include <SFML/Graphics/Texture.hpp>
 
 #include <optional>
 #include <string>
@@ -37,33 +35,16 @@ public:
     void render(sf::RenderTarget& window, const model::TileMap& map) const;
 
 private:
-    // Base atlas unit used only to derive the render scale factor (TileWidth/SourceTileSize):
-    // a tile registered with width/height that are multiples of this ends up covering that
-    // many map cells on screen.
-    static constexpr unsigned int SourceTileSize = 16;
-
-    // The sheet stores its backdrop in several near-identical shades (e.g. 146,146,251 and
-    // 148,148,255), so the color key matches within a tolerance instead of exactly —
-    // otherwise stray backdrop pixels survive as a visible fringe. Safe because the closest
-    // actual artwork color sits far outside this radius.
-    static constexpr int ColorKeyTolerance = 16;
-
-    struct Tileset {
-        sf::Image image;
-        sf::Texture texture;
-    };
-
+    // The registry references each tileset's SpritePainter by path; unordered_map keeps
+    // element addresses stable across inserts, so these pointers stay valid.
     struct TileEntry {
-        // Points into `tilesets`; unordered_map keeps element addresses stable across inserts.
-        const Tileset* tileset = nullptr;
+        const SpritePainter* tileset = nullptr;
         sf::IntRect rect;
     };
 
-    Tileset& tilesetFor(const std::string& tilesetPath);
-    static void applyColorKey(Tileset& tileset, const sf::IntRect& area, sf::Color transparentColor);
-    static void refreshTexture(Tileset& tileset);
+    SpritePainter& tilesetFor(const std::string& tilesetPath);
 
-    std::unordered_map<std::string, Tileset> tilesets;
+    std::unordered_map<std::string, SpritePainter> tilesets;
     std::unordered_map<char, TileEntry> tileRects;
 };
 

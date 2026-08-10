@@ -1,14 +1,13 @@
 # Full Project Class Diagram
 
 > Mermaid diagram covering all model, view, and controller classes (k.2.5). Stage 1
-> (model interface segregation) and stage 2, subtasks 0–3 are reflected: the goal castle
-> is painted into the TileMap completion zone from a 21-symbol sheet
-> (`TileMap::CastleSymbols`, registered by `TileMapRenderer` from atlas rows
-> y = 696/712 (tower) and 728/744/760 (base)); pipes spawn from `'p'` (body) / `'P'`
-> (mouth) runs in the grid; and tile collision treats castle symbols as ground/solid.
-> Still pending: stage 2 subtasks 4–6 (SpritePainter unification, removing the
-> `Castle` entity + `CastleRenderer`) and stage 3 (the PlayState split) — the temporary
-> `Castle` entity and `CastleRenderer` remain in the diagram until then.
+> (model interface segregation) and stage 2 are reflected: the goal castle is painted
+> into the TileMap completion zone from a 21-symbol sheet (`TileMap::CastleSymbols`,
+> registered by `TileMapRenderer` from atlas rows y = 696/712 (tower) and 728/744/760
+> (base)); pipes spawn from `'p'` (body) / `'P'` (mouth) runs in the grid; tile
+> collision treats castle symbols as ground/solid; and every static-image draw goes
+> through the shared `SpritePainter` facade (tile map, pipes, flagpole — the `Castle`
+> entity and `CastleRenderer` are gone). Still pending: stage 3, the PlayState split.
 > Companion doc: `CLASS_ENCAPSULATION_AND_CONNECTIONS.md` (per-class encapsulation + inter-class methods).
 
 ```mermaid
@@ -401,14 +400,8 @@ classDiagram
         +setSlideProgress(progress)
     }
 
-    class Castle {
-        +Castle(position, size)
-        +isSolid() bool*
-    }
-
-    %% The Castle above is the temporary entity (still spawned in resetLevel, stage 2
-    %% subtask 5 removes it): the gameplay castle is now tiles, painted by PlayState
-    %% via TileMap::setTile from the CastleSymbols sheet.
+    %% The gameplay castle is painted into the grid by PlayState via TileMap::setTile
+    %% from the CastleSymbols sheet (see TileMap); no Castle entity exists anymore.
 
     class GameManager {
         <<singleton>>
@@ -529,25 +522,16 @@ classDiagram
     }
 
     class PipeRenderer {
-        -sf_Texture texture
+        -SpritePainter painter
         +PipeRenderer()
         #renderTyped(window, pipe, ctx)*
     }
 
     class FlagPoleRenderer {
-        -sf_Texture texture
+        -SpritePainter painter
         +FlagPoleRenderer()
         #renderTyped(window, pole, ctx)*
     }
-
-    class CastleRenderer {
-        -sf_Texture texture
-        +CastleRenderer()
-        #renderTyped(window, castle, ctx)*
-    }
-
-    %% CastleRenderer renders the temporary Castle entity only; once the entity is
-    %% removed (stage 2, subtask 5) this renderer and its registry entry go too.
 
     class CoinBlockRenderer {
         -sf_Texture texture
@@ -562,8 +546,28 @@ classDiagram
         #renderTyped(window, brickBlock, ctx)*
     }
 
+    class SpritePainter {
+        -sf_Image image
+        -sf_Texture texture
+        -bool loaded
+        +SpritePainter()
+        +SpritePainter(texturePath)
+        +load(texturePath) bool
+        +isLoaded() bool
+        +applyColorKey(area, transparentColor)
+        +draw(target, frame, position, scale)
+        +drawCell(target, frame, origin)
+        $SourceTileSize 16
+        $ColorKeyTolerance 16
+    }
+
+    %% SpritePainter is the single sprite-drawing facade: it owns one tileset image +
+    %% texture, re-uploads after color keying, and draws frames snapped to integer
+    %% pixels. The tile map, pipes and the flagpole all paint through it, so sheet
+    %% loading and snapping live in exactly one place.
+
     class TileMapRenderer {
-        -unordered_map~string, Tileset~ tilesets
+        -unordered_map~string, SpritePainter~ tilesets
         -unordered_map~char, TileEntry~ tileRects
         +TileMapRenderer(tilesetPath, worldType)
         +loadTileset(tilesetPath)
@@ -684,7 +688,6 @@ classDiagram
         -LevelTimer timer
         -HudData hudData
         -FlagPole* flagPole
-        -Castle* castle
         -bool levelComplete
         -ClearPhase clearPhase
         +onEnter()
@@ -729,7 +732,6 @@ classDiagram
     Entity <|-- Block
     Entity <|-- Pipe
     Entity <|-- FlagPole
-    Entity <|-- Castle
     Character <|-- Player
     Character <|-- Enemy
     Character <|-- NPC
@@ -756,7 +758,6 @@ classDiagram
     SpriteEntityRenderer <|-- KoopaRenderer : T = Koopa
     TypedEntityRenderer <|-- PipeRenderer : T = Pipe
     TypedEntityRenderer <|-- FlagPoleRenderer : T = FlagPole
-    TypedEntityRenderer <|-- CastleRenderer : T = Castle
     TypedEntityRenderer <|-- CoinBlockRenderer : T = CoinBlock
     TypedEntityRenderer <|-- BrickBlockRenderer : T = BrickBlock
 
@@ -797,6 +798,9 @@ classDiagram
     EntityRendererRegistry ..> Entity : keys by typeid
     TypedEntityRenderer ..> Entity : downcasts to T
     SpriteEntityRenderer ..> Character : reads facing
+    PipeRenderer o-- SpritePainter : owns one
+    FlagPoleRenderer o-- SpritePainter : owns one
+    TileMapRenderer o-- "*" SpritePainter : one per tileset path
 
     %% Usage / Dependency
     PlayState ..> GameManager : score/coins/lives/map path
@@ -819,6 +823,7 @@ classDiagram
     LevelCompleteState ..> GameManager : bonus + next map
     HudRenderer ..> HudData : reads
     TileMapRenderer ..> TileMap : reads
+    SpritePainter ..> TileMap : cell scale (TileWidth/SourceTileSize)
     HitboxRenderer ..> Entity : debug overlay
     HitboxRenderer ..> TileMap : debug overlay
     TileMapRenderer ..> World : theme colors

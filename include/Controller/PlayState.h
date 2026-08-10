@@ -19,7 +19,6 @@
 namespace model {
 class Player;
 class FlagPole;
-class Castle;
 class Pipe;
 }
 
@@ -87,7 +86,6 @@ private:
     view::HudData hudData;
 
     model::FlagPole* flagPole = nullptr;  // non-owning: spawned in resetLevel
-    model::Castle* castle = nullptr;      // non-owning: spawned in resetLevel
     bool levelComplete = false;
 
     // Level-clear in the play state (see updateClearSequence).

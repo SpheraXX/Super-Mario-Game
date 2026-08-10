@@ -11,7 +11,6 @@
 #include "Model/Core/GameManager.h"
 #include "Model/Enemy/Goomba.h"
 #include "Model/Enemy/Koopa.h"
-#include "Model/Level/Castle.h"
 #include "Model/Level/FlagPole.h"
 #include "Model/Level/Pipe.h"
 #include "Model/Player/Luigi.h"
@@ -22,7 +21,6 @@
 #include "View/Block/CoinBlockRenderer.h"
 #include "View/Enemy/GoombaRenderer.h"
 #include "View/Enemy/KoopaRenderer.h"
-#include "View/Level/CastleRenderer.h"
 #include "View/Level/FlagPoleRenderer.h"
 #include "View/Level/PipeRenderer.h"
 #include "View/Player/PlayerRenderer.h"
@@ -46,7 +44,7 @@ namespace controller {
 
 namespace {
 // The level-completion zone appended to every map: 16 empty columns holding the
-// flagpole (6 tiles into the zone) and the castle (13 tiles in, 3 tiles wide).
+// flagpole (6 tiles into the zone) and the painted castle (11 tiles in, 5 tiles wide).
 constexpr std::size_t LevelPaddingTiles = 16;
 constexpr std::size_t PoleOffsetTiles = 6;
 constexpr std::size_t CastleOffsetTiles = 11;
@@ -113,7 +111,6 @@ void PlayState::onEnter() {
     entityRenderers->registerRenderer<model::CoinBlock, view::CoinBlockRenderer>();
     entityRenderers->registerRenderer<model::BrickBlock, view::BrickBlockRenderer>();
     entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
-    entityRenderers->registerRenderer<model::Castle, view::CastleRenderer>();
     entityRenderers->registerRenderer<model::Pipe, view::PipeRenderer>();
     hudRenderer = std::make_unique<view::HudRenderer>();
 
@@ -191,7 +188,6 @@ void PlayState::resetLevel() {
     entities.clear();
     player = nullptr;
     flagPole = nullptr;
-    castle = nullptr;
 
     bool marioSpawned = false;
     for (std::size_t row = 0; row < rows; ++row) {
@@ -308,13 +304,13 @@ void PlayState::resetLevel() {
     const std::size_t baseColumns = columns - LevelPaddingTiles;
     const float groundTop = groundTopAt(map, baseColumns > 0 ? baseColumns - 1 : 0);
     const float poleHeight = 224.0f;
-    const float castleHeight = 160.0f;
 
-    // The goal castle is painted into the grid from its 21-tile sheet as 'A'..'U',
-    // row-major over a 5x5 silhouette standing on the ground: the upper two rows are
-    // the 3-wide tower, the lower three the 5-wide base, the centre-bottom pair is
-    // the door, and the two outer cells of the tower rows stay air. The paint is
-    // deterministic, so re-running resetLevel (enter/death) is idempotent.
+    // The goal castle is painted into the grid from its 21-tile sheet (see
+    // TileMap::CastleSymbols), row-major over a 5x5 silhouette standing on the ground:
+    // the upper two rows are the 3-wide tower, the lower three the 5-wide base, the
+    // centre-bottom pair is the door, and the two outer cells of the tower rows stay
+    // air. The paint is deterministic, so re-running resetLevel (enter/death) is
+    // idempotent.
     const std::size_t groundRowTop =
         rows - 1 - static_cast<std::size_t>(groundTop / static_cast<float>(tileHeight));
     const std::size_t castleCol = baseColumns + CastleOffsetTiles;
@@ -335,12 +331,6 @@ void PlayState::resetLevel() {
         model::Vector2{8.0f, poleHeight});
     flagPole = flag.get();
     entities.push_back(std::move(flag));
-
-    entities.push_back(std::make_unique<model::Castle>(
-        model::Vector2{static_cast<float>((baseColumns + CastleOffsetTiles) * tileWidth),
-                       groundTop - castleHeight},
-        model::Vector2{3.0f * tileWidth, castleHeight}));
-    castle = static_cast<model::Castle*>(entities.back().get());
 
     // Every character obeys the current world's physics (gravity/fall/drag, swim).
     const model::World& world = model::WorldSet::forType(worldType);

@@ -4,9 +4,8 @@
 #include "Model/Map/TileMap.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
-#include <SFML/Graphics/Sprite.hpp>
 
-#include <cmath>
+#include <algorithm>
 
 namespace view {
 
@@ -24,13 +23,14 @@ constexpr int TilePx = 16;
 }
 
 PipeRenderer::PipeRenderer()
-    : textureLoaded(texture.loadFromFile("assets/super_mario_asset.png")) {
-    texture.setSmooth(false);
+    : painter("assets/super_mario_asset.png") {
 }
 
 void PipeRenderer::renderTyped(sf::RenderTarget& window, const model::Pipe& pipe,
                                const RenderContext& /* ctx */) const {
-    if (!textureLoaded) return;
+    if (!painter.isLoaded()) {
+        return;
+    }
 
     const float x0 = pipe.getPosition().x;
     const float y0 = pipe.getPosition().y;
@@ -45,11 +45,8 @@ void PipeRenderer::renderTyped(sf::RenderTarget& window, const model::Pipe& pipe
             // 1-wide pipe falls back to the single-tile right half (the classic cap).
             const int tileX = (row == 0) ? ((cols >= 2 && col == 0) ? CapLeftTileX : CapRightTileX)
                                          : BodyTileX;
-            sf::Sprite sprite(texture);
-            sprite.setTextureRect({{tileX, tileY}, {TilePx, TilePx}});
-            sprite.setScale({2.0f, 2.0f});
-            sprite.setPosition({std::round(x0 + col * tile), std::round(y0 + row * tile)});
-            window.draw(sprite);
+            painter.drawCell(window, {{tileX, tileY}, {TilePx, TilePx}},
+                             {x0 + col * tile, y0 + row * tile});
         }
     }
 }

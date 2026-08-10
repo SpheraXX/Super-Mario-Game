@@ -2,8 +2,7 @@
 #define VIEW_LEVEL_PIPERENDERER_H
 
 #include "View/Base/EntityRenderer.h"
-
-#include <SFML/Graphics/Texture.hpp>
+#include "View/Base/SpritePainter.h"
 
 namespace model {
 class Pipe;
@@ -22,8 +21,7 @@ protected:
                      const RenderContext& ctx) const override;
 
 private:
-    sf::Texture texture;
-    bool textureLoaded;
+    SpritePainter painter;
 };
 
 }

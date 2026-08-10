@@ -2,8 +2,7 @@
 #define VIEW_LEVEL_FLAGPOLERENDERER_H
 
 #include "View/Base/EntityRenderer.h"
-
-#include <SFML/Graphics/Texture.hpp>
+#include "View/Base/SpritePainter.h"
 
 namespace model {
 class FlagPole;
@@ -11,9 +10,8 @@ class FlagPole;
 
 namespace view {
 
-// Temporary placeholder art for the flagpole, cropped from the existing blocks.png
-// atlas (all rectangles are multiples of 16): a teal tile stretched into the pole, a
-// gold tile for the ball on top and the pennant.
+// Draws a FlagPole from blocks.png: the pole stretched onto the tall thin box, a gold
+// ball on top and a gold pennant whose slide-down is driven by the clear cinematic.
 class FlagPoleRenderer : public TypedEntityRenderer<model::FlagPole> {
 public:
     FlagPoleRenderer();
@@ -23,8 +21,7 @@ protected:
                      const RenderContext& ctx) const override;
 
 private:
-    sf::Texture texture;
-    bool textureLoaded;
+    SpritePainter painter;
 };
 
 }

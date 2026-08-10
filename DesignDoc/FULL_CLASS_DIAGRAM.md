@@ -1,13 +1,16 @@
 # Full Project Class Diagram
 
-> Mermaid diagram covering all model, view, and controller classes (k.2.5). Stage 1
-> (model interface segregation) and stage 2 are reflected: the goal castle is painted
-> into the TileMap completion zone from a 21-symbol sheet (`TileMap::CastleSymbols`,
-> registered by `TileMapRenderer` from atlas rows y = 696/712 (tower) and 728/744/760
-> (base)); pipes spawn from `'p'` (body) / `'P'` (mouth) runs in the grid; tile
-> collision treats castle symbols as ground/solid; and every static-image draw goes
-> through the shared `SpritePainter` facade (tile map, pipes, flagpole — the `Castle`
-> entity and `CastleRenderer` are gone). Still pending: stage 3, the PlayState split.
+> Mermaid diagram covering all model, view, and controller classes (k.2.5). All three
+> restructuring stages are reflected. Stage 1: model interface segregation. Stage 2:
+> the goal castle is painted into the TileMap completion zone from a 21-symbol sheet
+> (`TileMap::CastleSymbols`, registered by `TileMapRenderer` from atlas rows
+> y = 696/712 (tower) and 728/744/760 (base)); pipes spawn from `'p'`/`'P'` grid runs;
+> tile collision treats castle symbols as ground/solid; and every static-image draw
+> goes through the shared `SpritePainter` facade (the `Castle` entity and
+> `CastleRenderer` are gone). Stage 3: the controller god-object split — the live
+> level is `LevelScene` (update reports `Event`s), the flagpole clear play is
+> `LevelClearSequence`, and `PlayState` is slimmed to state transitions, HUD snapshot
+> and debug keys.
 > Companion doc: `CLASS_ENCAPSULATION_AND_CONNECTIONS.md` (per-class encapsulation + inter-class methods).
 
 ```mermaid
@@ -671,6 +674,19 @@ classDiagram
     }
 
     class PlayState {
+        -unique_ptr~LevelScene~ scene
+        -LevelClearSequence sequence
+        -unique_ptr~HudRenderer~ hudRenderer
+        -HudData hudData
+        -bool levelComplete
+        +onEnter()
+        +handleEvent(event)
+        +update(dt)
+        +render(window)
+        -finishClear()
+    }
+
+    class LevelScene {
         -Level level
         -size_t currentArea
         -TileMap map
@@ -678,32 +694,67 @@ classDiagram
         -bool mapLoaded
         -vector~size_t~ inertPipeColumns
         -unique_ptr~EntityRendererRegistry~ entityRenderers
-        -unique_ptr~HudRenderer~ hudRenderer
-        -HitboxRenderer hitboxRenderer
-        -bool showHitboxes
         -unique_ptr~CollisionManager~ collisionManager
         -vector~unique_ptr~Entity~~ entities
-        -Player* player
+        -Player* playerPtr
+        -FlagPole* flagPolePtr
         -WorldType worldType
+        -HitboxRenderer hitboxRenderer
+        -bool showHitboxes
+        -bool cinematicActive
         -LevelTimer timer
-        -HudData hudData
-        -FlagPole* flagPole
-        -bool levelComplete
-        -ClearPhase clearPhase
-        +onEnter()
-        +handleEvent(event)
-        +update(dt)
+        +LevelScene()
+        +loadLevel() bool
+        +player() Player*
+        +flagPole() FlagPole*
+        +getRemainingTime() int
+        +pauseTimer()
+        +setCinematicActive(active)
+        +toggleHitboxes()
+        +castleDoorX() float
+        +update(dt) Event
         +render(window)
-        -resetLevel()
+        +resetLevel()
         -loadArea(areaIndex)
         -teleportToPortal(portal)
-        -beginLevelClear()
-        -updateClearSequence(dt)
-        -finishLevelClear()
-        $LevelPaddingTiles 16
-        $PoleOffsetTiles 6
-        $CastleOffsetTiles 11
     }
+
+    class LevelSceneEvent {
+        <<enumeration>>
+        None
+        ClearTriggered
+        RunEnded
+    }
+
+    %% LevelSceneEvent is `LevelScene::Event`, the per-frame outcome of LevelScene::update:
+    %% ordinary frame, flagpole touched (start the clear play), player death fall over
+    %% (restart or game over). While `cinematicActive` the scene is frozen and reports None.
+
+    class LevelClearSequence {
+        -LevelScene* scenePtr
+        -Phase phase
+        -bool active
+        -bool finished
+        -float poleElapsed
+        -float poleSlideStartY
+        -float poleGroundY
+        +begin(scene)
+        +update(dt)
+        +isActive() bool
+        +isFinished() bool
+    }
+
+    class LevelClearSequencePhase {
+        <<enumeration>>
+        SlideToPole
+        WalkToCastle
+        ReachedCastle
+    }
+
+    %% LevelClearSequencePhase is `LevelClearSequence::Phase`: the three segments of the
+    %% scripted clear play (slide down the pole, walk to the castle, stand at the door).
+    %% The sequence drives the player through LevelScene accessors and never touches the
+    %% StateManager — the owning PlayState pushes the overlay once isFinished() turns true.
 
     class GameOverState {
         -sf_Font font
@@ -772,16 +823,19 @@ classDiagram
     AppEngine *-- sf_RenderWindow : owns
     AppEngine *-- sf_RenderTexture : owns scene
     StateManager o-- "*" GameState : stack of
-    PlayState *-- Level : owns
-    PlayState *-- TileMap : working grid
-    PlayState ..> TileMap : paints castle (setTile, completion zone)
-    PlayState *-- CollisionManager : owns
-    PlayState o-- "*" Entity : spawns
-    PlayState o-- TileMapRenderer : owns
-    PlayState o-- EntityRendererRegistry : owns
+    PlayState *-- LevelScene : owns
+    PlayState *-- LevelClearSequence : owns
     PlayState o-- HudRenderer : owns
-    PlayState o-- HitboxRenderer : owns
-    PlayState o-- LevelTimer : owns
+    LevelScene *-- Level : owns
+    LevelScene *-- TileMap : working grid
+    LevelScene ..> TileMap : paints castle (setTile, completion zone)
+    LevelScene *-- CollisionManager : owns
+    LevelScene *-- LevelTimer : owns
+    LevelScene o-- "*" Entity : spawns
+    LevelScene o-- TileMapRenderer : owns
+    LevelScene o-- EntityRendererRegistry : owns
+    LevelScene o-- HitboxRenderer : owns
+    LevelScene o-- FlagPole : spawns (non-owning)
     Player o-- PlayerState : state (unique_ptr)
     StarState o-- PlayerState : wraps previous
     Character --> TileMap : mapPtr (non-owning)
@@ -804,14 +858,18 @@ classDiagram
 
     %% Usage / Dependency
     PlayState ..> GameManager : score/coins/lives/map path
-    PlayState ..> WorldSet : theme + physics per area
     PlayState ..> GameOverState : pushes on death
     PlayState ..> LevelCompleteState : pushes on clear
     PlayState ..> HudData : fills snapshot
-    PlayState ..> Character : casts for input / life-state checks
+    LevelScene ..> GameManager : map path + metadata publish
+    LevelScene ..> WorldSet : theme + physics per area
+    LevelScene ..> Character : casts for input / life-state checks
+    LevelScene ..> Pipe : one-way entry check
+    LevelScene ..> Portal : teleports to destination area
+    LevelClearSequence ..> LevelScene : reads (player/flagPole/timer/door)
+    LevelClearSequence ..> GameManager : bonus award
     Player ..> GameManager : thin score wrappers
     Pipe ..> Portal : sourceColumn matches
-    PlayState ..> Pipe : one-way entry check
     CollisionManager ..> BlockHitEvent : dispatches to blocks
     CollisionManager ..> FlagPole : trigger pass
     BlockHitEvent --> Entity : player reference
@@ -828,7 +886,6 @@ classDiagram
     HitboxRenderer ..> TileMap : debug overlay
     TileMapRenderer ..> World : theme colors
 ```
-
 ## Enums
 
 | Enum | Values |
@@ -840,6 +897,8 @@ classDiagram
 | `KoopaState` | `Walking`, `ShellIdle`, `ShellSpinning` |
 | `PortalDirection` | `Down`, `Up` |
 | `WorldType` | `Overworld`, `Underwater`, `Castle` |
+| `LevelScene::Event` | `None`, `ClearTriggered`, `RunEnded` |
+| `LevelClearSequence::Phase` | `SlideToPole`, `WalkToCastle`, `ReachedCastle` |
 
 ## Legend
 

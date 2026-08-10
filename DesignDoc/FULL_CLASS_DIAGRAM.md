@@ -10,7 +10,10 @@
 > `CastleRenderer` are gone). Stage 3: the controller god-object split — the live
 > level is `LevelScene` (update reports `Event`s), the flagpole clear play is
 > `LevelClearSequence`, and `PlayState` is slimmed to state transitions, HUD snapshot
-> and debug keys.
+> and debug keys. Stage 3.1: the warp-pipe rules moved out of LevelScene into
+> `PortalSystem` (entry detection, one-way inert columns, re-emergence placement),
+> sharing the header-only `controller::geometry` helpers (`isGroundSymbol`/
+> `groundTopAt` in `LevelGeometry.h`) that LevelScene still uses for the castle paint.
 > Companion doc: `CLASS_ENCAPSULATION_AND_CONNECTIONS.md` (per-class encapsulation + inter-class methods).
 
 ```mermaid
@@ -692,7 +695,7 @@ classDiagram
         -TileMap map
         -unique_ptr~TileMapRenderer~ renderer
         -bool mapLoaded
-        -vector~size_t~ inertPipeColumns
+        -PortalSystem portals
         -unique_ptr~EntityRendererRegistry~ entityRenderers
         -unique_ptr~CollisionManager~ collisionManager
         -vector~unique_ptr~Entity~~ entities
@@ -729,6 +732,21 @@ classDiagram
     %% LevelSceneEvent is `LevelScene::Event`, the per-frame outcome of LevelScene::update:
     %% ordinary frame, flagpole touched (start the clear play), player death fall over
     %% (restart or game over). While `cinematicActive` the scene is frozen and reports None.
+
+    class PortalSystem {
+        -vector~size_t~ inertPipeColumns
+        +clear()
+        +markInert(column)
+        +findEntryPortal(player, level, currentArea, entities) Portal*
+        +landingY(map, entities, column, playerHeight) float
+    }
+
+    %% PortalSystem owns the warp-pipe rules: a portal is bound to a pipe by its anchor
+    %% column, arrival marks that column inert (one-way) until the area is rebuilt, and
+    %% re-emergence lands on the destination pipe's cap (else the ground). LevelScene
+    %% keeps only the orchestration (guard, loadArea, markInert, place player).
+    %% The ground-top math lives in the header-only `controller::geometry` helpers of
+    %% LevelGeometry.h, shared with LevelScene's castle paint.
 
     class LevelClearSequence {
         -LevelScene* scenePtr
@@ -836,6 +854,13 @@ classDiagram
     LevelScene o-- EntityRendererRegistry : owns
     LevelScene o-- HitboxRenderer : owns
     LevelScene o-- FlagPole : spawns (non-owning)
+    LevelScene *-- PortalSystem : owns
+    PortalSystem ..> Pipe : matches by sourceColumn
+    PortalSystem ..> Portal : entry detection + landing
+    PortalSystem ..> Level : per-area portals
+    PortalSystem ..> Player : reads input/feet/footprint
+    PortalSystem ..> TileMap : ground top via LevelGeometry
+    PortalSystem ..> LevelGeometry : groundTopAt (header-only inline)
     Player o-- PlayerState : state (unique_ptr)
     StarState o-- PlayerState : wraps previous
     Character --> TileMap : mapPtr (non-owning)
@@ -864,8 +889,7 @@ classDiagram
     LevelScene ..> GameManager : map path + metadata publish
     LevelScene ..> WorldSet : theme + physics per area
     LevelScene ..> Character : casts for input / life-state checks
-    LevelScene ..> Pipe : one-way entry check
-    LevelScene ..> Portal : teleports to destination area
+    LevelScene ..> Portal : teleports (orchestration)
     LevelClearSequence ..> LevelScene : reads (player/flagPole/timer/door)
     LevelClearSequence ..> GameManager : bonus award
     Player ..> GameManager : thin score wrappers

@@ -121,7 +121,7 @@ bool LevelScene::loadLevel() {
 // renderer, append the completion zone on the FINAL area only, then spawn the area.
 void LevelScene::loadArea(std::size_t areaIndex) {
     currentArea = areaIndex;
-    inertPipeColumns.clear();  // every visit to an area reactivates all its pipes
+    portals.clear();  // every visit to an area reactivates all its pipes
     worldType = level.areaWorld(areaIndex);
     map = level.areaMap(areaIndex);
     if (currentArea == level.areaCount() - 1) {
@@ -141,20 +141,13 @@ void LevelScene::teleportToPortal(const model::Portal& portal) {
     // cap of the destination pipe (if the arrival column has one) or on the ground.
     // The camera, HUD and timer all keep their state.
     loadArea(portal.destinationArea);
-    inertPipeColumns.push_back(portal.destinationColumn);  // one-way: no re-entry here
+    portals.markInert(portal.destinationColumn);  // one-way: no re-entry here
     if (!playerPtr) {
         return;
     }
     const std::size_t tileWidth = model::TileMap::TileWidth;
-    const float groundTop = groundTopAt(map, portal.destinationColumn);
-    float landY = groundTop - playerPtr->getSize().y;
-    for (const auto& e : entities) {
-        auto* pipe = dynamic_cast<model::Pipe*>(e.get());
-        if (pipe && pipe->getSourceColumn() == portal.destinationColumn) {
-            landY = pipe->getPosition().y - playerPtr->getSize().y;
-            break;
-        }
-    }
+    const float landY = portals.landingY(map, entities, portal.destinationColumn,
+                                         playerPtr->getSize().y);
     playerPtr->setPosition({
         static_cast<float>(portal.destinationColumn * tileWidth),
         landY});
@@ -432,36 +425,10 @@ LevelScene::Event LevelScene::update(float deltaTime) {
 
     // Pipe entry: holding Down while standing on a pipe's cap and a portal is bound to
     // that pipe's column teleports the player to the portal's area.
-    if (playerPtr && playerPtr->getInputDown() && !playerPtr->isDying()) {
-        for (const auto& e : entities) {
-            auto* pipe = dynamic_cast<model::Pipe*>(e.get());
-            if (!pipe || !pipe->isActive) continue;
-            const model::Portal* portal = nullptr;
-            for (const auto& p : level.portals(currentArea)) {
-                if (p.sourceColumn == pipe->getSourceColumn()) {
-                    portal = &p;
-                    break;
-                }
-            }
-            if (!portal) continue;
-
-            // One-way pipes: the pipe the player arrived through is inert for this visit.
-            if (std::find(inertPipeColumns.begin(), inertPipeColumns.end(),
-                          pipe->getSourceColumn()) != inertPipeColumns.end()) {
-                continue;
-            }
-
-            const model::Vector2& pPos = playerPtr->getPosition();
-            const float feetY = pPos.y + playerPtr->getSize().y;
-            const float onTop = std::abs(feetY - pipe->getPosition().y);
-            // Entry needs the player's feet resting on the cap and a real footprint
-            // overlap with it (slightly forgiving at the very edge).
-            const bool overlapsCap = pPos.x + playerPtr->getSize().x > pipe->getPosition().x + 2.0f &&
-                                     pPos.x < pipe->getPosition().x + pipe->getSize().x - 2.0f;
-            if (playerPtr->isGrounded && onTop < 8.0f && overlapsCap) {
-                teleportToPortal(*portal);
-                break;
-            }
+    if (playerPtr) {
+        if (const model::Portal* portal =
+                portals.findEntryPortal(*playerPtr, level, currentArea, entities)) {
+            teleportToPortal(*portal);
         }
     }
 

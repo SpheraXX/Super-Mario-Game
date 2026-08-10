@@ -1,6 +1,7 @@
 #ifndef CONTROLLER_LEVELSCENE_H
 #define CONTROLLER_LEVELSCENE_H
 
+#include "Controller/PortalSystem.h"
 #include "Model/Core/CollisionManager.h"
 #include "Model/Core/LevelTimer.h"
 #include "Model/Entity.h"
@@ -87,8 +88,8 @@ private:
     std::unique_ptr<view::TileMapRenderer> renderer;
     bool mapLoaded = false;
 
-    // Columns whose pipe is inert for this area visit (one-way warp pipes).
-    std::vector<std::size_t> inertPipeColumns;
+    // Warp pipes: entry detection, one-way inert columns and re-emergence placement.
+    PortalSystem portals;
 
     std::unique_ptr<view::EntityRendererRegistry> entityRenderers;
     std::unique_ptr<model::CollisionManager> collisionManager;

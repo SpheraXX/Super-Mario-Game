@@ -28,6 +28,10 @@ public:
     static constexpr char CloudSymbol = 'O';
     static constexpr char SmallTreeSymbol = 'T';
 
+    // Coin blocks: a reward-carrying block (see CoinBlock). Treated like enemy markers —
+    // stripped to empty tiles at load and re-created as entities by the state.
+    static constexpr char CoinBlockSymbol = 'C';
+
     void loadFromFile(const std::string& filePath);
 
     char getTile(std::size_t row, std::size_t column) const;
@@ -38,6 +42,10 @@ public:
     // to empty tiles during load, so a spawn marker is never solid ground.
     const std::vector<SpawnPoint>& getSpawnPoints() const;
 
+    // Coin-block placements found in the map (symbol 'C'), also in file order and likewise
+    // stripped to empty tiles. The level author decides where blocks live, same as enemies.
+    const std::vector<SpawnPoint>& getCoinBlockSpawns() const;
+
     // World-space top-left corner of a tile. Rows are stored bottom-up (row 0 is the
     // ground line), so this is the one place that flip is written down.
     static Vector2 tileOrigin(std::size_t row, std::size_t column);
@@ -47,6 +55,7 @@ public:
 private:
     std::vector<std::vector<char>> tiles;
     std::vector<SpawnPoint> spawnPoints;
+    std::vector<SpawnPoint> coinBlockSpawns;
     std::size_t columns = 0;  // map width in tiles, read from the file
 };
 

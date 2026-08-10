@@ -1,5 +1,7 @@
 #include "Model/Player/Player.h"
 #include "Model/Core/GameManager.h"
+#include "Model/Core/World.h"
+#include "Model/Projectile/MarioFireball.h"
 
 #include <cmath>
 
@@ -10,6 +12,8 @@ namespace model {
 Player::Player(Vector2 position, Vector2 size)
     : Character(position, size),
       state(std::make_unique<SmallState>()),
+      score(0),
+      coins(0),
       damageCooldown(0.0f) {
     // The collision layer drives the (type-check-free) routing in CollisionManager:
     // exactly one entity per pair must be the player for the pair to resolve.
@@ -29,6 +33,12 @@ void Player::update(float deltaTime) {
     state->update(*this, deltaTime);
     Character::update(deltaTime);
     syncAnimation();
+
+    if (getAnimState() == AnimState::Walk || getAnimState() == AnimState::Run) {
+        animationClock += deltaTime;
+    } else {
+        animationClock = 0.0f;
+    }
 
     if (damageCooldown > 0.0f) {
         damageCooldown -= deltaTime;
@@ -50,22 +60,46 @@ void Player::handleInput() {
     const float runSpeed = getRunSpeed();
     const float jumpForce = getJumpForce();
 
-    // Sprint: hold Shift to move at run speed.
-    const bool sprinting =
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
-    const float currentSpeed = sprinting ? runSpeed : walkSpeed;
+    // Crouch: hold Down/S while grounded and big (Super or Fire). Crouching locks the
+    // player in place — no walking, no jumping — and shrinks the box to one tile. The
+    // feet stay anchored (syncPowerSize), so the head drops to make room; letting go
+    // stands back up. Small Mario has no crouch.
+    const bool crouchPressed =
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down);
+    const bool wantCrouch =
+        crouchPressed && isOnGround() && (state->isSuper() || state->isFire());
+    if (wantCrouch != crouching) {
+        crouching = wantCrouch;
+        syncPowerSize();
+    }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-        velocity.x = -currentSpeed;
-        setDirection(-1);
-    } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) ||
-               sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-        velocity.x = currentSpeed;
-        setDirection(1);
-    } else {
+    if (crouching) {
+        horizontalInput = 0;
         velocity.x = 0.0f;
+        sprinting = false;
+    } else {
+        // Sprint: hold Shift to move at run speed.
+        const bool sprinting =
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+        const float currentSpeed = sprinting ? runSpeed : walkSpeed;
+        horizontalInput = 0;
+        this->sprinting = sprinting;
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
+            sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
+            horizontalInput = -1;
+            velocity.x = -currentSpeed;
+            setDirection(-1);
+        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) ||
+                   sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
+            horizontalInput = 1;
+            velocity.x = currentSpeed;
+            setDirection(1);
+        } else {
+            velocity.x = 0.0f;
+        }
     }
 
     const bool jumpPressed =
@@ -74,8 +108,9 @@ void Player::handleInput() {
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
 
     // No jump buffering: a jump fires only on the press edge while grounded, so holding
-    // the key does nothing until it is released and pressed again.
-    if (jumpPressed && !jumpHeld && isOnGround()) {
+    // the key does nothing until it is released and pressed again. A crouching player
+    // cannot jump (and releasing crouch never auto-jumps: the edge was already consumed).
+    if (jumpPressed && !jumpHeld && isOnGround() && !crouching) {
         velocity.y = jumpForce;
         playerInitiatedJump = true;
     }
@@ -85,6 +120,20 @@ void Player::handleInput() {
     if (!jumpPressed && playerInitiatedJump && velocity.y < 0.0f) {
         velocity.y = 0.0f;
         playerInitiatedJump = false;
+    }
+
+    // Fireball: holding the key re-fires whenever the cooldown clears (1.0s). Works in the
+    // air too — only the underlying Fire state may shoot, and a Star wrapped around Fire
+    // keeps the ability (StarState forwards canShoot/shoot to its previous state).
+    const bool firePressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
+    if (firePressed && state->canShoot() && world) {
+        state->shoot();
+        // Spawn just in front of the facing side, around mouth height, so the ball never
+        // overlaps the player (and never spawns inside the ground).
+        const Vector2 pos = getPosition();
+        const Vector2 origin{pos.x + (getDirection() > 0 ? getSize().x : -model::MarioFireball::Width),
+                             pos.y + getSize().y * 0.3f};
+        world->spawn(std::make_unique<model::MarioFireball>(origin, this, getDirection()));
     }
 
     jumpHeld = jumpPressed;
@@ -105,7 +154,8 @@ void Player::takeDamage(int amount) {
         state->onExit(*this);
         state.reset(newState);
         state->onEnter(*this);
-        damageCooldown = DamageCooldownTime;
+        damageCooldown = DamageBlinkTime;
+        syncPowerSize();
     }
 }
 
@@ -120,10 +170,41 @@ void Player::setState(std::unique_ptr<PlayerState> newState) {
     state->onExit(*this);
     state = std::move(newState);
     state->onEnter(*this);
+    syncPowerSize();
+}
+
+void Player::syncPowerSize() {
+    const float targetHeight = crouching ? CrouchHeight
+        : ((state->isSuper() || state->isFire()) ? BigHeight : SmallHeight);
+    if (getSize().y == targetHeight) return;
+
+    // Anchor the feet: keep the bottom edge fixed while the box grows upward (or shrinks
+    // back down). Screen y grows downward, so the top edge moves by the height delta.
+    Vector2 pos = getPosition();
+    pos.y += getSize().y - targetHeight;
+    setPosition(pos);
+    setSize({getSize().x, targetHeight});
+
+    // Entity::setSize only touches `size`; the collision hitbox carries its own
+    // width/height and would keep colliding with the old box unless we bring it along.
+    hitbox.height = targetHeight;
+    hitbox.width = getSize().x;
 }
 
 PlayerState& Player::getState() {
     return *state;
+}
+
+bool Player::isFire() const {
+    return state->isFire();
+}
+
+bool Player::isStar() const {
+    return state->isStar();
+}
+
+float Player::getBlinkRemaining() const {
+    return damageCooldown;
 }
 
 const char* Player::getStateName() const {
@@ -152,8 +233,20 @@ void Player::becomeStar() {
     state->onEnter(*this);
 }
 
+bool Player::isLuigi() const {
+    return false;
+}
+
 void Player::addScore(int points) {
-    model::GameManager::instance().addScore(points);
+    score += points;
+}
+
+void Player::addCoin() {
+    coins++;
+    if (coins >= 100) {
+        coins -= 100;
+        model::GameManager::instance().addLife();
+    }
 }
 
 void Player::addLife() {
@@ -161,11 +254,31 @@ void Player::addLife() {
 }
 
 int Player::getScore() const {
-    return model::GameManager::instance().getScore();
+    return score;
+}
+
+int Player::getCoins() const {
+    return coins;
 }
 
 int Player::getLives() const {
     return model::GameManager::instance().getLives();
+}
+
+int Player::getHorizontalInput() const {
+    return horizontalInput;
+}
+
+bool Player::isSprinting() const {
+    return sprinting;
+}
+
+bool Player::isCrouching() const {
+    return crouching;
+}
+
+float Player::getAnimationClock() const {
+    return animationClock;
 }
 
 void Player::syncAnimation() {
@@ -174,22 +287,31 @@ void Player::syncAnimation() {
         return;
     }
 
-    Vector2 vel = getVelocity();
+    const Vector2 vel = getVelocity();
     bool grounded = isOnGround();
+    AnimState nextState = AnimState::Idle;
 
-    if (vel.x > 0.1f) {
+    if (horizontalInput > 0) {
         setFacingRight(true);
-    } else if (vel.x < -0.1f) {
+    } else if (horizontalInput < 0) {
         setFacingRight(false);
     }
 
     if (!grounded) {
-        setAnimState(vel.y < 0 ? AnimState::Jump : AnimState::Fall);
-    } else if (std::abs(vel.x) > 0.1f) {
-        setAnimState(std::abs(vel.x) > 200.0f ? AnimState::Run : AnimState::Walk);
+        nextState = vel.y < 0 ? AnimState::Jump : AnimState::Fall;
+    } else if (crouching) {
+        nextState = AnimState::Crouch;
+    } else if (horizontalInput != 0) {
+        nextState = sprinting ? AnimState::Run : AnimState::Walk;
     } else {
-        setAnimState(AnimState::Idle);
+        nextState = AnimState::Idle;
     }
+
+    if (nextState != getAnimState()) {
+        animationClock = 0.0f;
+    }
+
+    setAnimState(nextState);
 }
 
 }

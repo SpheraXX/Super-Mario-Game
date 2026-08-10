@@ -19,4 +19,8 @@ float Luigi::getJumpForce() const {
     return JumpForce;
 }
 
+bool Luigi::isLuigi() const {
+    return true;
+}
+
 }

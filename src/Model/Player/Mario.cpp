@@ -20,4 +20,8 @@ float Mario::getJumpForce() const {
     return JumpForce;
 }
 
+bool Mario::isLuigi() const {
+    return false;
+}
+
 }

@@ -133,4 +133,14 @@ std::unique_ptr<PlayerState> StarState::checkExpiration() {
     return nullptr;
 }
 
+bool StarState::canShoot() const {
+    return previousState && previousState->canShoot();
+}
+
+void StarState::shoot() {
+    if (previousState) {
+        previousState->shoot();
+    }
+}
+
 }

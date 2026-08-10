@@ -32,6 +32,12 @@ public:
     virtual bool isFire() const { return false; }
     virtual bool isStar() const { return false; }
 
+    // Shooting: only the underlying Fire state can fire, and a Star wrapped around it keeps
+    // the ability (Star forwards to its previous state, so the cooldown lives in one place).
+    // Player asks canShoot() before spending a shot and calls shoot() to start the cooldown.
+    virtual bool canShoot() const { return false; }
+    virtual void shoot() {}
+
     virtual const char* getStateName() const = 0;
     virtual float getRemainingTime() const { return -1.0f; }
 
@@ -71,14 +77,15 @@ public:
     PlayerAnimState getAnimState(const Player& player) const override;
 
     bool isFire() const override { return true; }
-    bool canShoot() const;
-    void shoot();
+    bool canShoot() const override;
+    void shoot() override;
 
     const char* getStateName() const override { return "Fire"; }
 
 private:
     float fireCooldown = 0.0f;
-    static constexpr float FireCooldownDuration = 0.5f;
+    // One ball per 1.5s; holding the fire key re-fires as soon as the cooldown clears.
+    static constexpr float FireCooldownDuration = 1.0f;
 };
 
 class StarState : public PlayerState {
@@ -97,6 +104,11 @@ public:
     bool isStar() const override { return true; }
     const char* getStateName() const override { return "Star"; }
     float getRemainingTime() const override { return duration; }
+
+    // A star preserves the state it wrapped, so shooting follows that state: fire-under-star
+    // can shoot (the cooldown lives in the wrapped FireState), anything else cannot.
+    bool canShoot() const override;
+    void shoot() override;
 
 private:
     float duration;

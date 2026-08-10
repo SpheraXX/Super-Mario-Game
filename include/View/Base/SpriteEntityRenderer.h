@@ -64,10 +64,18 @@ protected:
 
         sf::Sprite sprite(texture);
         sprite.setTextureRect(frame);
+        sprite.setColor(characterTint(entity));
         setupEntitySprite(sprite, frame, drawSize, sourceFacesRight != entity.isFacingRight());
         sprite.setPosition({std::round(entity.getPosition().x + drawOffset.x),
                             std::round(entity.getPosition().y + drawOffset.y)});
         window.draw(sprite);
+    }
+
+    // Optional per-entity colour tint, multiplied into the texture right before drawing.
+    // White (the default) leaves the sprite unchanged. Overridden by subclasses that want
+    // a palette that differs from the sheet — e.g. Fire Mario.
+    virtual sf::Color characterTint(const T& /* entity */) const {
+        return sf::Color::White;
     }
 
     sf::Texture texture;

@@ -12,6 +12,7 @@ void TileMap::loadFromFile(const std::string& filePath) {
     }
 
     spawnPoints.clear();
+    coinBlockSpawns.clear();
 
     std::string line;
     for (std::size_t row = 0; row < Rows; ++row) {
@@ -38,6 +39,11 @@ void TileMap::loadFromFile(const std::string& filePath) {
             if (symbol >= '0' && symbol <= '9') {
                 spawnPoints.push_back({symbol - '0', row, column});
                 tiles[row][column] = '.';
+            } else if (symbol == CoinBlockSymbol) {
+                // Coin blocks get the same treatment: the map says where one lives and the
+                // state turns it into a living CoinBlock entity (bump -> reward).
+                coinBlockSpawns.push_back({0, row, column});
+                tiles[row][column] = '.';
             } else {
                 tiles[row][column] = symbol;
             }
@@ -47,6 +53,10 @@ void TileMap::loadFromFile(const std::string& filePath) {
 
 const std::vector<SpawnPoint>& TileMap::getSpawnPoints() const {
     return spawnPoints;
+}
+
+const std::vector<SpawnPoint>& TileMap::getCoinBlockSpawns() const {
+    return coinBlockSpawns;
 }
 
 Vector2 TileMap::tileOrigin(std::size_t row, std::size_t column) {

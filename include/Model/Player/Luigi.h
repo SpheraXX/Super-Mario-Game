@@ -12,6 +12,7 @@ public:
     float getWalkSpeed() const override;
     float getRunSpeed() const override;
     float getJumpForce() const override;
+    bool isLuigi() const override;
 
     static constexpr float WalkSpeed = 160.0f;
     static constexpr float RunSpeed = 350.0f;

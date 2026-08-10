@@ -12,6 +12,7 @@ enum class AnimState {
     Run,
     Jump,
     Fall,
+    Crouch,
     Die
 };
 

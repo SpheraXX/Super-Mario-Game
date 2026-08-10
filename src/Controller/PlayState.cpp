@@ -14,6 +14,21 @@
 #include "Model/Enemy/HammerBro.h"
 #include "Model/Enemy/Koopa.h"
 #include "Model/Enemy/Lakitu.h"
+#include "Model/Enemy/Spiny.h"
+#include "Model/Projectile/Fireball.h"
+#include "Model/Projectile/Hammer.h"
+#include "Model/Projectile/MarioFireball.h"
+#include "Model/Projectile/SpinyEgg.h"
+#include "Model/Block/CoinBlock.h"
+#include "Model/Item/FireFlower.h"
+#include "Model/Item/Mushroom.h"
+#include "Model/Item/Starman.h"
+#include "Model/Item/Starman.h"
+#include "View/Base/AtlasFrameRenderer.h"
+#include "View/Enemy/EnemyAtlas.h"
+#include "View/Enemy/FireballRenderer.h"
+#include "View/Item/ItemAtlas.h"
+#include "View/Item/ItemFrameRenderer.h"
 #include "Model/Enemy/PiranhaPlant.h"
 #include "Model/Enemy/Spiny.h"
 #include "Model/Projectile/Fireball.h"
@@ -70,6 +85,17 @@ void PlayState::onEnter() {
     entityRenderers->registerRenderer<model::Koopa, view::KoopaRenderer>();
     entityRenderers->registerRenderer<model::CoinBlock, view::CoinBlockRenderer>();
 
+    // Items are drawn from their own sprite sheet; the frame rects are named in
+    // View/Item/ItemAtlas.h.
+    entityRenderers->registerRenderer<model::Mushroom,
+                                      view::ItemFrameRenderer<model::Mushroom>>(view::atlas::Mushroom);
+    entityRenderers->registerRenderer<model::FireFlower,
+                                      view::ItemFrameRenderer<model::FireFlower>>(view::atlas::FireFlower);
+    entityRenderers->registerRenderer<model::Starman,
+                                      view::ItemFrameRenderer<model::Starman>>(view::atlas::Starman);
+    entityRenderers->registerRenderer<model::Starman,
+                                      view::ItemFrameRenderer<model::Starman>>(view::atlas::Starman);
+
     // Everything below has a single pose and shares the generic atlas renderer; the frames
     // themselves are named in View/Enemy/EnemyAtlas.h.
     entityRenderers->registerRenderer<model::HammerBro,
@@ -88,6 +114,9 @@ void PlayState::onEnter() {
                                       view::AtlasFrameRenderer<model::SpinyEgg>>(view::atlas::SpinyEgg);
     entityRenderers->registerRenderer<model::Fireball,
                                       view::AtlasFrameRenderer<model::Fireball>>(view::atlas::BowserFire);
+    // Mario's fireball is its own animated ball (4 rolling frames), unlike Bowser's flat
+    // breath above, so it needs its own renderer.
+    entityRenderers->registerRenderer<model::MarioFireball, view::FireballRenderer>();
 
     hudRenderer = std::make_unique<view::HudRenderer>();
 
@@ -111,9 +140,14 @@ void PlayState::resetLevel() {
     // y = (Rows-1)*TileHeight. Spawn Mario one tile above ground.
     const float groundY = static_cast<float>((model::TileMap::Rows - 2) * TileHeight
                                              - TileHeight);
-    auto mario = std::make_unique<model::Mario>(model::Vector2{64.0f, groundY});
-    player = mario.get();
-    addEntity(std::move(mario));
+    std::unique_ptr<model::Player> hero;
+    if (playAsLuigi) {
+        hero = std::make_unique<model::Luigi>(model::Vector2{64.0f, groundY});
+    } else {
+        hero = std::make_unique<model::Mario>(model::Vector2{64.0f, groundY});
+    }
+    player = hero.get();
+    addEntity(std::move(hero));
 
     // Hostiles come entirely from the map. Nothing here decides where an enemy goes: the
     // level author writes a digit into the map file and the factory turns it into an object.
@@ -124,14 +158,16 @@ void PlayState::resetLevel() {
         }
     }
 
-    // Spawn CoinBlock using block texture, not a red rect.
-    // Position it 5 tiles above ground in world coords. One world tile in size so its
-    // hitbox matches the tile art it renders with.
-    const float blockY = groundY - 5.0f * TileHeight;
-    addEntity(std::make_unique<model::CoinBlock>(
-        model::Vector2{320.0f, blockY},
-        model::Vector2{static_cast<float>(model::TileMap::TileWidth),
-                       static_cast<float>(model::TileMap::TileHeight)}));
+    // Coin blocks come from the map too: every 'C' the level author wrote becomes a working
+    // block (bump -> coin / mushroom / flower). The tile is stripped during load, so the
+    // entity is the only thing occupying that cell.
+    for (const model::SpawnPoint& point : map.getCoinBlockSpawns()) {
+        const model::Vector2 origin = model::TileMap::tileOrigin(point.row, point.column);
+        addEntity(std::make_unique<model::CoinBlock>(
+            origin,
+            model::Vector2{static_cast<float>(model::TileMap::TileWidth),
+                           static_cast<float>(model::TileMap::TileHeight)}));
+    }
 
     // Seed the camera from the freshly placed player, then put everything the view has not
     // reached yet to sleep. Order matters: the frontier has to exist before it can be
@@ -213,10 +249,15 @@ void PlayState::handleEvent(const sf::Event& event) {
                     player->die(true);
                 }
                 break;
+            case sf::Keyboard::Key::C:
+                // Character switch: restart the level as the other brother. The fresh run
+                // keeps the same lives/score, only the character changes.
+                playAsLuigi = !playAsLuigi;
+                resetLevel();
+                break;
             case sf::Keyboard::Key::H:
                 // Debug: toggle the collision-box overlay.
                 showHitboxes = !showHitboxes;
-                break;
             case sf::Keyboard::Key::N:
                 // Debug stand-in for finishing a level: banks the unspent clock as score and
                 // restarts. Replace this with the real goal trigger once one exists.

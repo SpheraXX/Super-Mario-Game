@@ -50,6 +50,19 @@ inline const sf::IntRect Spiny({72, 352}, {16, 16});         // world 32x32
 inline const sf::IntRect CheepCheep({0, 370}, {16, 16});     // world 32x32
 inline const sf::IntRect PiranhaPlant({0, 139}, {16, 23});   // world 32x46
 
+// Mario's bouncing fireball lives in enemies.png, a DIFFERENT sheet from enemies-8.png
+// above: it carries a real alpha channel, so no colour-key masking is needed at load time.
+// A 22x22 cell at (26,150)-(48,172) holds four 7x7 rolling poses, one in each corner;
+// the roll order is left-to-right, then top-to-bottom (matching the sheet, not the order
+// the corner scan happens to visit). The 7x7 source scales 2x into the 14x14 world box.
+inline const char* const FireballSheet = "assets/enemies.png";
+inline const sf::IntRect FireballRoll[4] = {
+    {{26, 150}, {7, 7}},   // frame 0 — top-left
+    {{41, 150}, {7, 7}},   // frame 1 — top-right
+    {{26, 165}, {7, 7}},   // frame 2 — bottom-left
+    {{41, 165}, {7, 7}},   // frame 3 — bottom-right
+};
+
 }
 }
 

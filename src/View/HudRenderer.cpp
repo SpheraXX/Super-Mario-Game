@@ -66,7 +66,7 @@ void HudRenderer::render(sf::RenderTarget& window) const {
     drawText(window, "TIME  " + padded(game.getTimeRemaining(), 3), right, y, 18, true);
 
     const float hintY = viewSize.y - 26.0f;
-    drawText(window, "WASD/Arrows: Move  |  Space/W/Up: Jump  |  ESC: Menu", 10.f, hintY, 16,
+    drawText(window, "WASD/Arrows: Move  |  C: Switch  |  X: Shoot  |  Space/W/Up: Jump  |  ESC: Menu", 10.f, hintY, 16,
              false);
 }
 

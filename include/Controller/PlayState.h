@@ -60,6 +60,10 @@ private:
 
     std::unique_ptr<model::CollisionManager> collisionManager;
     std::vector<std::unique_ptr<model::Entity>> entities;
+
+    // Which playable character the level currently runs: toggled with the C key, and the
+    // level restarts under the new character (resetLevel reads it when spawning the player).
+    bool playAsLuigi = false;
     // Spawned mid-update and spliced in once the loop is over: growing `entities` while
     // iterating it invalidates the iterator.
     std::vector<std::unique_ptr<model::Entity>> pendingEntities;

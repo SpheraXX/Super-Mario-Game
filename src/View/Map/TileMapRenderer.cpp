@@ -29,6 +29,10 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath) {
 
     registerTile('#', tilesetPath, 17 * SourceTileSize, 7 * SourceTileSize, SourceTileSize, SourceTileSize);
     registerTile('C', tilesetPath, 5 * SourceTileSize, 7 * SourceTileSize, SourceTileSize, SourceTileSize);
+    // Breakable brick. Same artwork as '#' — the difference is behavioural, not visual, and
+    // in the original a brick and the ground it sits on do look alike.
+    registerTile(model::TileMap::BrickSymbol, tilesetPath,
+                 17 * SourceTileSize, 7 * SourceTileSize, SourceTileSize, SourceTileSize);
 
     // Indestructible ground block.
     registerTile('G', MarioAssetPath, 0, 16, 16, 16);

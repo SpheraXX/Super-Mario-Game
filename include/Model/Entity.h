@@ -41,6 +41,10 @@ public:
     // the collision routing damages instead of squashing and bouncing.
     virtual bool isStompable() const { return true; }
 
+    // True for entities that smash a breakable brick when they hit one from below. Only a
+    // big player can; everything else bounces off.
+    virtual bool canBreakBricks() const { return false; }
+
     // True for entities drawn *before* the tile map, so the terrain covers them. A Piranha
     // Plant has to slide out from behind its pipe; drawn in the normal pass it would hang
     // visibly in front of the pipe at every retracted position.

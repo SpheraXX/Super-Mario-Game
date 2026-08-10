@@ -21,8 +21,8 @@
 #include "Model/Projectile/SpinyEgg.h"
 #include "Model/Block/CoinBlock.h"
 #include "Model/Item/FireFlower.h"
+#include "Model/Item/Coin.h"
 #include "Model/Item/Mushroom.h"
-#include "Model/Item/Starman.h"
 #include "Model/Item/Starman.h"
 #include "View/Base/AtlasFrameRenderer.h"
 #include "View/Enemy/EnemyAtlas.h"
@@ -93,8 +93,9 @@ void PlayState::onEnter() {
                                       view::ItemFrameRenderer<model::FireFlower>>(view::atlas::FireFlower);
     entityRenderers->registerRenderer<model::Starman,
                                       view::ItemFrameRenderer<model::Starman>>(view::atlas::Starman);
-    entityRenderers->registerRenderer<model::Starman,
-                                      view::ItemFrameRenderer<model::Starman>>(view::atlas::Starman);
+    // The coin comes off the main Mario sheet instead, which needs its backdrop keyed out.
+    entityRenderers->registerRenderer<model::Coin, view::ItemFrameRenderer<model::Coin>>(
+        view::atlas::Coin, view::atlas::MarioAssetSheet, view::atlas::MarioAssetColorKey);
 
     // Everything below has a single pose and shares the generic atlas renderer; the frames
     // themselves are named in View/Enemy/EnemyAtlas.h.

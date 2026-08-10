@@ -191,6 +191,16 @@ void Player::syncPowerSize() {
     hitbox.width = getSize().x;
 }
 
+bool Player::isBig() const {
+    // Crouching drops the box to CrouchHeight, which is still taller than Small — a
+    // crouching big Mario is still big.
+    return getSize().y > SmallHeight;
+}
+
+bool Player::canBreakBricks() const {
+    return isBig();
+}
+
 PlayerState& Player::getState() {
     return *state;
 }

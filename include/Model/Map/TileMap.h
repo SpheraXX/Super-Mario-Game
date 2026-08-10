@@ -28,6 +28,11 @@ public:
     static constexpr char CloudSymbol = 'O';
     static constexpr char SmallTreeSymbol = 'T';
 
+    // Breakable brick. Solid like any other terrain, but a big player headbutting it from
+    // below smashes it out of the level. Deliberately a separate symbol from '#': the map
+    // uses '#' for ground and stairs too, and those must never break.
+    static constexpr char BrickSymbol = 'B';
+
     // Coin blocks: a reward-carrying block (see CoinBlock). Treated like enemy markers —
     // stripped to empty tiles at load and re-created as entities by the state.
     static constexpr char CoinBlockSymbol = 'C';
@@ -37,6 +42,10 @@ public:
     char getTile(std::size_t row, std::size_t column) const;
     std::size_t getRows() const;
     std::size_t getColumns() const;
+
+    // Smash a tile out of the level, leaving empty space. Out-of-range coordinates are
+    // ignored so callers can pass whatever the collision pass computed.
+    void breakTile(std::size_t row, std::size_t column);
 
     // Enemy placements found in the map, in file order. The digits themselves are stripped
     // to empty tiles during load, so a spawn marker is never solid ground.

@@ -32,6 +32,13 @@ public:
     // be able to tell Fire from Super without a non-const state reference.
     bool isFire() const;
     bool isStar() const;
+    // Whether the player is currently in a two-tile-tall form. Asked instead of the power
+    // state because a Star wraps whatever state it replaced and does not report isSuper(),
+    // so a Super Mario under a star would otherwise read as small.
+    bool isBig() const;
+
+    // Big Mario headbutts breakable bricks apart; small Mario just bounces off them.
+    bool canBreakBricks() const override;
     // Remaining post-damage invulnerability; the view fades the sprite off this, so the
     // blink and the invulnerability window always end together.
     float getBlinkRemaining() const;

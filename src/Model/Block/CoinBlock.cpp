@@ -1,5 +1,6 @@
 #include "Model/Block/CoinBlock.h"
 #include "Model/Core/World.h"
+#include "Model/Item/Coin.h"
 #include "Model/Item/FireFlower.h"
 #include "Model/Item/Mushroom.h"
 #include "Model/Item/Starman.h"
@@ -82,19 +83,15 @@ void CoinBlock::onCollision(Entity& other, CollisionType side) {
         if (world) {
             world->spawn(std::make_unique<Starman>(spawnPos));
         }
-    } else if (player) {
-        // Plain coin: real-Mario scoring — one coin (100 coins = an extra life) + 200 points.
-        player->addCoin();
-        player->addScore(200);
-    }
-    // Bumped from below: the block's bottom face is hit by the player. The coin is
-    // collected once; afterwards the block stays as a plain used block.
-    if (side == CollisionType::Bottom && other.hitbox.layer == CollisionLayer::Player) {
-        if (coinAvailable) {
-            collectCoin();
-            // A coin counts twice over: score now, and towards the extra-life tally.
-            GameManager::instance().addScore(CoinScore);
-            GameManager::instance().addCoin();
+    } else {
+        // Plain coin. It is credited here and now rather than when the sprite is touched —
+        // the coin is never in doubt, and the player is underneath the block, not where the
+        // coin pops to. The spawned Coin is only the flourish.
+        GameManager::instance().addCoin();
+        GameManager::instance().addScore(CoinScore);
+
+        if (world) {
+            world->spawn(std::make_unique<Coin>(spawnPos));
         }
     }
 }

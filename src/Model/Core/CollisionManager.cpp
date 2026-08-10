@@ -1,7 +1,7 @@
 #include "Model/Core/CollisionManager.h"
+#include "Model/Core/GameManager.h"
 #include "Model/Entity.h"
 #include "Model/Map/TileMap.h"
-#include "Model/Player/Player.h"
 #include "Model/Player/Player.h"
 
 namespace model {
@@ -9,6 +9,9 @@ namespace model {
 namespace {
 // A contact must have real area, but never rely on exact floating-point equality for it.
 constexpr float ContactEpsilon = 0.01f;
+
+// Points for smashing a brick, matching the original.
+constexpr int BrickBreakScore = 50;
 
 CollisionType invertCollisionSide(CollisionType side) {
     switch (side) {
@@ -166,9 +169,18 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
 
         if (row < TileMap::Rows && colCenter < tileMap->getColumns()
             && TileMap::isSolidTile(tileMap->getTile(row, colCenter))) {
+            const char tile = tileMap->getTile(row, colCenter);
             pos.y = (TileMap::Rows - row) * TileMap::TileHeight - hb.offset.y;
             vel.y = 0.0f;
-            entity->onTileCollision(tileMap->getTile(row, colCenter), CollisionType::Top);
+            entity->onTileCollision(tile, CollisionType::Top);
+
+            // Headbutting a breakable brick smashes it out of the level, but only for
+            // someone big enough. The entity decides that for itself, so no type check is
+            // needed here.
+            if (tile == TileMap::BrickSymbol && entity->canBreakBricks()) {
+                tileMap->breakTile(row, colCenter);
+                GameManager::instance().addScore(BrickBreakScore);
+            }
         }
     }
 

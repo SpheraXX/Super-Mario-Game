@@ -68,6 +68,11 @@ char TileMap::getTile(std::size_t row, std::size_t column) const {
     return tiles.at(row).at(column);
 }
 
+void TileMap::breakTile(std::size_t row, std::size_t column) {
+    if (row >= tiles.size() || column >= columns) return;
+    tiles[row][column] = '.';
+}
+
 std::size_t TileMap::getRows() const {
     return Rows;
 }

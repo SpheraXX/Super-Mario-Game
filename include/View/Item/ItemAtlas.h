@@ -1,6 +1,7 @@
 #ifndef VIEW_ITEMATLAS_H
 #define VIEW_ITEMATLAS_H
 
+#include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Rect.hpp>
 
 namespace view {
@@ -24,6 +25,13 @@ inline const char* const ItemSheet =
 inline const sf::IntRect Mushroom({3, 11}, {16, 16});     // world 32x32
 inline const sf::IntRect FireFlower({43, 11}, {16, 16});  // world 32x32
 inline const sf::IntRect Starman({114, 10}, {17, 18});    // world 32x32
+
+// The coin is not on the power-up sheet — it lives on the main Mario sheet, which has no
+// alpha channel and instead uses the same flat backdrop colour the scenery tiles key out.
+inline const char* const MarioAssetSheet = "assets/super_mario_asset.png";
+inline const sf::Color MarioAssetColorKey(148, 148, 255);
+
+inline const sf::IntRect Coin({298, 95}, {16, 16});       // world 32x32
 
 }
 

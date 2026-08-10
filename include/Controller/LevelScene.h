@@ -1,6 +1,7 @@
 #ifndef CONTROLLER_LEVELSCENE_H
 #define CONTROLLER_LEVELSCENE_H
 
+#include "Controller/LevelCompletion.h"
 #include "Controller/PortalSystem.h"
 #include "Model/Core/CollisionManager.h"
 #include "Model/Core/LevelTimer.h"
@@ -91,12 +92,14 @@ private:
     // Warp pipes: entry detection, one-way inert columns and re-emergence placement.
     PortalSystem portals;
 
+    // Goal zone: flagpole + painted castle in the padded columns of the final area.
+    LevelCompletion completion;
+
     std::unique_ptr<view::EntityRendererRegistry> entityRenderers;
     std::unique_ptr<model::CollisionManager> collisionManager;
 
     std::vector<std::unique_ptr<model::Entity>> entities;
-    model::Player* playerPtr = nullptr;    // non-owning: spawned by resetLevel
-    model::FlagPole* flagPolePtr = nullptr;  // non-owning: spawned by resetLevel
+    model::Player* playerPtr = nullptr;  // non-owning: spawned by resetLevel
 
     model::WorldType worldType = model::WorldType::Overworld;
     view::HitboxRenderer hitboxRenderer;

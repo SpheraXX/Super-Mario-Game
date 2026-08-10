@@ -13,7 +13,9 @@
 > and debug keys. Stage 3.1: the warp-pipe rules moved out of LevelScene into
 > `PortalSystem` (entry detection, one-way inert columns, re-emergence placement),
 > sharing the header-only `controller::geometry` helpers (`isGroundSymbol`/
-> `groundTopAt` in `LevelGeometry.h`) that LevelScene still uses for the castle paint.
+> `groundTopAt` in `LevelGeometry.h`). Stage 3.2: the goal zone moved out of LevelScene
+> into `LevelCompletion` (zone constants, castle paint via `setTile`, flagpole spawn,
+> touch/door queries), leaving LevelScene as pure orchestration.
 > Companion doc: `CLASS_ENCAPSULATION_AND_CONNECTIONS.md` (per-class encapsulation + inter-class methods).
 
 ```mermaid
@@ -696,11 +698,11 @@ classDiagram
         -unique_ptr~TileMapRenderer~ renderer
         -bool mapLoaded
         -PortalSystem portals
+        -LevelCompletion completion
         -unique_ptr~EntityRendererRegistry~ entityRenderers
         -unique_ptr~CollisionManager~ collisionManager
         -vector~unique_ptr~Entity~~ entities
         -Player* playerPtr
-        -FlagPole* flagPolePtr
         -WorldType worldType
         -HitboxRenderer hitboxRenderer
         -bool showHitboxes
@@ -746,7 +748,23 @@ classDiagram
     %% re-emergence lands on the destination pipe's cap (else the ground). LevelScene
     %% keeps only the orchestration (guard, loadArea, markInert, place player).
     %% The ground-top math lives in the header-only `controller::geometry` helpers of
-    %% LevelGeometry.h, shared with LevelScene's castle paint.
+    %% LevelGeometry.h, shared with LevelCompletion's castle paint.
+
+    class LevelCompletion {
+        -FlagPole* flagPolePtr
+        +clear()
+        +build(map, entities)
+        +isTouched() bool
+        +flagPole() FlagPole*
+        +castleDoorX(map) float
+        +LevelPaddingTiles size_t
+    }
+
+    %% LevelCompletion owns the goal zone appended to every map: 16 padded columns with
+    %% the flagpole (6 tiles in) and the painted castle (11 tiles in, 5 tiles wide).
+    %% build() paints the 21-sheet castle into the grid (deterministic — re-runs are
+    %% idempotent) and spawns the flagpole; isTouched()/flagPole()/castleDoorX() are
+    %% what the clear play needs, exposed through LevelScene delegates.
 
     class LevelClearSequence {
         -LevelScene* scenePtr
@@ -846,14 +864,16 @@ classDiagram
     PlayState o-- HudRenderer : owns
     LevelScene *-- Level : owns
     LevelScene *-- TileMap : working grid
-    LevelScene ..> TileMap : paints castle (setTile, completion zone)
     LevelScene *-- CollisionManager : owns
     LevelScene *-- LevelTimer : owns
     LevelScene o-- "*" Entity : spawns
     LevelScene o-- TileMapRenderer : owns
     LevelScene o-- EntityRendererRegistry : owns
     LevelScene o-- HitboxRenderer : owns
-    LevelScene o-- FlagPole : spawns (non-owning)
+    LevelScene *-- LevelCompletion : owns
+    LevelCompletion ..> TileMap : paints castle + reads door
+    LevelCompletion ..> FlagPole : spawns (non-owning)
+    LevelCompletion ..> LevelGeometry : groundTopAt (header-only inline)
     LevelScene *-- PortalSystem : owns
     PortalSystem ..> Pipe : matches by sourceColumn
     PortalSystem ..> Portal : entry detection + landing

@@ -37,38 +37,12 @@
 namespace controller {
 
 namespace {
-// The level-completion zone appended to every map: 16 empty columns holding the
-// flagpole (6 tiles into the zone) and the painted castle (11 tiles in, 5 tiles wide).
-constexpr std::size_t LevelPaddingTiles = 16;
-constexpr std::size_t PoleOffsetTiles = 6;
-constexpr std::size_t CastleOffsetTiles = 11;
-
 constexpr float TimerStartSeconds = 400.0f;
 
 // TEMP trace instrumentation (removed after playtest).
 void trace(const std::string& msg) {
     std::ofstream out("trace_log.txt", std::ios::app);
     out << msg << '\n';
-}
-
-bool isGroundSymbol(char symbol) {
-    return symbol == 'G' || symbol == 'C' || symbol == 'B' || symbol == '#';
-}
-
-// Top face of the ground stack at the given column: scan up from the bottom row and
-// return the top edge of the contiguous solid base. Falls back to a standard height.
-float groundTopAt(const model::TileMap& map, std::size_t column) {
-    const std::size_t rows = map.getRows();
-    if (column < map.getColumns()) {
-        std::size_t solid = 0;
-        while (solid < rows && isGroundSymbol(map.getTile(solid, column))) {
-            ++solid;
-        }
-        if (solid > 0) {
-            return static_cast<float>((rows - 1 - (solid - 1)) * model::TileMap::TileHeight);
-        }
-    }
-    return static_cast<float>((rows - 2) * model::TileMap::TileHeight);
 }
 }
 
@@ -125,7 +99,7 @@ void LevelScene::loadArea(std::size_t areaIndex) {
     worldType = level.areaWorld(areaIndex);
     map = level.areaMap(areaIndex);
     if (currentArea == level.areaCount() - 1) {
-        map.padRight(LevelPaddingTiles);
+        map.padRight(LevelCompletion::LevelPaddingTiles);
     }
     renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png", worldType);
     mapLoaded = true;
@@ -168,7 +142,7 @@ void LevelScene::resetLevel() {
     trace("resetLevel");
     entities.clear();
     playerPtr = nullptr;
-    flagPolePtr = nullptr;
+    completion.clear();
 
     bool marioSpawned = false;
     for (std::size_t row = 0; row < rows; ++row) {
@@ -278,40 +252,9 @@ void LevelScene::resetLevel() {
     }
 
     // Level completion zone, in the padded columns: flagpole, then the goal castle.
-    // (Guard: with a failed load columns is 0 and there is nothing to spawn.)
-    if (columns < LevelPaddingTiles) {
-        return;
-    }
-    const std::size_t baseColumns = columns - LevelPaddingTiles;
-    const float groundTop = groundTopAt(map, baseColumns > 0 ? baseColumns - 1 : 0);
-    const float poleHeight = 224.0f;
-
-    // The goal castle is painted into the grid from its 21-tile sheet (see
-    // TileMap::CastleSymbols), row-major over a 5x5 silhouette standing on the ground:
-    // the upper two rows are the 3-wide tower, the lower three the 5-wide base, the
-    // centre-bottom pair is the door, and the two outer cells of the tower rows stay
-    // air. The paint is deterministic, so re-running resetLevel (enter/death) is
-    // idempotent.
-    const std::size_t groundRowTop =
-        rows - 1 - static_cast<std::size_t>(groundTop / static_cast<float>(tileHeight));
-    const std::size_t castleCol = baseColumns + CastleOffsetTiles;
-    std::size_t castleIndex = 0;
-    for (std::size_t silhouetteRow = 0; silhouetteRow < 5; ++silhouetteRow) {
-        for (std::size_t silhouetteColumn = 0; silhouetteColumn < 5; ++silhouetteColumn) {
-            if (silhouetteRow < 2 && (silhouetteColumn == 0 || silhouetteColumn == 4)) {
-                continue;
-            }
-            map.setTile(groundRowTop + 5 - silhouetteRow, castleCol + silhouetteColumn,
-                        model::TileMap::CastleSymbols[castleIndex++]);
-        }
-    }
-
-    auto flag = std::make_unique<model::FlagPole>(
-        model::Vector2{static_cast<float>((baseColumns + PoleOffsetTiles) * tileWidth),
-                       groundTop - poleHeight},
-        model::Vector2{8.0f, poleHeight});
-    flagPolePtr = flag.get();
-    entities.push_back(std::move(flag));
+    // (Guard inside build: with a failed load columns is 0 and there is nothing to
+    // spawn.)
+    completion.build(map, entities);
 
     // Every character obeys the current world's physics (gravity/fall/drag, swim).
     const model::World& world = model::WorldSet::forType(worldType);
@@ -433,7 +376,7 @@ LevelScene::Event LevelScene::update(float deltaTime) {
     }
 
     // Flagpole touch: report the event so the owner starts the scripted clear play.
-    if (flagPolePtr && flagPolePtr->isTouched() && playerPtr && !playerPtr->isDying()) {
+    if (completion.isTouched() && playerPtr && !playerPtr->isDying()) {
         return Event::ClearTriggered;
     }
 
@@ -502,7 +445,7 @@ model::Player* LevelScene::player() const {
 }
 
 model::FlagPole* LevelScene::flagPole() const {
-    return flagPolePtr;
+    return completion.flagPole();
 }
 
 int LevelScene::getRemainingTime() const {
@@ -522,8 +465,7 @@ void LevelScene::toggleHitboxes() {
 }
 
 float LevelScene::castleDoorX() const {
-    return static_cast<float>(
-        (map.getColumns() - LevelPaddingTiles + CastleOffsetTiles) * model::TileMap::TileWidth);
+    return completion.castleDoorX(map);
 }
 
 }

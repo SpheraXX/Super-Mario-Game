@@ -20,6 +20,18 @@ public:
     static constexpr char CloudSymbol = 'O';
     static constexpr char SmallTreeSymbol = 'T';
 
+    // The goal castle is painted into the map's completion zone from its dedicated
+    // 21-tile sheet. Each symbol must not collide with any symbol the map or the
+    // renderer already uses: 'G' (ground), 'O'/'T' (scenery), 'M'/'E'/'K'/'C'/'B'/'#'
+    // (spawns) and 'P'/'p' (pipes) are all taken, so the castle uses the remaining
+    // letters of the alphabet (row-major over the 5x5 silhouette).
+    static constexpr std::size_t CastleTiles = 21;
+    static constexpr char CastleSymbols[CastleTiles] =
+        {'A', 'D', 'F', 'H', 'I', 'J', 'L', 'N', 'Q', 'R', 'S',
+         'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd'};
+
+    static bool isCastleSymbol(char symbol);
+
     void loadFromFile(const std::string& filePath);
 
     // Load a pre-split grid (no header/metadata lines) of exactly Rows lines. Used by
@@ -30,6 +42,9 @@ public:
     // castle). Every new column mirrors the leftmost column's ground symbol ('G') so
     // the floor strip carries across the bonus area; everything else pads as air.
     void padRight(std::size_t extraColumns);
+
+    // Rewrite one cell (used by the controller to paint the castle into the grid).
+    void setTile(std::size_t row, std::size_t column, char symbol);
 
     char getTile(std::size_t row, std::size_t column) const;
     std::size_t getRows() const;

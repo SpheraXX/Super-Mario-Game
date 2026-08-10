@@ -49,7 +49,7 @@ namespace {
 // flagpole (6 tiles into the zone) and the castle (13 tiles in, 3 tiles wide).
 constexpr std::size_t LevelPaddingTiles = 16;
 constexpr std::size_t PoleOffsetTiles = 6;
-constexpr std::size_t CastleOffsetTiles = 13;
+constexpr std::size_t CastleOffsetTiles = 11;
 
 constexpr float TimerStartSeconds = 400.0f;
 constexpr int FlagBonus = 5000;
@@ -246,23 +246,26 @@ void PlayState::resetLevel() {
         }
     }
 
-    // Pipes: contiguous vertical runs of 'P' on one column become a single Pipe whose
-    // box covers the whole run (cap on the top cell, plain body below). 'P' marks the
-    // LEFT column of a 2-tile-wide pipe: the cell to its right must stay empty ('.'/'-'),
-    // so the pipe spans two tiles while the map only encodes its left column. If the
-    // right-hand cells are occupied the run falls back to a 1-wide pipe to stay playable.
-    // The column is what links the entity to its level portal, if any.
+    // Pipes: contiguous vertical runs of 'P' (and, temporarily, 'p') on one column
+    // become a single Pipe whose box covers the whole run (cap on the top cell, plain
+    // body below). 'P' marks the LEFT column of a 2-tile-wide pipe: the cell to its
+    // right must stay empty ('.'/'-'), so the pipe spans two tiles while the map only
+    // encodes its left column. If the right-hand cells are occupied the run falls back
+    // to a 1-wide pipe to stay playable. The column is what links the entity to its
+    // level portal, if any.
     for (std::size_t column = 0; column < columns; ++column) {
         std::size_t runStart = 0;
         while (runStart < rows) {
-            while (runStart < rows && map.getTile(runStart, column) != 'P') {
+            while (runStart < rows && map.getTile(runStart, column) != 'P'
+                   && map.getTile(runStart, column) != 'p') {
                 ++runStart;
             }
             if (runStart >= rows) {
                 break;
             }
             std::size_t runEnd = runStart;
-            while (runEnd + 1 < rows && map.getTile(runEnd + 1, column) == 'P') {
+            while (runEnd + 1 < rows && (map.getTile(runEnd + 1, column) == 'P'
+                   || map.getTile(runEnd + 1, column) == 'p')) {
                 ++runEnd;
             }
             // Row 0 is the bottom row; the cap is the topmost row of the run.
@@ -306,6 +309,25 @@ void PlayState::resetLevel() {
     const float groundTop = groundTopAt(map, baseColumns > 0 ? baseColumns - 1 : 0);
     const float poleHeight = 224.0f;
     const float castleHeight = 160.0f;
+
+    // The goal castle is painted into the grid from its 21-tile sheet as 'A'..'U',
+    // row-major over a 5x5 silhouette standing on the ground: the upper two rows are
+    // the 3-wide tower, the lower three the 5-wide base, the centre-bottom pair is
+    // the door, and the two outer cells of the tower rows stay air. The paint is
+    // deterministic, so re-running resetLevel (enter/death) is idempotent.
+    const std::size_t groundRowTop =
+        rows - 1 - static_cast<std::size_t>(groundTop / static_cast<float>(tileHeight));
+    const std::size_t castleCol = baseColumns + CastleOffsetTiles;
+    std::size_t castleIndex = 0;
+    for (std::size_t silhouetteRow = 0; silhouetteRow < 5; ++silhouetteRow) {
+        for (std::size_t silhouetteColumn = 0; silhouetteColumn < 5; ++silhouetteColumn) {
+            if (silhouetteRow < 2 && (silhouetteColumn == 0 || silhouetteColumn == 4)) {
+                continue;
+            }
+            map.setTile(groundRowTop + 5 - silhouetteRow, castleCol + silhouetteColumn,
+                        model::TileMap::CastleSymbols[castleIndex++]);
+        }
+    }
 
     auto flag = std::make_unique<model::FlagPole>(
         model::Vector2{static_cast<float>((baseColumns + PoleOffsetTiles) * tileWidth),
@@ -535,7 +557,8 @@ void PlayState::beginLevelClear() {
     const model::Vector2 poleTop = flagPole->getPosition();
     poleGroundY = poleTop.y + flagPole->getSize().y;
     poleSlideStartY = player->getPosition().y;
-    castleEntryX = (castle) ? castle->getPosition().x : 0.0f;
+    castleEntryX = static_cast<float>(
+        (map.getColumns() - LevelPaddingTiles + CastleOffsetTiles) * model::TileMap::TileWidth);
 
     poleElapsed = 0.0f;
     clearPhase = ClearPhase::SlideToPole;

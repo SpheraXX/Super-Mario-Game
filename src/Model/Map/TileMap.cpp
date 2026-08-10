@@ -87,6 +87,10 @@ void TileMap::padRight(std::size_t extraColumns) {
     columns += extraColumns;
 }
 
+void TileMap::setTile(std::size_t row, std::size_t column, char symbol) {
+    tiles.at(row).at(column) = symbol;
+}
+
 char TileMap::getTile(std::size_t row, std::size_t column) const {
     return tiles.at(row).at(column);
 }
@@ -118,8 +122,17 @@ bool TileMap::hasNextMap() const {
 bool TileMap::isSolidTile(char symbol) {
     // Only the ground is static tile geometry now: 'C', 'B', 'M', 'E', 'K' and '#'
     // spawn as entities (blocks and characters) that manage their own collision, and
-    // scenery ('O', 'T') is decorative.
-    return symbol == 'G';
+    // scenery ('O', 'T') is decorative. The painted castle is solid.
+    return symbol == 'G' || isCastleSymbol(symbol);
+}
+
+bool TileMap::isCastleSymbol(char symbol) {
+    for (const char candidate : CastleSymbols) {
+        if (candidate == symbol) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void TileMap::parseHeader(const std::string& line) {

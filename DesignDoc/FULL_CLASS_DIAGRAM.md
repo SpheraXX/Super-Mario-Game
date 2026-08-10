@@ -1,8 +1,14 @@
 # Full Project Class Diagram
 
-> Mermaid diagram covering all model, view, and controller classes (k.2.5 — stage 1:
-> model interface segregation. The PlayState split and the tileset unification are the
-> planned stages 2–3 and are not yet reflected).
+> Mermaid diagram covering all model, view, and controller classes (k.2.5). Stage 1
+> (model interface segregation) and stage 2, subtasks 0–3 are reflected: the goal castle
+> is painted into the TileMap completion zone from a 21-symbol sheet
+> (`TileMap::CastleSymbols`, registered by `TileMapRenderer` from atlas rows
+> y = 696/712 (tower) and 728/744/760 (base)); pipes spawn from `'p'` (body) / `'P'`
+> (mouth) runs in the grid; and tile collision treats castle symbols as ground/solid.
+> Still pending: stage 2 subtasks 4–6 (SpritePainter unification, removing the
+> `Castle` entity + `CastleRenderer`) and stage 3 (the PlayState split) — the temporary
+> `Castle` entity and `CastleRenderer` remain in the diagram until then.
 > Companion doc: `CLASS_ENCAPSULATION_AND_CONNECTIONS.md` (per-class encapsulation + inter-class methods).
 
 ```mermaid
@@ -313,6 +319,7 @@ classDiagram
         +loadFromFile(path)
         +loadFromLines(rows)
         +padRight(extraColumns)
+        +setTile(row, col, symbol)
         +getTile(row, col) char
         +getRows() size_t
         +getColumns() size_t
@@ -321,12 +328,15 @@ classDiagram
         +getNextMapPath() string
         +hasNextMap() bool
         +isSolidTile(symbol) bool
+        +isCastleSymbol(symbol) bool
         -parseHeader(line)
         $Rows 16
         $TileWidth 32
         $TileHeight 32
         $CloudSymbol O
         $SmallTreeSymbol T
+        $CastleTiles 21
+        $CastleSymbols A D F H I J L N Q R S U V W X Y Z a b c d
     }
 
     class World {
@@ -378,6 +388,9 @@ classDiagram
         +getSourceColumn() size_t
     }
 
+    %% Pipes are spawned by PlayState from vertical 'p'/'P' runs in the grid ('p' body,
+    %% 'P' mouth); adjacent columns of a tube (p/P side by side) form one wide pipe.
+
     class FlagPole {
         -bool touched
         -float slideProgress
@@ -392,6 +405,10 @@ classDiagram
         +Castle(position, size)
         +isSolid() bool*
     }
+
+    %% The Castle above is the temporary entity (still spawned in resetLevel, stage 2
+    %% subtask 5 removes it): the gameplay castle is now tiles, painted by PlayState
+    %% via TileMap::setTile from the CastleSymbols sheet.
 
     class GameManager {
         <<singleton>>
@@ -454,6 +471,9 @@ classDiagram
         -processEntityCollisions(entities)
         -pushOutOfBlock(moverCharacter, blocker, moverSide)
     }
+
+    %% Tile grounding accepts 'G', block cells ('C'/'B'/'#') and the painted castle
+    %% symbols (TileMap::isCastleSymbol).
 
     %% ====================================================================
     %% VIEW LAYER — renderer hierarchy
@@ -526,6 +546,9 @@ classDiagram
         #renderTyped(window, castle, ctx)*
     }
 
+    %% CastleRenderer renders the temporary Castle entity only; once the entity is
+    %% removed (stage 2, subtask 5) this renderer and its registry entry go too.
+
     class CoinBlockRenderer {
         -sf_Texture texture
         -sf_Texture coinTexture
@@ -547,6 +570,10 @@ classDiagram
         +registerTile(symbol, tilesetPath, x, y, w, h, transparentColor)
         +render(window, map)
     }
+
+    %% TileMapRenderer's constructor additionally registers all 21 castle-sheet symbols
+    %% (TileMap::CastleSymbols) against MarioAssetPath: tower at atlas y = 696/712
+    %% (x = 40..72), base rows at y = 728/744/760 (x = 24..88).
 
     class HudData {
         +int score
@@ -670,6 +697,9 @@ classDiagram
         -beginLevelClear()
         -updateClearSequence(dt)
         -finishLevelClear()
+        $LevelPaddingTiles 16
+        $PoleOffsetTiles 6
+        $CastleOffsetTiles 11
     }
 
     class GameOverState {
@@ -743,6 +773,7 @@ classDiagram
     StateManager o-- "*" GameState : stack of
     PlayState *-- Level : owns
     PlayState *-- TileMap : working grid
+    PlayState ..> TileMap : paints castle (setTile, completion zone)
     PlayState *-- CollisionManager : owns
     PlayState o-- "*" Entity : spawns
     PlayState o-- TileMapRenderer : owns

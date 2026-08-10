@@ -45,6 +45,28 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldTyp
     // tileset's blue backdrop.
     registerTile(model::TileMap::CloudSymbol, MarioAssetPath, 344, 632, 3 * 16, 2 * 16, SceneryBackdrop);
     registerTile(model::TileMap::SmallTreeSymbol, MarioAssetPath, 264, 656, 16, 2 * 16, SceneryBackdrop);
+    // The goal castle is painted into the padded completion zone by the controller
+    // from its 21-tile sheet. The symbols (see TileMap::CastleSymbols) were chosen to
+    // not clash with the map's own symbols, and are mapped row-major over the castle's
+    // 5x5 silhouette: the upper two rows are the 3-wide tower (atlas x = 40..72), the
+    // lower three rows are the 5-wide base (atlas x = 24..88). The centre-bottom pair
+    // is the entrance. The two unpainted corner cells of the tower rows stay air.
+    {
+        static constexpr int SheetX[model::TileMap::CastleTiles] =
+            {40, 56, 72, 40, 56, 72,
+             24, 40, 56, 72, 88,
+             24, 40, 56, 72, 88,
+             24, 40, 56, 72, 88};
+        static constexpr int SheetY[model::TileMap::CastleTiles] =
+            {696, 696, 696, 712, 712, 712,
+             728, 728, 728, 728, 728,
+             744, 744, 744, 744, 744,
+             760, 760, 760, 760, 760};
+        for (std::size_t i = 0; i < model::TileMap::CastleTiles; ++i) {
+            registerTile(model::TileMap::CastleSymbols[i], MarioAssetPath,
+                         SheetX[i], SheetY[i], 16, 16);
+        }
+    }
 }
 
 void TileMapRenderer::loadTileset(const std::string& tilesetPath) {

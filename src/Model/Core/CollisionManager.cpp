@@ -22,7 +22,8 @@ constexpr float StompBias = 0.75f;
 // always hold a static solid entity, so landing on them is equivalent. Grounding on these
 // cells keeps isGrounded stable on top of blocks (gravity + animation never flap).
 bool isGroundTile(char symbol) {
-    return symbol == 'G' || symbol == 'C' || symbol == 'B' || symbol == '#';
+    return symbol == 'G' || symbol == 'C' || symbol == 'B' || symbol == '#'
+        || model::TileMap::isCastleSymbol(symbol);
 }
 
 // Minimum upward speed (world units/s) for a top-face block contact to count as a bump.

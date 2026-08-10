@@ -1,5 +1,8 @@
 #include "Model/Core/CollisionManager.h"
+#include "Model/Block/Block.h"
 #include "Model/Core/BlockHitEvent.h"
+#include "Model/Character.h"
+#include "Model/Enemy/Enemy.h"
 #include "Model/Entity.h"
 #include "Model/Map/TileMap.h"
 
@@ -46,14 +49,17 @@ constexpr float TopRestEpsilon = 2.0f;
 // True when one of the pair is the player resting on the other's solid top: feet within
 // TopRestEpsilon of the top (or a sub-pixel overlap), a real horizontal footprint, and no
 // upward flight. The entity-pass equivalent of the tile pass's LandingEpsilon landing.
+//
+// The collision layers are the type contract here: the Player layer is only ever carried
+// by Player (a Character), so the static_cast is safe by construction.
 bool restingOnSolidTop(const Entity& a, const Entity& b) {
-    const Entity* player = nullptr;
+    const Character* player = nullptr;
     const Entity* solid = nullptr;
     if (a.hitbox.layer == CollisionLayer::Player) {
-        player = &a;
+        player = static_cast<const Character*>(&a);
         solid = &b;
     } else if (b.hitbox.layer == CollisionLayer::Player) {
-        player = &b;
+        player = static_cast<const Character*>(&b);
         solid = &a;
     }
     if (!player || !solid->isSolid() || player->getVelocity().y < 0.0f) return false;
@@ -74,22 +80,26 @@ CollisionManager::CollisionManager(TileMap* tileMap) : tileMap(tileMap) {}
 
 void CollisionManager::update(std::vector<Entity*>& entities, float deltaTime) {
     // Pass 1: Entity vs TileMap. Dying bodies pop through the world, so they skip it.
+    // Static world objects (pipes, blocks, the flagpole) are skipped entirely: they
+    // never move, so tile resolution is a no-op for them anyway.
     for (auto* entity : entities) {
-        if (!entity || !entity->isActive || entity->isDying()) continue;
-        entity->isGrounded = false;
-        processTileCollisions(entity, deltaTime);
+        if (!entity || !entity->isActive) continue;
+        auto* character = dynamic_cast<Character*>(entity);
+        if (!character || character->isDying()) continue;
+        character->isGrounded = false;
+        processTileCollisions(*character, deltaTime);
     }
 
     // Pass 2: Entity vs Entity
     processEntityCollisions(entities);
 }
 
-void CollisionManager::processTileCollisions(Entity* entity, float deltaTime) {
+void CollisionManager::processTileCollisions(Character& entity, float deltaTime) {
     if (!tileMap) return;
 
-    Vector2 pos = entity->getPosition();
-    Hitbox& hb = entity->hitbox;
-    Vector2 vel = entity->getVelocity();
+    Vector2 pos = entity.getPosition();
+    Hitbox& hb = entity.hitbox;
+    Vector2 vel = entity.getVelocity();
     
     // Simplistic AABB resolution against tiles
     float footY = pos.y + hb.offset.y + hb.height;
@@ -122,8 +132,8 @@ void CollisionManager::processTileCollisions(Entity* entity, float deltaTime) {
                     if (prevFootY > tileTop + LandingEpsilon) break;
                     pos.y = tileTop - hb.height - hb.offset.y;
                     vel.y = 0.0f;
-                    entity->isGrounded = true;
-                    entity->onTileCollision(tileMap->getTile(row, col), CollisionType::Bottom);
+                    entity.isGrounded = true;
+                    entity.onTileCollision(tileMap->getTile(row, col), CollisionType::Bottom);
                     break;
                 }
             }
@@ -139,7 +149,7 @@ void CollisionManager::processTileCollisions(Entity* entity, float deltaTime) {
             if (TileMap::isSolidTile(tileMap->getTile(row, col))) {
                 pos.y = (TileMap::Rows - row) * TileMap::TileHeight - hb.offset.y;
                 vel.y = 0.0f;
-                entity->onTileCollision(tileMap->getTile(row, col), CollisionType::Top);
+                entity.onTileCollision(tileMap->getTile(row, col), CollisionType::Top);
             }
         }
     }
@@ -153,7 +163,7 @@ void CollisionManager::processTileCollisions(Entity* entity, float deltaTime) {
             if (TileMap::isSolidTile(tileMap->getTile(row, col))) {
                 pos.x = (col + 1) * TileMap::TileWidth - hb.offset.x;
                 vel.x = 0.0f;
-                entity->onTileCollision(tileMap->getTile(row, col), CollisionType::Left);
+                entity.onTileCollision(tileMap->getTile(row, col), CollisionType::Left);
             }
         }
     }
@@ -167,19 +177,23 @@ void CollisionManager::processTileCollisions(Entity* entity, float deltaTime) {
             if (TileMap::isSolidTile(tileMap->getTile(row, col))) {
                 pos.x = col * TileMap::TileWidth - hb.width - hb.offset.x;
                 vel.x = 0.0f;
-                entity->onTileCollision(tileMap->getTile(row, col), CollisionType::Right);
+                entity.onTileCollision(tileMap->getTile(row, col), CollisionType::Right);
             }
         }
     }
 
-    entity->setPosition(pos);
-    entity->setVelocity(vel);
+    entity.setPosition(pos);
+    entity.setVelocity(vel);
 }
 
 void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
     for (std::size_t i = 0; i < entities.size(); ++i) {
         Entity* a = entities[i];
-        if (!a || !a->isActive || a->isDying()) continue;
+        if (!a || !a->isActive) continue;
+        // Dying bodies ignore interaction until the level removes them. Only Characters
+        // carry life state; static world objects are never dying.
+        auto* aCharacter = dynamic_cast<Character*>(a);
+        if (aCharacter && aCharacter->isDying()) continue;
 
         // The player can overlap several solid blocks in one frame (a head pressed into a
         // row of bricks). Only the deepest contact is resolved — ties go to the block that
@@ -192,7 +206,9 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
 
         for (std::size_t j = i + 1; j < entities.size(); ++j) {
             Entity* b = entities[j];
-            if (!b || !b->isActive || b->isDying()) continue;
+            if (!b || !b->isActive) continue;
+            auto* bCharacter = dynamic_cast<Character*>(b);
+            if (bCharacter && bCharacter->isDying()) continue;
 
             // At exact contact (feet == block top) the strict AABB reports no overlap, so
             // the pair is only kept when the player is resting on a solid top within the
@@ -302,49 +318,44 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
     b.onCollision(a, sideB);
 
     // Routing uses the collision layers instead of concrete types. Exactly one of the
-    // two entities is the player; the other decides how the pair interacts.
+    // two entities is the player; the other decides how the pair interacts. The layers
+    // are the type contract for the casts below: the Player layer is only ever carried
+    // by Player (a Character) and the Enemy layer only by Enemy subclasses.
     const bool aIsPlayer = a.hitbox.layer == CollisionLayer::Player;
     const bool bIsPlayer = b.hitbox.layer == CollisionLayer::Player;
     if (aIsPlayer == bIsPlayer) return;
 
     Entity* player = aIsPlayer ? &a : &b;
     Entity* other = aIsPlayer ? &b : &a;
+    Character& playerCharacter = static_cast<Character&>(*player);
     const CollisionType playerSide = (player == &a) ? sideA : sideB;
 
     if (other->hitbox.layer == CollisionLayer::Enemy) {
+        Enemy& enemy = static_cast<Enemy&>(*other);
         if (playerSide == CollisionType::Bottom) {
             // Player landed on top of the enemy: squash it and bounce.
-            other->onStomped(*player);
-            player->setVelocity({player->getVelocity().x, -350.0f}); // Bounce force
+            enemy.onStomped(*player);
+            playerCharacter.setVelocity({playerCharacter.getVelocity().x, -350.0f}); // Bounce force
         } else {
             // Player hit the enemy from the side or from below: take damage.
-            player->takeDamage(other->getDamageValue());
+            playerCharacter.takeDamage(enemy.getDamageValue());
         }
     } else if (other->isSolid()) {
         // Solid blocks stop the player (push-out). A bump from below also dispatches the
         // block-hit event — but only when the head is moving into the block fast enough
-        // (a graze at the top of the arc is too weak to trigger it).
-        const float upwardSpeed = std::max(0.0f, -player->getVelocity().y);
-        CollisionType resolvedSide = playerSide;
-        if (playerSide == CollisionType::Bottom && !other->isLandable()) {
-            // A top that must not be stood on (e.g. the goal castle): turn the landing
-            // into a horizontal slide so the player falls back down the nearer side
-            // instead of resting on the roof.
-            const float playerCenterX = player->getPosition().x + player->hitbox.offset.x
-                                        + player->hitbox.width / 2.0f;
-            const float blockerCenterX = other->getPosition().x + other->hitbox.offset.x
-                                         + other->hitbox.width / 2.0f;
-            resolvedSide = (playerCenterX < blockerCenterX) ? CollisionType::Right
-                                                            : CollisionType::Left;
-        }
-        pushOutOfBlock(*player, *other, resolvedSide);
+        // (a graze at the top of the arc is too weak to trigger it), and only when the
+        // blocker is actually a Block: a solid pipe never reacts to a bump.
+        const float upwardSpeed = std::max(0.0f, -playerCharacter.getVelocity().y);
+        pushOutOfBlock(playerCharacter, *other, playerSide);
         if (playerSide == CollisionType::Top && upwardSpeed >= MinBumpSpeed) {
-            other->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
+            if (auto* block = dynamic_cast<Block*>(other)) {
+                block->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
+            }
         }
     }
 }
 
-void CollisionManager::pushOutOfBlock(Entity& mover, const Entity& blocker, CollisionType moverSide) {
+void CollisionManager::pushOutOfBlock(Character& mover, const Entity& blocker, CollisionType moverSide) {
     // Side semantics: moverSide is the side of the mover that is in contact, i.e.
     // Bottom = the mover's bottom face rests on the blocker's top (stand on it),
     // Top = the mover's top face hit the blocker's bottom (bump, stop the ascent).

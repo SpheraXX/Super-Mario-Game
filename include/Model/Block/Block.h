@@ -2,6 +2,7 @@
 #define MODEL_BLOCK_H
 
 #include "Model/Entity.h"
+#include "Model/Core/BlockHitEvent.h"
 
 namespace model {
 
@@ -13,6 +14,11 @@ public:
 
     char getTileSymbol() const;
     bool isSolid() const override;
+
+    // The player bumped this block from below (see BlockHitEvent). Only block
+    // subclasses react (bounce / collect a coin); other solid objects like pipes
+    // never receive this hook.
+    virtual void onBlockHit(const BlockHitEvent& event) { (void)event; }
 
     // Bump reaction: start a short render-side bounce (only bricks and unopened
     // CoinBlocks do this; see the subclasses' onBlockHit overrides).

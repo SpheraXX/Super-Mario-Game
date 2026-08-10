@@ -13,9 +13,12 @@ public:
     void update(float deltaTime) override;
     virtual void updateAI(float deltaTime) = 0;
 
+    // Stomp and damage hooks are Enemy semantics: CollisionManager dispatches them via
+    // the collision layers, and only Enemy subclasses react.
     virtual void onStomped(Entity& player);
-    virtual void onHit(Entity& source) override;
-    int getDamageValue() const override;
+    // Knocked out by another enemy (e.g. a spinning shell): pop up and fall away.
+    virtual void onHit(Entity& source);
+    int getDamageValue() const;
 
     // True while the enemy shows its squished sprite (stomped but not gone yet).
     bool isSquished() const;

@@ -7,6 +7,7 @@
 namespace model {
 
 class Entity;
+class Character;
 class TileMap;
 
 class CollisionManager {
@@ -21,12 +22,15 @@ public:
 private:
     TileMap* tileMap;
 
-    void processTileCollisions(Entity* entity, float deltaTime);
+    // Tile resolution only applies to Characters: static world objects never move, so
+    // the pass has nothing to resolve for them (and they no longer expose a velocity).
+    void processTileCollisions(Character& entity, float deltaTime);
     void processEntityCollisions(std::vector<Entity*>& entities);
 
     // Push the mover out of a solid blocker along the collision axis. Works on any
-    // entity pair: the responder (e.g. CoinBlock) reacts through its onCollision hook.
-    void pushOutOfBlock(Entity& mover, const Entity& blocker, CollisionType moverSide);
+    // character-vs-blocker pair: the responder (e.g. CoinBlock) reacts through its
+    // onBlockHit hook, dispatched by type at the call site.
+    void pushOutOfBlock(Character& mover, const Entity& blocker, CollisionType moverSide);
 };
 
 }

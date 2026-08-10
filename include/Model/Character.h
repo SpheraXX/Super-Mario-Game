@@ -2,7 +2,6 @@
 #define MODEL_CHARACTER_H
 
 #include "Model/Entity.h"
-#include "Model/Core/CollisionResult.h"
 
 namespace model {
 
@@ -18,8 +17,9 @@ enum class AnimState {
     Die
 };
 
-class TileMap;
-
+// A living, moving world object: owns its velocity, gravity-driven motion, health
+// and death state. Player, enemies and NPCs derive from this; static objects (pipes,
+// the flagpole, blocks) stay plain world objects without motion or life semantics.
 class Character : public Entity {
 public:
     Character(Vector2 position, Vector2 size);
@@ -27,15 +27,19 @@ public:
 
     void update(float deltaTime) override;
 
-    virtual void onCollision(Entity* other);
-    virtual void takeDamage(int amount) override;
+    // Input gathering is delegated polymorphically: only the player reacts. It runs
+    // BEFORE update() so gravity & integration see the correct player-intended
+    // velocity, not stale values.
+    virtual void handleInput(float deltaTime) { (void)deltaTime; }
+
+    virtual void takeDamage(int amount);
 
     // Enter the death animation: the body pops up (if bounce) then falls away.
     // Dying bodies ignore tile collisions and stop all other interaction until the
     // level removes them after the fall.
     virtual void beginDying(bool bounce);
-    bool isDying() const override;
-    bool isAlive() const override;
+    bool isDying() const;
+    bool isAlive() const;
 
     // Movement tuning: subclasses (Mario/Luigi) override with their own numbers so the
     // player controller never needs to know which character it is driving. Jumps are
@@ -47,7 +51,6 @@ public:
     virtual float getJumpAccel() const;
 
     void applyGravity(float deltaTime);
-    virtual void move();
     virtual void die();
     
     bool isOnGround() const;
@@ -62,6 +65,9 @@ public:
     float getHorizontalDrag() const;
     bool isUnderwater() const;
 
+    Vector2 getVelocity() const;
+    void setVelocity(Vector2 v);
+
     int getDirection() const;
     void setDirection(int d);
 
@@ -71,16 +77,16 @@ public:
     bool isFacingRight() const;
     void setFacingRight(bool right);
 
-    void resolveTileCollisions();
+    // Whether the character is resting on solid ground or a block top this frame.
+    bool isGrounded;
 
 protected:
-    void clampVelocity();
+    Vector2 velocity;
 
     int direction;
     int health;
     bool alive;
     bool isDyingFlag = false;
-    float deathElapsed = 0.0f;
     AnimState animState;
     bool facingRight;
     const TileMap* mapPtr = nullptr;

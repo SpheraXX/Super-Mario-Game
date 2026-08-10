@@ -381,10 +381,13 @@ void PlayState::update(float deltaTime) {
     for (auto& e : entities) {
         if (!e->isActive) continue;
 
-        // Input gathering is delegated polymorphically: only the player reacts.
-        // It runs BEFORE entity->update() so gravity & integration see the correct
-        // player-intended velocity, not stale values.
-        e->handleInput(deltaTime);
+        // Input gathering is delegated polymorphically: only the player reacts (input is
+        // a Character capability — static world objects have no input). It runs BEFORE
+        // entity->update() so gravity & integration see the correct player-intended
+        // velocity, not stale values.
+        if (auto* character = dynamic_cast<model::Character*>(e.get())) {
+            character->handleInput(deltaTime);
+        }
 
         e->update(deltaTime);
         activeEntities.push_back(e.get());
@@ -410,19 +413,21 @@ void PlayState::update(float deltaTime) {
         static int failFrame = 0;
         if (!mapLoaded && ++failFrame % 10 == 0 && e.get() == player) {
             trace("fail pos=" + std::to_string(pos.x) + "," + std::to_string(pos.y)
-                  + " g=" + std::to_string(e->isGrounded)
-                  + " vy=" + std::to_string(e->getVelocity().y));
+                  + " g=" + std::to_string(player->isGrounded)
+                  + " vy=" + std::to_string(player->getVelocity().y));
         }
 
         // Bodies that finished their (non-animated) death are gone for good, e.g.
-        // squished Goombas after their despawn timer.
-        if (!e->isAlive() && !e->isDying()) {
+        // squished Goombas after their despawn timer. Only Characters have life state;
+        // static world objects are always alive and skip these checks.
+        auto* character = dynamic_cast<model::Character*>(e.get());
+        if (character && !character->isAlive() && !character->isDying()) {
             e->isActive = false;
             continue;
         }
 
         // Dying bodies fall through the world; once past the bottom they are removed.
-        if (e->isDying()) {
+        if (character && character->isDying()) {
             if (pos.y > mapHeight) {
                 if (e.get() == player) {
                     playerFinishedDeathFall = true;

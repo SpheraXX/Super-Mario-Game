@@ -161,9 +161,6 @@ void Player::handleInput(float deltaTime) {
     jumpHeld = jumpPressed;
 }
 
-void Player::onCollision(Entity* /* other */) {
-}
-
 void Player::takeDamage(int amount) {
     if (!alive || isDying() || damageCooldown > 0.0f) return;
 

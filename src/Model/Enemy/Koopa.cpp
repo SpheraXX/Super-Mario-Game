@@ -56,9 +56,10 @@ bool Koopa::isShell() const {
 
 void Koopa::onCollision(Entity& other, CollisionType /* side */) {
     if (state == KoopaState::ShellSpinning) {
-        // A spinning shell knocks out any other enemy it touches.
+        // A spinning shell knocks out any other enemy it touches. The layer guard is the
+        // contract for the cast: only Enemy subclasses carry the Enemy layer.
         if (&other != this && other.hitbox.layer == CollisionLayer::Enemy) {
-            other.onHit(*this);
+            static_cast<Enemy&>(other).onHit(*this);
         }
     }
 }

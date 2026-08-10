@@ -8,6 +8,8 @@ namespace model {
 
 Character::Character(Vector2 position, Vector2 size)
     : Entity(position, size),
+      isGrounded(false),
+      velocity({0.0f, 0.0f}),
       direction(1),
       health(1),
       alive(true),
@@ -27,7 +29,6 @@ void Character::update(float deltaTime) {
             pos.x += velocity.x * deltaTime;
             pos.y += velocity.y * deltaTime;
             setPosition(pos);
-            deathElapsed += deltaTime;
         }
         return;
     }
@@ -46,9 +47,6 @@ void Character::update(float deltaTime) {
     pos.x += velocity.x * deltaTime;
     pos.y += velocity.y * deltaTime;
     setPosition(pos);
-}
-
-void Character::onCollision(Entity* /* other */) {
 }
 
 float Character::getWalkSpeed() const {
@@ -72,9 +70,6 @@ void Character::takeDamage(int amount) {
     if (health <= 0) {
         die();
     }
-}
-
-void Character::move() {
 }
 
 void Character::die() {
@@ -163,74 +158,12 @@ void Character::setFacingRight(bool right) {
     facingRight = right;
 }
 
-void Character::clampVelocity() {
-    if (velocity.x > 400.0f) velocity.x = 400.0f;
-    if (velocity.x < -400.0f) velocity.x = -400.0f;
-    if (velocity.y > getMaxFallSpeed()) velocity.y = getMaxFallSpeed();
+Vector2 Character::getVelocity() const {
+    return velocity;
 }
 
-void Character::resolveTileCollisions() {
-    if (!mapPtr) return;
-
-    Vector2 pos = getPosition();
-    Vector2 sz = getSize();
-
-    float footY = pos.y + sz.y;
-    float headY = pos.y;
-    float leftX = pos.x;
-    float rightX = pos.x + sz.x;
-    float centerY = pos.y + sz.y / 2.0f;
-    float centerX = pos.x + sz.x / 2.0f;
-
-    if (velocity.y >= 0.0f) {
-        std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
-
-        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
-            if (mapPtr->getTile(row, col) != '.') {
-                pos.y = (TileMap::Rows - 1 - row) * TileMap::TileHeight - sz.y;
-                velocity.y = 0.0f;
-            }
-        }
-    }
-
-    if (velocity.y < 0.0f) {
-        std::size_t col = static_cast<std::size_t>(centerX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(headY / TileMap::TileHeight);
-
-        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
-            if (mapPtr->getTile(row, col) != '.') {
-                pos.y = (TileMap::Rows - row) * TileMap::TileHeight;
-                velocity.y = 0.0f;
-            }
-        }
-    }
-
-    if (velocity.x < 0.0f) {
-        std::size_t col = static_cast<std::size_t>(leftX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
-
-        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
-            if (mapPtr->getTile(row, col) != '.') {
-                pos.x = (col + 1) * TileMap::TileWidth;
-                velocity.x = 0.0f;
-            }
-        }
-    }
-
-    if (velocity.x > 0.0f) {
-        std::size_t col = static_cast<std::size_t>(rightX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
-
-        if (col < mapPtr->getColumns() && row < TileMap::Rows) {
-            if (mapPtr->getTile(row, col) != '.') {
-                pos.x = col * TileMap::TileWidth - sz.x;
-                velocity.x = 0.0f;
-            }
-        }
-    }
-
-    setPosition(pos);
+void Character::setVelocity(Vector2 v) {
+    velocity = v;
 }
 
 }

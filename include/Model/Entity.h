@@ -4,10 +4,14 @@
 #include "Model/Core/Vector2.h"
 #include "Model/Core/Hitbox.h"
 #include "Model/Core/CollisionResult.h"
-#include "Model/Core/BlockHitEvent.h"
 
 namespace model {
 
+// A world object: anything placed in the level with a position, size and hitbox.
+// Static objects (pipes, the flagpole, blocks) are plain world objects; everything
+// that moves, takes damage or dies adds those capabilities in Character. Nothing in
+// this interface implies life, motion or input, so e.g. a FlagPole can never be
+// asked for a velocity or a death state.
 class Entity {
 public:
     Entity(Vector2 position, Vector2 size);
@@ -17,42 +21,20 @@ public:
     virtual void onCollision(Entity& other, CollisionType side);
     virtual void onTileCollision(char tile, CollisionType side);
 
-    // Behaviour hooks with safe defaults: game code (Controller, CollisionManager) can
-    // drive entities through these virtuals instead of checking concrete types.
-    virtual void handleInput(float deltaTime) { (void)deltaTime; }
-    virtual void takeDamage(int amount) { (void)amount; }
-    virtual void onStomped(Entity& stomper) { (void)stomper; }
-    virtual void onHit(Entity& source) { (void)source; }
-    virtual int getDamageValue() const { return 0; }
-
     // Fired when an entity with a trigger hitbox overlaps the player (see the trigger
     // pass in CollisionManager). Default: nothing — trigger semantics live in the
     // concrete type (e.g. FlagPole marks itself touched).
     virtual void onTriggerEnter(Entity& other) { (void)other; }
 
-    // The player bumped a solid block from below (see BlockHitEvent).
-    virtual void onBlockHit(const BlockHitEvent& event) { (void)event; }
-
-    // Semantic state queries (Characters override; plain entities are alive and passable).
-    virtual bool isAlive() const { return true; }
-    virtual bool isDying() const { return false; }
     virtual bool isSolid() const { return false; }
-    // Whether a solid entity may be stood ON (its top acts as a floor). False turns a
-    // top contact into a horizontal push, so e.g. the goal castle cannot be climbed on.
-    virtual bool isLandable() const { return true; }
 
     Vector2 getPosition() const;
     Vector2 getSize() const;
     void setPosition(Vector2 newPosition);
     void setSize(Vector2 newSize);
 
-    Vector2 getVelocity() const;
-    void setVelocity(Vector2 v);
-
     Hitbox hitbox;
-    Vector2 velocity;
     bool isActive;
-    bool isGrounded;
 
 private:
     Vector2 position;

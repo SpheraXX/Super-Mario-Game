@@ -16,7 +16,6 @@ public:
     void update(float deltaTime) override;
 
     void handleInput(float deltaTime) override;
-    void onCollision(Entity* other) override;
     void takeDamage(int amount) override;
 
     using Character::die;

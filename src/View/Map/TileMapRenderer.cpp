@@ -10,6 +10,9 @@ namespace {
 const std::string MarioAssetPath = "assets/super_mario_asset.png";
 const sf::Color SceneryBackdrop(148, 148, 255);
 
+// Pipe artwork is laid out on a 17px pitch: 16px of art with a 1px separator.
+constexpr unsigned int PipeCell = 16;
+
 bool nearlyEqual(sf::Color a, sf::Color b, int tolerance) {
     const auto channelDiff = [](std::uint8_t lhs, std::uint8_t rhs) {
         return std::abs(static_cast<int>(lhs) - static_cast<int>(rhs));
@@ -33,6 +36,41 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath) {
     // tileset's blue backdrop.
     registerTile(model::TileMap::CloudSymbol, MarioAssetPath, 344, 632, 3 * 16, 2 * 16, SceneryBackdrop);
     registerTile(model::TileMap::SmallTreeSymbol, MarioAssetPath, 264, 656, 16, 2 * 16, SceneryBackdrop);
+
+    // Pipes are built from one-cell tiles rather than a single oversized sprite. Collision is
+    // decided per cell (TileMap::isSolidTile reads one char), so a pipe drawn as one wide
+    // sprite would leave its right-hand column passable and Mario would walk into it.
+    //
+    // Standing pipe, two cells wide and as tall as the author writes:
+    //     PQ      <- mouth
+    //     pq      <- shaft, repeated
+    registerTile('P', MarioAssetPath, 119, 196, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('Q', MarioAssetPath, 136, 196, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('p', MarioAssetPath, 119, 213, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('q', MarioAssetPath, 136, 213, PipeCell, PipeCell, SceneryBackdrop);
+
+    // Sideways pipe, three cells tall and three long, for the level-exit run. Its right-hand
+    // end reuses the standing pipe's right column (Q on top, q below), which is how the two
+    // join into the classic L shape.
+    //     HIJQ   <- top
+    //     KLMq   <- middle, repeat for a taller run
+    //     hijq   <- bottom
+    registerTile('H', MarioAssetPath, 85, 230, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('I', MarioAssetPath, 102, 230, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('J', MarioAssetPath, 119, 230, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('h', MarioAssetPath, 85, 247, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('i', MarioAssetPath, 102, 247, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('j', MarioAssetPath, 119, 247, PipeCell, PipeCell, SceneryBackdrop);
+
+    // Middle band. The sheet only draws this pipe two cells tall — the cells below the
+    // bottom row are empty backdrop, and the next artwork down is the grey palette swap —
+    // so there is no true middle row to point at. These alias the top row, which means a
+    // three-tall pipe shows the top row's outline as a seam a third of the way down.
+    // If a proper middle band exists elsewhere on the sheet, repoint these three and
+    // nothing else has to change.
+    registerTile('K', MarioAssetPath, 85, 230, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('L', MarioAssetPath, 102, 230, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('M', MarioAssetPath, 119, 230, PipeCell, PipeCell, SceneryBackdrop);
 }
 
 void TileMapRenderer::loadTileset(const std::string& tilesetPath) {

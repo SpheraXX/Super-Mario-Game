@@ -25,6 +25,7 @@ public:
 
 private:
     bool coinAvailable;
+    static constexpr int CoinScore = 200;
 };
 
 }

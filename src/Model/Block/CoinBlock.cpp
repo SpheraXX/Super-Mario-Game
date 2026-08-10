@@ -8,6 +8,8 @@
 
 #include <random>
 
+#include "Model/Core/GameManager.h"
+
 namespace model {
 
 namespace {
@@ -19,6 +21,7 @@ float randomChance() {
     return dist(gen);
 }
 }
+
 
 CoinBlock::CoinBlock(Vector2 position, Vector2 size)
     : Block(position, size, 'C'), coinAvailable(true) {
@@ -50,7 +53,11 @@ void CoinBlock::onCollision(Entity& other, CollisionType side) {
     const float overlapLeft = std::max(playerLeft, blockLeft);
     const float overlapRight = std::min(playerRight, blockRight);
     const float horizontalOverlap = overlapRight - overlapLeft;
-    if (horizontalOverlap < 4.0f) return;
+    // A valid AABB contact can be a fraction of a pixel at an edge.  Require only a
+    // positive overlap with a small tolerance; a larger arbitrary cutoff makes a block
+    // in a narrow corridor respond only when the player is visually centred beneath it.
+    constexpr float ContactEpsilon = 0.01f;
+    if (horizontalOverlap <= ContactEpsilon) return;
 
     // Spend the block immediately: the renderer now draws the used-block colour.
     coinAvailable = false;
@@ -79,6 +86,16 @@ void CoinBlock::onCollision(Entity& other, CollisionType side) {
         // Plain coin: real-Mario scoring — one coin (100 coins = an extra life) + 200 points.
         player->addCoin();
         player->addScore(200);
+    }
+    // Bumped from below: the block's bottom face is hit by the player. The coin is
+    // collected once; afterwards the block stays as a plain used block.
+    if (side == CollisionType::Bottom && other.hitbox.layer == CollisionLayer::Player) {
+        if (coinAvailable) {
+            collectCoin();
+            // A coin counts twice over: score now, and towards the extra-life tally.
+            GameManager::instance().addScore(CoinScore);
+            GameManager::instance().addCoin();
+        }
     }
 }
 

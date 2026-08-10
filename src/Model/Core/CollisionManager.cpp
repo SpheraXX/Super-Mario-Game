@@ -7,6 +7,9 @@
 namespace model {
 
 namespace {
+// A contact must have real area, but never rely on exact floating-point equality for it.
+constexpr float ContactEpsilon = 0.01f;
+
 CollisionType invertCollisionSide(CollisionType side) {
     switch (side) {
         case CollisionType::Top: return CollisionType::Bottom;
@@ -17,22 +20,43 @@ CollisionType invertCollisionSide(CollisionType side) {
     }
 }
 
+float horizontalOverlap(const Entity& first, const Entity& second) {
+    const float firstLeft = first.getPosition().x + first.hitbox.offset.x;
+    const float firstRight = firstLeft + first.hitbox.width;
+    const float secondLeft = second.getPosition().x + second.hitbox.offset.x;
+    const float secondRight = secondLeft + second.hitbox.width;
+    return std::min(firstRight, secondRight) - std::max(firstLeft, secondLeft);
+}
+
+// Stomps are directional contacts.  Choosing the smallest AABB overlap is unreliable at
+// either edge of an enemy: there the horizontal overlap is naturally tiny even though the
+// player arrived from above.  Use vertical motion and faces instead, while still requiring
+// a non-zero horizontal overlap.
+bool isStompFromAbove(const Entity& player, const Entity& enemy) {
+    if (player.getVelocity().y < -ContactEpsilon) return false;
+    if (horizontalOverlap(player, enemy) <= ContactEpsilon) return false;
+
+    const float playerTop = player.getPosition().y + player.hitbox.offset.y;
+    const float playerBottom = playerTop + player.hitbox.height;
+    const float enemyTop = enemy.getPosition().y + enemy.hitbox.offset.y;
+    const float maxPenetration = enemy.hitbox.height * 0.5f + ContactEpsilon;
+
+    // The player must still be predominantly above the enemy.  The half-height bound
+    // prevents a lateral collision while falling from being misclassified as a stomp.
+    return playerTop <= enemyTop + ContactEpsilon
+        && playerBottom >= enemyTop - ContactEpsilon
+        && playerBottom <= enemyTop + maxPenetration;
+}
+
 bool hasStableTopContact(const Entity& player, const Entity& blocker) {
-    const float playerLeft = player.getPosition().x + player.hitbox.offset.x;
-    const float playerRight = playerLeft + player.hitbox.width;
     const float playerBottom = player.getPosition().y + player.hitbox.offset.y + player.hitbox.height;
     const float blockerTop = blocker.getPosition().y + blocker.hitbox.offset.y;
-    const float blockerLeft = blocker.getPosition().x + blocker.hitbox.offset.x;
-    const float blockerRight = blockerLeft + blocker.hitbox.width;
-    const float overlapLeft = std::max(playerLeft, blockerLeft);
-    const float overlapRight = std::min(playerRight, blockerRight);
-    const float horizontalOverlap = overlapRight - overlapLeft;
 
     // Keep standing support stable when the player is effectively on the block's top
     // face but float rounding leaves a tiny gap or tiny overlap.
     if (player.getVelocity().y < 0.0f) return false;
     if (playerBottom < blockerTop - 2.0f || playerBottom > blockerTop + 4.0f) return false;
-    return horizontalOverlap > 0.5f;
+    return horizontalOverlap(player, blocker) > ContactEpsilon;
 }
 
 // Reclassify a solid-block contact from the mover's own motion. The smaller-overlap
@@ -44,11 +68,8 @@ CollisionType solidSideFromMotion(const Entity& mover, const Entity& blocker, Co
     const float blockTop = blocker.getPosition().y + blocker.hitbox.offset.y;
     const float blockHeight = blocker.hitbox.height;
     const float blockBottom = blockTop + blockHeight;
-    const float blockLeft = blocker.getPosition().x + blocker.hitbox.offset.x;
-    const float blockRight = blockLeft + blocker.hitbox.width;
     const float moverTop = mover.getPosition().y + mover.hitbox.offset.y;
     const float moverBottom = moverTop + mover.hitbox.height;
-    const float moverCenterX = mover.getPosition().x + mover.hitbox.offset.x + mover.hitbox.width / 2.0f;
 
     const float vy = mover.getVelocity().y;
 
@@ -60,26 +81,19 @@ CollisionType solidSideFromMotion(const Entity& mover, const Entity& blocker, Co
         return CollisionType::Bottom;
     }
 
-    // If the mover's centre is clearly inside the blocker span, prefer the vertical
-    // side immediately. This avoids corner flicker on small entity blocks such as
-    // coin blocks, where the smaller-overlap heuristic can alternate between a side
-    // shove and a head bump from one frame to the next.
-    if (moverCenterX > blockLeft + 1.0f && moverCenterX < blockRight - 1.0f) {
-        if (vy < 0.0f) return CollisionType::Top;
-        if (vy > 0.0f) return CollisionType::Bottom;
-    }
-
     // Head bump: the mover is rising and its top face has just crossed the block's
     // underside (blockBottom). The band is wide on the inside because the head moves at
     // full jump speed, so the contact frame can sink ~10-12px into the block; a narrow
     // band misses that frame and edge hits on coin blocks — and a jump centred on the
     // seam of two adjacent blocks — then look more horizontal than vertical and shove
     // the mover sideways.
-    if (vy < 0.0f && moverTop >= blockBottom - 14.0f && moverTop <= blockBottom + 2.0f) {
+    if (vy < -ContactEpsilon && horizontalOverlap(mover, blocker) > ContactEpsilon
+        && moverTop >= blockBottom - 14.0f - ContactEpsilon
+        && moverTop <= blockBottom + 2.0f + ContactEpsilon) {
         return CollisionType::Top;
     }
     // Landing: the feet are inside the block, only just past its top face.
-    if (vy > 0.0f && moverBottom > blockTop && moverBottom < blockBottom
+    if (vy > ContactEpsilon && moverBottom > blockTop - ContactEpsilon && moverBottom < blockBottom
         && moverBottom - blockTop < blockHeight * 0.5f) {
         return CollisionType::Bottom;
     }
@@ -115,6 +129,7 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
     float headY = pos.y + hb.offset.y;
     float leftX = pos.x + hb.offset.x;
     float rightX = pos.x + hb.offset.x + hb.width;
+    float centerY = pos.y + hb.offset.y + hb.height / 2.0f;
     float centerX = pos.x + hb.offset.x + hb.width / 2.0f;
 
     // Check downwards
@@ -143,18 +158,14 @@ void CollisionManager::processTileCollisions(Entity* entity, float /* deltaTime 
     // Check upwards
     if (vel.y < 0.0f) {
         std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(headY / TileMap::TileHeight);
-        // Sample the whole head, not just the center column.
-        std::size_t colLeft = static_cast<std::size_t>((leftX + 1.0f) / TileMap::TileWidth);
+        // Choose a ceiling from the player's centre lane.  In a narrow `#C#` shaft the
+        // side tiles are walls beside the CoinBlock, not ceiling beneath it.  Sampling
+        // the whole head turns a sub-pixel lateral drift into a false wall hit and moves
+        // the player down before the CoinBlock entity can receive its bump.
         std::size_t colCenter = static_cast<std::size_t>(centerX / TileMap::TileWidth);
-        std::size_t colRight = static_cast<std::size_t>((rightX - 1.0f) / TileMap::TileWidth);
 
-        bool hit = false;
-        if (row < TileMap::Rows) {
-            if (colLeft < tileMap->getColumns() && TileMap::isSolidTile(tileMap->getTile(row, colLeft))) hit = true;
-            if (colCenter < tileMap->getColumns() && TileMap::isSolidTile(tileMap->getTile(row, colCenter))) hit = true;
-            if (colRight < tileMap->getColumns() && TileMap::isSolidTile(tileMap->getTile(row, colRight))) hit = true;
-        }
-        if (hit) {
+        if (row < TileMap::Rows && colCenter < tileMap->getColumns()
+            && TileMap::isSolidTile(tileMap->getTile(row, colCenter))) {
             pos.y = (TileMap::Rows - row) * TileMap::TileHeight - hb.offset.y;
             vel.y = 0.0f;
             entity->onTileCollision(tileMap->getTile(row, colCenter), CollisionType::Top);
@@ -271,6 +282,10 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
             const CollisionType playerSide = aIsPlayer ? sideA : invertCollisionSide(sideA);
             const CollisionType resolved = solidSideFromMotion(*player, *other, playerSide);
             sideA = aIsPlayer ? resolved : invertCollisionSide(resolved);
+        } else if (other->hitbox.layer == CollisionLayer::Enemy && isStompFromAbove(*player, *other)) {
+            // Apply the directional stomp classification before either collision hook
+            // sees the side.  This keeps both halves of the enemy equally stompable.
+            sideA = aIsPlayer ? CollisionType::Bottom : CollisionType::Top;
         }
     }
 
@@ -318,25 +333,6 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         Entity* blocker = a.isSolid() ? &a : &b;
         const CollisionType moverSide = a.isSolid() ? invertCollisionSide(sideA) : sideA;
         const CollisionType resolved = solidSideFromMotion(*mover, *blocker, moverSide);
-
-        // Centre-rule for head bumps: a rising player under the seam of two blocks clips
-        // both undersides, and the block resolved first would shove the player down and
-        // swallow the bump before the block under the player's centre could react. If the
-        // mover's centre is not actually beneath this block, leave the push to the correct
-        // block (a player beside a block simply slides past it). Landings and side hits
-        // always push; walking items and enemies never bump from below, so they are
-        // unaffected.
-        if (resolved == CollisionType::Top) {
-            const float moverCenterX =
-                mover->getPosition().x + mover->hitbox.offset.x + mover->hitbox.width / 2.0f;
-            const float blockerLeft = blocker->getPosition().x + blocker->hitbox.offset.x;
-            const float blockerRight = blockerLeft + blocker->hitbox.width;
-            // Use a half-open span so a centre that lands exactly on a seam belongs to the
-            // block on the right, not both blocks at once.
-            if (moverCenterX < blockerLeft || moverCenterX >= blockerRight) {
-                return;
-            }
-        }
 
         pushOutOfBlock(*mover, *blocker, resolved);
     }

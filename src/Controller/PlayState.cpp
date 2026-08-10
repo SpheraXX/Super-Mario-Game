@@ -29,6 +29,14 @@
 #include "View/Enemy/FireballRenderer.h"
 #include "View/Item/ItemAtlas.h"
 #include "View/Item/ItemFrameRenderer.h"
+#include "Model/Enemy/PiranhaPlant.h"
+#include "Model/Enemy/Spiny.h"
+#include "Model/Projectile/Fireball.h"
+#include "Model/Projectile/Hammer.h"
+#include "Model/Projectile/SpinyEgg.h"
+#include "Model/Block/CoinBlock.h"
+#include "View/Base/AtlasFrameRenderer.h"
+#include "View/Enemy/EnemyAtlas.h"
 #include "View/Block/CoinBlockRenderer.h"
 #include "View/Enemy/GoombaRenderer.h"
 #include "View/Enemy/KoopaRenderer.h"
@@ -49,8 +57,12 @@ namespace controller {
 
 namespace {
 std::string mapPathForLevel(int level) {
-    (void)level;
-    return "assets/maps/debug.map";
+    // Levels that have been built get their own file; anything else falls back to the
+    // scratch map used for trying features out.
+    switch (level) {
+        case 1:  return "assets/maps/level1_1.map";
+        default: return "assets/maps/debug.map";
+    }
 }
 }
 
@@ -94,6 +106,8 @@ void PlayState::onEnter() {
                                       view::AtlasFrameRenderer<model::Spiny>>(view::atlas::Spiny);
     entityRenderers->registerRenderer<model::Bowser,
                                       view::AtlasFrameRenderer<model::Bowser>>(view::atlas::Bowser);
+    entityRenderers->registerRenderer<model::PiranhaPlant,
+                                      view::AtlasFrameRenderer<model::PiranhaPlant>>(view::atlas::PiranhaPlant);
     entityRenderers->registerRenderer<model::Hammer,
                                       view::AtlasFrameRenderer<model::Hammer>>(view::atlas::Hammer);
     entityRenderers->registerRenderer<model::SpinyEgg,
@@ -161,6 +175,10 @@ void PlayState::resetLevel() {
     activationFrontier = 0.0f;
     updateCamera();
     armDormancy();
+
+    // The clock is a per-attempt allowance: a retry after a death starts from full, it does
+    // not inherit whatever was left when the last life ran out.
+    model::GameManager::instance().startLevelTimer();
 }
 
 // Camera: follows the player horizontally, but never pans past the map fringes; it is fixed
@@ -240,6 +258,11 @@ void PlayState::handleEvent(const sf::Event& event) {
             case sf::Keyboard::Key::H:
                 // Debug: toggle the collision-box overlay.
                 showHitboxes = !showHitboxes;
+            case sf::Keyboard::Key::N:
+                // Debug stand-in for finishing a level: banks the unspent clock as score and
+                // restarts. Replace this with the real goal trigger once one exists.
+                model::GameManager::instance().awardTimeBonus();
+                resetLevel();
                 break;
             default:
                 break;
@@ -248,6 +271,18 @@ void PlayState::handleEvent(const sf::Event& event) {
 }
 
 void PlayState::update(float deltaTime) {
+    // The clock only runs while the level is actually being played: it freezes during the
+    // death fall so the timer cannot expire on a body that is already falling.
+    model::GameManager& game = model::GameManager::instance();
+    if (player && !player->isDying()) {
+        game.tickTimer(deltaTime);
+        if (game.isTimeUp()) {
+            // Out of time is fatal, as in the original. It costs a life and restarts the
+            // level through the same death flow as any other way of dying.
+            player->die(false);
+        }
+    }
+
     // Wake pass: anything the frontier has swept past joins the simulation from now on.
     // Uses the frontier settled at the end of the previous frame.
     for (auto& e : entities) {
@@ -368,18 +403,23 @@ void PlayState::render(sf::RenderTarget& window) {
     const sf::Color skyBlue(92, 148, 252);
     window.clear(skyBlue);
 
-    // World space: the tile map, then every active entity through its registered
-    // renderer (no type checks here — the view dispatches polymorphically).
+    // World space, back to front: entities that live behind the terrain, then the tile map
+    // over them, then everything else. No type checks here — the view dispatches
+    // polymorphically and the entity itself declares which side of the terrain it is on.
+    const auto drawEntities = [&](bool behindTerrain) {
+        if (!entityRenderers) return;
+        for (const auto& e : entities) {
+            if (!e->isActive || e->isDormant) continue;
+            if (e->drawsBehindTerrain() != behindTerrain) continue;
+            entityRenderers->render(window, *e);
+        }
+    };
+
+    drawEntities(true);
     if (mapLoaded && renderer) {
         renderer->render(window, map);
     }
-    if (entityRenderers) {
-        for (const auto& e : entities) {
-            if (e->isActive && !e->isDormant) {
-                entityRenderers->render(window, *e);
-            }
-        }
-    }
+    drawEntities(false);
 
     // Debug overlay: hitboxes go on top of the sprites, still in world space so they line
     // up with what they bound. Solid tiles first, then entities over them.

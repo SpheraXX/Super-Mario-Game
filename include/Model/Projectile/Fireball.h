@@ -6,9 +6,8 @@
 namespace model {
 
 // Bowser's fire breath: travels horizontally at a constant height, unaffected by gravity or
-// terrain. Mario's bouncing fireball is a separate class (MarioFireball) because it falls
-// under gravity, resolves against tiles, and rolls — but who a projectile damages is always
-// decided by its owner, not its type.
+// terrain. The same class will serve Mario's fireball later with a non-zero gravity scale —
+// who it damages is decided by its owner, not by its type.
 class Fireball : public Projectile {
 public:
     Fireball(Vector2 position, Entity* owner, int direction);

@@ -136,6 +136,7 @@ void PlayState::onEnter() {
 // renderer, append the completion zone on the FINAL area only, then spawn the area.
 void PlayState::loadArea(std::size_t areaIndex) {
     currentArea = areaIndex;
+    inertPipeColumns.clear();  // every visit to an area reactivates all its pipes
     worldType = level.areaWorld(areaIndex);
     map = level.areaMap(areaIndex);
     if (currentArea == level.areaCount() - 1) {
@@ -155,6 +156,7 @@ void PlayState::teleportToPortal(const model::Portal& portal) {
     // cap of the destination pipe (if the arrival column has one) or on the ground.
     // The camera, HUD and timer all keep their state.
     loadArea(portal.destinationArea);
+    inertPipeColumns.push_back(portal.destinationColumn);  // one-way: no re-entry here
     if (!player) {
         return;
     }
@@ -245,8 +247,11 @@ void PlayState::resetLevel() {
     }
 
     // Pipes: contiguous vertical runs of 'P' on one column become a single Pipe whose
-    // box covers the whole run (cap on the top cell, plain body below). The column is
-    // what links the entity to its level portal, if any.
+    // box covers the whole run (cap on the top cell, plain body below). 'P' marks the
+    // LEFT column of a 2-tile-wide pipe: the cell to its right must stay empty ('.'/'-'),
+    // so the pipe spans two tiles while the map only encodes its left column. If the
+    // right-hand cells are occupied the run falls back to a 1-wide pipe to stay playable.
+    // The column is what links the entity to its level portal, if any.
     for (std::size_t column = 0; column < columns; ++column) {
         std::size_t runStart = 0;
         while (runStart < rows) {
@@ -263,9 +268,22 @@ void PlayState::resetLevel() {
             // Row 0 is the bottom row; the cap is the topmost row of the run.
             const float pipeTop = static_cast<float>((rows - 1 - runEnd) * tileHeight);
             const float pipeHeight = static_cast<float>((runEnd - runStart + 1) * tileHeight);
+            bool wide = column + 1 < columns;
+            if (wide) {
+                for (std::size_t row = runStart; row <= runEnd && wide; ++row) {
+                    const char rightCell = map.getTile(row, column + 1);
+                    wide = (rightCell == '.' || rightCell == '-');
+                }
+                if (!wide) {
+                    trace("pipe at column " + std::to_string(column) +
+                          ": right cell not empty, spawning 1-wide");
+                }
+            }
+            const float pipeWidth =
+                wide ? 2.0f * static_cast<float>(tileWidth) : static_cast<float>(tileWidth);
             auto pipe = std::make_unique<model::Pipe>(
                 model::Vector2{static_cast<float>(column * tileWidth), pipeTop},
-                model::Vector2{static_cast<float>(tileWidth), pipeHeight}, column);
+                model::Vector2{pipeWidth, pipeHeight}, column);
             entities.push_back(std::move(pipe));
             runStart = runEnd + 1;
         }
@@ -459,6 +477,12 @@ void PlayState::update(float deltaTime) {
                 }
             }
             if (!portal) continue;
+
+            // One-way pipes: the pipe the player arrived through is inert for this visit.
+            if (std::find(inertPipeColumns.begin(), inertPipeColumns.end(),
+                          pipe->getSourceColumn()) != inertPipeColumns.end()) {
+                continue;
+            }
 
             const model::Vector2& pPos = player->getPosition();
             const float feetY = pPos.y + player->getSize().y;

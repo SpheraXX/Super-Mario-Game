@@ -67,6 +67,10 @@ private:
     std::unique_ptr<view::TileMapRenderer> renderer;
     bool mapLoaded = false;
 
+    // Columns whose pipe is inert for this area visit: the pipe the player just exited
+    // from cannot be re-entered until the area is revisited (one-way warp pipes).
+    std::vector<std::size_t> inertPipeColumns;
+
     std::unique_ptr<view::EntityRendererRegistry> entityRenderers;
     std::unique_ptr<view::HudRenderer> hudRenderer;
 

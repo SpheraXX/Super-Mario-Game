@@ -218,8 +218,8 @@ classDiagram
     %% --------------------------------------------------------------------
 
     class TileMapRenderer {
-        -sf::Texture tilesetTexture
-        -unordered_map~char, sf::IntRect~ tileRects
+        -sf_Texture tilesetTexture
+        -unordered_map~char, sf_IntRect~ tileRects
         +TileMapRenderer(texturePath)
         +registerTile(symbol, col, row)
         +render(window, map)
@@ -230,7 +230,7 @@ classDiagram
     %% --------------------------------------------------------------------
 
     class AppEngine {
-        -sf::RenderWindow window
+        -sf_RenderWindow window
         -StateManager states
         +AppEngine()
         +run()
@@ -265,7 +265,7 @@ classDiagram
     }
 
     class MenuState {
-        -sf::Font font
+        -sf_Font font
         +onEnter()
         +handleEvent(event)
         +update(dt)
@@ -275,7 +275,7 @@ classDiagram
     class PlayState {
         -TileMap map
         -unique_ptr~TileMapRenderer~ renderer
-        -sf::Font font
+        -sf_Font font
         +onEnter()
         +handleEvent(event)
         +update(dt)
@@ -283,7 +283,7 @@ classDiagram
     }
 
     class GameOverState {
-        -sf::Font font
+        -sf_Font font
         +onEnter()
         +handleEvent(event)
         +update(dt)
@@ -318,7 +318,7 @@ classDiagram
 
     %% Composition / Aggregation
     AppEngine *-- StateManager : owns
-    AppEngine *-- "1" sf::RenderWindow : owns
+    AppEngine *-- "1" sf_RenderWindow : owns
     StateManager o-- "*" GameState : stack of
     PlayState *-- TileMap : owns
     PlayState o-- TileMapRenderer : owns

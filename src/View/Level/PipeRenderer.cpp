@@ -11,10 +11,13 @@
 namespace view {
 
 namespace {
-// The 16x16 pipe tiles in super_mario_asset.png (inherited source scale).
-// Entrance cap at (112,192) (the opening), plain body tile at (128,192) below it.
-constexpr int EntranceTileX = 112;
-constexpr int EntranceTileY = 192;
+// The 16x16 pipe tiles in super_mario_asset.png (inherited source scale). The cap is a
+// two-piece pair: the left half at (96,192) and the right half (with the mouth) at
+// (112,192); a 1-wide pipe (fallback spawn) uses only the right half, which is the
+// classic single-tile cap. The plain body tile at (128,192) fills the rows below.
+constexpr int CapLeftTileX = 96;
+constexpr int CapRightTileX = 112;
+constexpr int CapTileY = 192;
 constexpr int BodyTileX = 128;
 constexpr int BodyTileY = 192;
 constexpr int TilePx = 16;
@@ -36,9 +39,12 @@ void PipeRenderer::renderTyped(sf::RenderTarget& window, const model::Pipe& pipe
     const int rows = std::max(1, static_cast<int>(pipe.getSize().y / tile));
 
     for (int row = 0; row < rows; ++row) {
-        const int tileX = (row == 0) ? EntranceTileX : BodyTileX;
-        const int tileY = (row == 0) ? EntranceTileY : BodyTileY;
+        const int tileY = (row == 0) ? CapTileY : BodyTileY;
         for (int col = 0; col < cols; ++col) {
+            // Cap row: a 2-wide pipe composes the left half (col 0) + right half; a
+            // 1-wide pipe falls back to the single-tile right half (the classic cap).
+            const int tileX = (row == 0) ? ((cols >= 2 && col == 0) ? CapLeftTileX : CapRightTileX)
+                                         : BodyTileX;
             sf::Sprite sprite(texture);
             sprite.setTextureRect({{tileX, tileY}, {TilePx, TilePx}});
             sprite.setScale({2.0f, 2.0f});

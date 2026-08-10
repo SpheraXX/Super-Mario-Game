@@ -36,6 +36,38 @@ constexpr float MinBumpSpeed = 200.0f;
 // epsilon absorbs float noise so the resting-on-ground case (prevFoot == tile top, vel.y = 0)
 // keeps grounding every frame.
 constexpr float LandingEpsilon = 1.0f;
+
+// Rest tolerance for standing on a solid ENTITY top (pipe caps). The strict AABB test
+// reports no overlap at exact contact (feet == block top), so without this the player
+// would drop one frame and snap back the next — the "glitch dance" on pipes. A solid top
+// within this epsilon of the feet counts as a standing contact, mirroring LandingEpsilon.
+constexpr float TopRestEpsilon = 2.0f;
+
+// True when one of the pair is the player resting on the other's solid top: feet within
+// TopRestEpsilon of the top (or a sub-pixel overlap), a real horizontal footprint, and no
+// upward flight. The entity-pass equivalent of the tile pass's LandingEpsilon landing.
+bool restingOnSolidTop(const Entity& a, const Entity& b) {
+    const Entity* player = nullptr;
+    const Entity* solid = nullptr;
+    if (a.hitbox.layer == CollisionLayer::Player) {
+        player = &a;
+        solid = &b;
+    } else if (b.hitbox.layer == CollisionLayer::Player) {
+        player = &b;
+        solid = &a;
+    }
+    if (!player || !solid->isSolid() || player->getVelocity().y < 0.0f) return false;
+
+    const float feetY = player->getPosition().y + player->hitbox.offset.y + player->hitbox.height;
+    const float topY = solid->getPosition().y + solid->hitbox.offset.y;
+    if (std::fabs(feetY - topY) > TopRestEpsilon) return false;
+
+    const float myLeft = player->getPosition().x + player->hitbox.offset.x;
+    const float myRight = myLeft + player->hitbox.width;
+    const float otherLeft = solid->getPosition().x + solid->hitbox.offset.x;
+    const float otherRight = otherLeft + solid->hitbox.width;
+    return myLeft < otherRight && myRight > otherLeft;
+}
 }
 
 CollisionManager::CollisionManager(TileMap* tileMap) : tileMap(tileMap) {}
@@ -162,7 +194,13 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
             Entity* b = entities[j];
             if (!b || !b->isActive || b->isDying()) continue;
 
-            if (!a->hitbox.intersects(b->hitbox, a->getPosition(), b->getPosition())) continue;
+            // At exact contact (feet == block top) the strict AABB reports no overlap, so
+            // the pair is only kept when the player is resting on a solid top within the
+            // rest epsilon — see restingOnSolidTop.
+            if (!a->hitbox.intersects(b->hitbox, a->getPosition(), b->getPosition()) &&
+                !restingOnSolidTop(*a, *b)) {
+                continue;
+            }
 
             // Trigger pass: trigger hitboxes never block or push; they only fire the
             // onTriggerEnter hook when the other entity is the player (e.g. FlagPole).

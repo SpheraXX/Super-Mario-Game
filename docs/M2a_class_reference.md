@@ -174,7 +174,7 @@ protected:
     int score;
     int coins;
     int lives;               // Mặc định = 3
-    float damageCooldown;    // 0.5s无敌 sau khi nhận damage
+    float damageCooldown;    // 2s bất tử sau khi nhận damage + cũng là timer blink của view
 };
 ```
 
@@ -188,9 +188,9 @@ protected:
 - `takeDamage(int amount)` — Player override Character::takeDamage. Logic:
   1. Hỏi `state->takeDamage()` → state quyết định chuyển xuống state nhỏ hơn hay không
   2. Nếu trả về `nullptr` → mất 1 life, nếu lives > 0 thì respawn, nếu = 0 thì chết
-  3. Nếu trả về state mới → chuyển state, bật damageCooldown 0.5s
+  3. Nếu trả về state mới → chuyển state, bật damageCooldown 2s (blink + bất tử)
 
-- `damageCooldown` — sau khi nhận damage, player bất tử trong 0.5s. Kiểm tra:
+- `damageCooldown` — sau khi nhận damage, player bất tử trong 2s (blink cũng chạy đúng 2s này). Kiểm tra:
   ```cpp
   if (!alive || damageCooldown > 0.0f) return;  // trong takeDamage()
   ```

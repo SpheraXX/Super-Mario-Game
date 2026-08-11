@@ -7,97 +7,111 @@ Resumable state for the `tmp` × `feat` integration. Plan: `MERGE_TASKS.md`. Dec
 |---|---|
 | Branch | `integration/merge-tmp-feat` (branched from `tmp` @ `39bcf13`) |
 | Last updated | 2026-08-11 |
-| **Status** | **Task 1 complete — awaiting human play-test sign-off before Task 2** |
+| **Status** | **All 3 tasks complete — awaiting human play-test sign-off** |
 
-## Commits so far
+## Commits
 
 ```
+59629d9  Task 3: player abilities, coin-block rewards, tuning and cleanup
+2416b90  Task 2: port feat's content layer and the runtime spawn channel
+8eb6d50  docs: add resumable merge progress tracker
 32d7009  Task 1: World -> WorldTheme rename, Entity life-state virtuals, cast removal
-d4ae041  docs: merge analysis, decisions and task plan for tmp x feat integration
+d4ae041  docs: merge analysis, decisions and task plan
 39bcf13  k.2.6                                            <- tmp, branch point
 ```
 
-Rollback to any checkpoint: `git reset --hard <sha>`. `tmp` and `feat` are untouched.
+Rollback: `git reset --hard <sha>`. `tmp` and `feat` are untouched.
 
 ---
 
 ## ✅ Task 1 — complete
+`World` → `WorldTheme` rename (D-4 option A); `isAlive()`/`isDying()` virtuals on `Entity` with
+motion staying on `Character` (D-1 option C); both O(n²) pass-2 `dynamic_cast`s removed.
+Pulled `CONFIGURE_DEPENDS` forward from Task 3 — the stale-glob failure hit during the rename.
 
-| Step | Done |
+## ✅ Task 2 — complete
+48 content files (5 enemies + `EnemyFactory`, 5 projectiles, 5 items, atlas renderers).
+`LevelScene` implements `model::World` (D-3) with deferred `pendingEntities` splice.
+Dormancy with monotonic frontier; behind-terrain render pass; TileMap `SpawnPoint` parsing;
+winged Koopa; `Projectile`/`Item` collision layers; colour-key sprite ctor; `addCoin(int)`.
+Map `assets/maps/feat1_1.map` adapted from feat's `level1_1` — now the default.
+
+## ✅ Task 3 — complete
+`syncPowerSize()` (feet-anchored resize); fireball firing wired up; `canShoot`/`shoot` hoisted to
+`PlayerState` base with Star forwarding **and** ticking the wrapped state; CoinBlock random rewards
+via `world->spawn()` behind tmp's `onBlockHit`; D-5/D-7/D-8/D-9 tuning; all 28 `trace()` calls
+removed; `CMakeUserPresets.json` untracked.
+
+---
+
+## Checkpoint status — automated: ALL PASS
+
+| Check | Result |
 |---|---|
-| 1.1 Integration branch from `tmp` | ✅ |
-| 1.2 D-4 `World` → `WorldTheme` | ✅ |
-| 1.3 D-1 Option C — `Entity`/`Character` shape | ✅ |
-| 1.4 Remove pass-2 `dynamic_cast`s | ✅ |
+| Clean reconfigure + full rebuild | **0 errors, 0 warnings** |
+| `trace(` call sites | **0** |
+| `dynamic_cast` in `CollisionManager.cpp` | **2** (pass-1 `Character*`, pre-existing `Block*`) |
+| `class World` declarations | **1** (the spawn interface) |
+| `WorldTheme` | 1 definition + 1 forward decl |
+| `CMakeUserPresets.json` tracked | **no** |
+| D-5 `RunSpeed` / D-7 `FireCooldown` / D-9 damage | 360 / 0.5s / 1.0s |
+| D-8 reward table | 75 / 15 / 5 / 5 |
+| Enemy spawns at runtime | **19 across 7 types**, verified from trace before removal |
+| Runtime stability | **6/6 trials ran past 15–20s**, no stderr, no crash |
 
-**Files changed:** `CMakeLists.txt`, `Entity.h`, `Character.h/.cpp`, `WorldTheme.h/.cpp` (renamed
-from `World.*`), `WorldSet.h/.cpp`, `LevelScene.cpp`, `CollisionManager.cpp`.
+### On an exit that looked like a regression
+Several runtime trials reported `EXITED code=0` shortly after launch. Bisecting to the Task 2
+commit reproduced it there too, and pointing the build back at `debug.map` did not. But four
+consecutive trials afterwards, and two more on the final build, all ran clean past 15–20s with no
+stderr. **Nothing was changed to "fix" it** — the readings were a test-harness artifact (leftover
+instances from earlier trials being force-killed, plus PowerShell's `Start-Process` resolving a
+relative `-FilePath` against the process cwd rather than `-WorkingDirectory`). Recorded here so the
+false alarm is not rediscovered later. If the game ever does exit on its own, note that
+`AppEngine::run` loops on `window.isOpen() && !states.empty()`, and nothing in the codebase calls
+`popState()` — so a self-exit means a `Closed` event, not a drained state stack.
 
-### Checkpoint 1 — automated checks: ALL PASS
-- Clean reconfigure + full rebuild: **0 errors, 0 warnings**
-- No stale `model::World` theme references — only `WorldTheme`
-- `dynamic_cast` count in `CollisionManager.cpp`: **exactly 2** (pass-1 `Character*` @88,
-  pre-existing `Block*` @351)
-- No `velocity` / `isGrounded` declared on `Entity`
-- Executable launches and runs stably (verified >60s, clean exit on terminate)
+---
 
-### ⚠️ Checkpoint 1 — NOT yet verified (requires a human at the keyboard)
-These need someone to actually play. **Task 2 should not start until these are confirmed:**
-- [ ] Mario walks / runs / jumps
+## ⚠️ NOT verified — needs a human at the keyboard
+
+No automated test suite exists (no test target, no framework, on either branch). Everything above
+is build verification plus process-level runtime checks. **These still need playing:**
+
 - [ ] **Jump arc: clears a 4-tile wall, fails a 5-tile wall** ← the critical D-2 regression
-- [ ] Stomping a Goomba kills it and bounces the player
-- [ ] `G` → death animation, life lost, restart
-- [ ] `H` → hitbox overlay toggles
+- [ ] Coyote time; jump buffering
+- [ ] Mushroom → Super grows without clipping through the floor; Flower → Fire; Star → invincible
+- [ ] Fire Mario shoots with **X**; cooldown ≈ 0.5s; a starred Fire Mario can still shoot
+- [ ] `?` block drops all four rewards over ~20 hits, **mostly coins**
+- [ ] Big Mario smashes a brick; small Mario bounces
+- [ ] Hammer Bro throws; Spiny egg lobbed; Lakitu hovers; Piranha Plant draws behind its pipe
+- [ ] Enemies wake on camera approach and do **not** re-arm when backtracking
+- [ ] Damage → blink and invulnerability begin and end together
+- [ ] `C` switches Mario/Luigi; `H` toggles hitboxes only
 - [ ] Flagpole → clear sequence → level-complete overlay
-- [ ] Pipe entry (hold Down on a pipe) teleports
-
-Task 1 is behaviour-neutral by design, so any failure here is a real regression from the rename or
-the `isDying()` change — not expected drift.
-
-### Deviations from the plan
-1. **`CONFIGURE_DEPENDS` pulled forward from Task 3.5 to Task 1.** The stale-glob failure hit
-   during the rename (`fatal error: src\Model\World\World.cpp: No such file or directory`) and
-   Task 2 adds ~48 files, where it would hit repeatedly. `CMakeLists.txt` now matches `feat`'s.
-2. **`Entity.h` class comment rewritten.** The original said a FlagPole "can never be asked for a
-   velocity **or a death state**." Adding `isDying()` made the second half false. The comment now
-   documents motion staying on `Character` and explains why life state is the deliberate exception.
+- [ ] Pipe/portal transitions; timer expiry kills; death → life lost → Game Over at zero
 
 ---
 
-## ⬜ Task 2 — not started
+## Deferred / not done
 
-Content layer: our 48 files + the spawn channel. See `MERGE_TASKS.md` § TASK 2.
-
-**First steps when resuming:**
-1. `git checkout integration/merge-tmp-feat`
-2. Copy `include/Model/Core/World.h` from `feat` (the spawn interface — the name is now free)
-3. Add `setWorld(World*)` + protected `world` ptr to `Entity`
-4. `LevelScene : public model::World` — `spawn()` → `pendingEntities`, post-update splice
-
-**Source for every ported file:**
-`git show feat/adding-new-entities-state-movements:<path>`
-
----
-
-## ⬜ Task 3 — not started
-
-Player, CoinBlock, view union, tuning (D-5…D-9), cleanup. See `MERGE_TASKS.md` § TASK 3.
-
-Carry-over items already identified:
-- Remove 28 `trace()` calls across 7 files
-- Fix `case Key::H` fall-through in `feat`'s `PlayState::handleEvent` (missing `break`) — note this
-  bug lives in `feat`'s `PlayState`, which is **not** the one being kept; verify it did not travel
-  into the merged `LevelScene`/`PlayState`
-- `git rm --cached CMakeUserPresets.json`
+- **Crouch** (`AnimState::Crouch` enum added, `CrouchHeight` not wired). `syncPowerSize` handles
+  Small/Big only. Crouch input and the sitting-pose box remain to be ported from `feat`.
+- **`PlayerRenderer` Luigi row / crouch frame / blink fade** — `tmp`'s renderer was heavily
+  reworked and was left as-is; `isLuigi()`/`getBlinkRemaining()` exist but the view does not read
+  them yet.
+- **`Player::isLuigi()` always returns false** — `Luigi` does not override it yet.
+- **`dynamic_cast<Player*>` remains in `Mushroom`/`FireFlower`/`Starman`** `onCollect`. This is a
+  different case from the CoinBlock one the plan targeted: applying a power-up calls
+  `becomeSuper()`/`becomeFire()`/`becomeStar()`, which only `Player` has. The alternative — hoisting
+  those onto `Character` — is worse. Left deliberately.
+- **`CheepCheep` (id 6)** returns nullptr; needs the water/swimming mechanic.
 
 ---
 
-## Build command
+## Build
 
 ```sh
 cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH="C:/SFML/SFML-3.0.2" -DSFML_STATIC_LIBRARIES=ON
 cmake --build build -j 8
 build/bin/SuperMario.exe
 ```
-
-`C:\mingw64\bin` must be on PATH (it is, on this machine's User PATH).

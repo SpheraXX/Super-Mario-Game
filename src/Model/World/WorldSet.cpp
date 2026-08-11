@@ -7,8 +7,11 @@ namespace model {
 const WorldTheme& WorldSet::forType(WorldType type) {
     static const std::map<WorldType, WorldTheme> worlds{
         {WorldType::Overworld,
+         // No horizontal drag on land: the player's own friction and acceleration already
+         // shape the ground feel, and stacking a per-world bleed on top of them was what
+         // made a released key coast. Drag stays for water, where floatiness is the point.
          WorldTheme(WorldType::Overworld, sf::Color(92, 148, 252), "assets/blocks.png",
-               1.0f, 1.0f, 0.4f)},
+               1.0f, 1.0f, 0.0f)},
         // Simplified underwater: weaker gravity, a slower fall ceiling and horizontal
         // drag; the player swims with the held jump key (see Player::handleInput).
         {WorldType::Underwater,

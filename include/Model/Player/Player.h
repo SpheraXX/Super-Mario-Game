@@ -101,9 +101,18 @@ protected:
     // graze at the top of that arc is filtered by the bump-speed gate in CollisionManager.
     static constexpr float JumpInitialSpeed = -220.0f;
     // Horizontal inertia: velocity approaches the target speed, never snapping.
-    static constexpr float GroundAccel = 800.0f;
-    static constexpr float AirAccel = 600.0f;
-    static constexpr float Friction = 1600.0f;
+    //
+    // Retuned for responsiveness. The original 800/600/1600 (with the Overworld's 0.4/s
+    // drag on top) took 0.50s to reach run speed and 0.22s to coast to a stop, which read
+    // as skating on ice: the player moved a beat after the key went down and kept going a
+    // beat after it came up. These values keep the weighty feel — the velocity is still
+    // never snapped — while cutting that to 0.23s and 0.15s.
+    static constexpr float GroundAccel = 1600.0f;
+    // Air control stays below ground accel on purpose: committing to a jump direction is
+    // part of the platforming. At 1200 the run speed is reachable in the first third of a
+    // full jump (0.34s of 0.85s) instead of the last fifth.
+    static constexpr float AirAccel = 1200.0f;
+    static constexpr float Friction = 2400.0f;
 
     // Animation hysteresis thresholds (self-explanatory in syncAnimation): entering walk
     // needs >10px/s, leaving it needs to drop below 2px/s (or lose the input), and the

@@ -94,11 +94,22 @@ bool Character::isDying() const {
 
 void Character::applyGravity(float deltaTime) {
     if (!isGrounded) {
-        velocity.y += getGravity() * deltaTime;
+        // The per-character scale composes with the world's: a hovering Lakitu (scale 0)
+        // ignores gravity in every world, while an ordinary walker (scale 1) keeps the
+        // exact tuned numbers. A dying body always falls under full gravity — see die().
+        velocity.y += getGravity() * gravityScale * deltaTime;
         if (velocity.y > getMaxFallSpeed()) {
             velocity.y = getMaxFallSpeed();
         }
     }
+}
+
+float Character::getGravityScale() const {
+    return gravityScale;
+}
+
+void Character::setGravityScale(float scale) {
+    gravityScale = scale;
 }
 
 void Character::setMap(const TileMap* map) {

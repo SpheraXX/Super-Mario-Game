@@ -191,6 +191,32 @@ void Player::setState(std::unique_ptr<PlayerState> newState) {
     state->onEnter(*this);
 }
 
+bool Player::isFire() const {
+    return state->isFire();
+}
+
+bool Player::isStar() const {
+    return state->isStar();
+}
+
+bool Player::isBig() const {
+    // Crouching drops the box to CrouchHeight, which is still taller than Small — a
+    // crouching big Mario is still big.
+    return getSize().y > SmallHeight;
+}
+
+bool Player::canBreakBricks() const {
+    return isBig();
+}
+
+float Player::getBlinkRemaining() const {
+    return damageCooldown;
+}
+
+bool Player::isLuigi() const {
+    return false;
+}
+
 PlayerState& Player::getState() {
     return *state;
 }

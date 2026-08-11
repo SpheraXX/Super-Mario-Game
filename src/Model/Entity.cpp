@@ -5,6 +5,7 @@ namespace model {
 Entity::Entity(Vector2 position, Vector2 size)
     : hitbox({0.0f, 0.0f}, size.x, size.y, false, CollisionLayer::Environment),
       isActive(true),
+      isDormant(false),
       position(position),
       size(size) {
 }

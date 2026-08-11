@@ -28,6 +28,25 @@ public:
     const char* getStateName() const;
     float getRemainingTime() const;
 
+    // Const power queries for the view and for gameplay routing: renderers receive a
+    // `const Player&` and must tell Fire from Super without a non-const state reference.
+    bool isFire() const;
+    bool isStar() const;
+    // Whether the player is currently in a two-tile-tall form. Asked instead of the power
+    // state because a Star wraps whatever state it replaced and does not report isSuper(),
+    // so a Super Mario under a star would otherwise read as small.
+    bool isBig() const;
+    // Big Mario headbutts breakable bricks apart; small Mario just bounces off them.
+    bool canBreakBricks() const override;
+    // Remaining post-damage invulnerability; the view fades the sprite off this, so the
+    // blink and the invulnerability window always end together.
+    float getBlinkRemaining() const;
+
+    // Which playable character this is. Mario and Luigi share every pose and power-up; they
+    // only differ by the row they live in on the spritesheet, so the view picks the row off
+    // this instead of dynamic_casting the concrete type.
+    virtual bool isLuigi() const;
+
     void becomeSuper();
     void becomeFire();
     void becomeStar();
@@ -68,7 +87,9 @@ protected:
     bool inputDown = false;
 
 protected:
-    static constexpr float DamageCooldownTime = 0.5f;
+    static constexpr float DamageCooldownTime = 1.0f;
+    // Height of the one-tile (Small) form, used by isBig(). Super/Fire are two tiles.
+    static constexpr float SmallHeight = 32.0f;
     static constexpr float CoyoteTime = 0.1f;
     static constexpr float JumpBufferTime = 0.1f;
     static constexpr float MaxJumpHoldTime = 0.16f;

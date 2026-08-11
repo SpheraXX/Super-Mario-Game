@@ -4,6 +4,8 @@
 #include "View/Base/EntityRenderer.h"
 #include "View/Base/EntityRenderUtils.h"
 
+#include <SFML/Graphics/Color.hpp>
+#include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -25,6 +27,19 @@ public:
     // entity disagree. Stating it per sheet avoids every renderer re-deriving the flip.
     explicit SpriteEntityRenderer(const std::string& texturePath, bool sourceFacesRight = false)
         : textureLoaded(texture.loadFromFile(texturePath)), sourceFacesRight(sourceFacesRight) {
+        texture.setSmooth(false);
+    }
+
+    // For sheets with no alpha channel, where a flat background colour stands in for
+    // transparency. The key is masked out once, at load, rather than per draw.
+    SpriteEntityRenderer(const std::string& texturePath, sf::Color colorKey,
+                         bool sourceFacesRight = false)
+        : textureLoaded(false), sourceFacesRight(sourceFacesRight) {
+        sf::Image sheet;
+        if (sheet.loadFromFile(texturePath)) {
+            sheet.createMaskFromColor(colorKey);
+            textureLoaded = texture.loadFromImage(sheet);
+        }
         texture.setSmooth(false);
     }
 

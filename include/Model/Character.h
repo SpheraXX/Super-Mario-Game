@@ -14,6 +14,7 @@ enum class AnimState {
     Run,
     Jump,
     Fall,
+    Crouch,
     Die
 };
 
@@ -34,6 +35,11 @@ public:
 
     virtual void takeDamage(int amount);
 
+    // Contact damage this character deals. Declared here rather than on Entity because
+    // only moving, living things hurt anything — a pipe deals no damage and should not be
+    // askable. Enemies and projectiles override; everything else stays harmless.
+    virtual int getDamageValue() const { return 0; }
+
     // Enter the death animation: the body pops up (if bounce) then falls away.
     // Dying bodies ignore tile collisions and stop all other interaction until the
     // level removes them after the fall.
@@ -51,6 +57,15 @@ public:
     virtual float getJumpAccel() const;
 
     void applyGravity(float deltaTime);
+
+    // Per-character gravity multiplier. 1.0 is a normal walker; 0.0 pins a character to
+    // its own vertical logic (Piranha Plant riding its pipe, Lakitu hovering); small
+    // values read as buoyancy or a lazy projectile arc. Composes with the world's scale:
+    // final gravity = DefaultGravity * theme.gravityScale * entity.gravityScale.
+    // Does not affect the death fall, which always uses full gravity so every body
+    // reliably drops out of the world and gets cleaned up.
+    float getGravityScale() const;
+    void setGravityScale(float scale);
     virtual void die();
     
     bool isOnGround() const;
@@ -87,6 +102,8 @@ protected:
     int health;
     bool alive;
     bool isDyingFlag = false;
+    float deathElapsed = 0.0f;
+    float gravityScale = 1.0f;
     AnimState animState;
     bool facingRight;
     const TileMap* mapPtr = nullptr;

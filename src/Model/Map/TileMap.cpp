@@ -62,15 +62,33 @@ void TileMap::loadFromLines(const std::vector<std::string>& rows) {
     }
     columns = width;
     tiles.assign(Rows, std::vector<char>(columns, '.'));
+    spawnPoints.clear();
 
     for (std::size_t row = 0; row < Rows; ++row) {
         if (rows[row].size() < columns) {
             throw std::runtime_error("Area grid row is shorter than the first row");
         }
         for (std::size_t column = 0; column < columns; ++column) {
-            tiles[row][column] = rows[row][column];
+            const char symbol = rows[row][column];
+            // Digits are enemy markers, not terrain: record where the enemy goes and leave
+            // empty space behind, so the marker cannot double as a solid tile.
+            if (symbol >= '0' && symbol <= '9') {
+                spawnPoints.push_back({symbol - '0', row, column});
+                tiles[row][column] = '.';
+            } else {
+                tiles[row][column] = symbol;
+            }
         }
     }
+}
+
+const std::vector<SpawnPoint>& TileMap::getSpawnPoints() const {
+    return spawnPoints;
+}
+
+Vector2 TileMap::tileOrigin(std::size_t row, std::size_t column) {
+    return {static_cast<float>(column) * TileWidth,
+            static_cast<float>(Rows - 1 - row) * TileHeight};
 }
 
 void TileMap::padRight(std::size_t extraColumns) {

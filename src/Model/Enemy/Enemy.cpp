@@ -1,5 +1,9 @@
 #include "Model/Enemy/Enemy.h"
+
+#include "Model/Core/GameManager.h"
+#include "Model/Core/World.h"
 #include "Model/Map/TileMap.h"
+#include "Model/Projectile/Projectile.h"
 
 namespace model {
 
@@ -46,6 +50,7 @@ void Enemy::update(float deltaTime) {
         }
     }
 
+    updateAttack(deltaTime);
     Character::update(deltaTime);
 
     if (isStomped) {
@@ -59,11 +64,17 @@ void Enemy::update(float deltaTime) {
 void Enemy::onStomped(Entity& /* player */) {
     isStomped = true;
     despawnTimer = 1.0f; // Default 1 second before despawning after stomped
+    awardScore();
 }
 
 void Enemy::onHit(Entity& /* source */) {
     // Knocked out (e.g. by a spinning shell): pop up and fall away.
     beginDying(true);
+    awardScore();
+}
+
+void Enemy::awardScore() const {
+    GameManager::instance().addScore(getScoreValue());
 }
 
 int Enemy::getDamageValue() const {
@@ -72,6 +83,27 @@ int Enemy::getDamageValue() const {
 
 bool Enemy::isSquished() const {
     return isStomped;
+}
+
+std::unique_ptr<Projectile> Enemy::createProjectile() {
+    return nullptr;  // most enemies do not attack
+}
+
+void Enemy::updateAttack(float deltaTime) {
+    // A stomped enemy is mid-despawn and stops attacking.
+    if (attackCooldown <= 0.0f || isStomped || world == nullptr) return;
+
+    attackTimer -= deltaTime;
+    if (attackTimer > 0.0f) return;
+
+    attackTimer = attackCooldown;
+    if (auto projectile = createProjectile()) {
+        world->spawn(std::move(projectile));
+    }
+}
+
+const Entity* Enemy::findPlayer() const {
+    return world ? world->getPlayer() : nullptr;
 }
 
 }

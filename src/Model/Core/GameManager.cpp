@@ -2,7 +2,7 @@
 
 namespace model {
 
-const char* GameManager::DefaultMapPath = "assets/maps/debug.map";
+const char* GameManager::DefaultMapPath = "assets/maps/feat1_1.map";
 
 GameManager& GameManager::instance() {
     static GameManager singleton;
@@ -39,8 +39,9 @@ int GameManager::getCoins() const {
     return coins;
 }
 
-void GameManager::addCoin() {
-    ++coins;
+void GameManager::addCoin(int count) {
+    if (count <= 0) return;
+    coins += count;
     // Classic rule: every 100 collected coins trade in for an extra life.
     while (coins >= CoinsPerLife) {
         coins -= CoinsPerLife;

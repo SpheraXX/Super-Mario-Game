@@ -5,6 +5,7 @@
 #include "Controller/PortalSystem.h"
 #include "Model/Core/CollisionManager.h"
 #include "Model/Core/LevelTimer.h"
+#include "Model/Core/World.h"
 #include "Model/Entity.h"
 #include "Model/Level/Level.h"
 #include "Model/Map/TileMap.h"
@@ -36,7 +37,12 @@ namespace controller {
 // death fall finished (RunEnded — the owner decides restart vs. game over). While a
 // cinematic runs, the scene is frozen via setCinematicActive(true) and update() does
 // nothing — the cinematic drives the player directly.
-class LevelScene {
+// Also the concrete model::World the level's entities see: that is how a Hammer Bro gets a
+// hammer into the world, or a coin block its reward, without either knowing a controller
+// exists. The scene is the right home for it (rather than PlayState) because it already owns
+// the entity list and the camera — putting it on the state node would push a controller class
+// inside the model layer's abstraction boundary.
+class LevelScene : public model::World {
 public:
     enum class Event {
         None,            // ordinary frame
@@ -73,6 +79,13 @@ public:
     Event update(float deltaTime);
     void render(sf::RenderTarget& window);
 
+    // model::World — the entity-facing service interface.
+    // Deferred: entities spawn from inside the update loop, and growing `entities` while
+    // iterating it invalidates the iterator. Pending entities are spliced in once the loop
+    // is over.
+    void spawn(std::unique_ptr<model::Entity> entity) override;
+    const model::Entity* getPlayer() const override;
+
     // Rebuild the whole entity list from the working grid: called by loadArea and by
     // the owner to restart the level after a death. Idempotent (see the castle paint).
     void resetLevel();
@@ -99,7 +112,24 @@ private:
     std::unique_ptr<model::CollisionManager> collisionManager;
 
     std::vector<std::unique_ptr<model::Entity>> entities;
+    // Spawned mid-update and spliced in once the loop is over (see spawn()).
+    std::vector<std::unique_ptr<model::Entity>> pendingEntities;
     model::Player* playerPtr = nullptr;  // non-owning: spawned by resetLevel
+
+    // Take ownership immediately — safe only outside the update loop (level build time).
+    model::Entity* addEntity(std::unique_ptr<model::Entity> entity);
+
+    // Camera centre in world space, and the high-water mark of its right edge: entities to
+    // the left of the frontier are awake. Monotonic, so walking back left never re-arms an
+    // enemy that has already woken.
+    float cameraX = 0.0f;
+    float activationFrontier = 0.0f;
+    void armDormancy();
+    void updateActivation();
+
+    // How far beyond the right edge of the view an entity wakes. A small lead-in means
+    // enemies are already moving by the time they scroll into sight, instead of popping.
+    static constexpr float ActivationMargin = 64.0f;
 
     model::WorldType worldType = model::WorldType::Overworld;
     view::HitboxRenderer hitboxRenderer;

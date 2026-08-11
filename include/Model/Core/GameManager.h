@@ -24,7 +24,10 @@ public:
     bool isGameOver() const;
 
     int getCoins() const;
-    void addCoin();
+    // Every CoinsPerLife coins collected grants a life and the tally rolls back. The count
+    // parameter lets a single pickup be worth more than one coin; the default keeps every
+    // existing call site compiling unchanged.
+    void addCoin(int count = 1);
 
     // The map currently being played. PlayState loads it on enter and, when the level
     // is cleared, advances to the map declared by the finished one ('; next=...').

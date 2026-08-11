@@ -8,7 +8,12 @@ namespace model {
 enum class CollisionLayer {
     Player,
     Enemy,
+    // Thrown/fired things: hammers, fireballs, Spiny eggs. Separate from Enemy so the
+    // collision routing can damage without the stomp/squash semantics of a body.
+    Projectile,
     Environment,
+    // Collectibles: passable, and collected on contact rather than blocking.
+    Item,
     Trigger
 };
 

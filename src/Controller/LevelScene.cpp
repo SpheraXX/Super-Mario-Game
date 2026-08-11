@@ -5,6 +5,20 @@
 #include "Model/Block/CoinBlock.h"
 #include "Model/Character.h"
 #include "Model/Core/GameManager.h"
+#include "Model/Enemy/Bowser.h"
+#include "Model/Enemy/EnemyFactory.h"
+#include "Model/Enemy/HammerBro.h"
+#include "Model/Enemy/Lakitu.h"
+#include "Model/Enemy/PiranhaPlant.h"
+#include "Model/Enemy/Spiny.h"
+#include "Model/Item/Coin.h"
+#include "Model/Item/FireFlower.h"
+#include "Model/Item/Mushroom.h"
+#include "Model/Item/Starman.h"
+#include "Model/Projectile/Fireball.h"
+#include "Model/Projectile/Hammer.h"
+#include "Model/Projectile/MarioFireball.h"
+#include "Model/Projectile/SpinyEgg.h"
 #include "Model/Enemy/Goomba.h"
 #include "Model/Enemy/Koopa.h"
 #include "Model/Level/FlagPole.h"
@@ -16,6 +30,9 @@
 #include "View/Base/RenderContext.h"
 #include "View/Block/BrickBlockRenderer.h"
 #include "View/Block/CoinBlockRenderer.h"
+#include "View/Base/AtlasFrameRenderer.h"
+#include "View/Enemy/FireballRenderer.h"
+#include "View/Item/ItemFrameRenderer.h"
 #include "View/Enemy/GoombaRenderer.h"
 #include "View/Enemy/KoopaRenderer.h"
 #include "View/Level/FlagPoleRenderer.h"
@@ -59,6 +76,40 @@ LevelScene::LevelScene()
     entityRenderers->registerRenderer<model::BrickBlock, view::BrickBlockRenderer>();
     entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
     entityRenderers->registerRenderer<model::Pipe, view::PipeRenderer>();
+
+    // Items are drawn from their own sprite sheet; the frame rects are named in
+    // View/Item/ItemAtlas.h.
+    entityRenderers->registerRenderer<model::Mushroom,
+                                      view::ItemFrameRenderer<model::Mushroom>>(view::atlas::Mushroom);
+    entityRenderers->registerRenderer<model::FireFlower,
+                                      view::ItemFrameRenderer<model::FireFlower>>(view::atlas::FireFlower);
+    entityRenderers->registerRenderer<model::Starman,
+                                      view::ItemFrameRenderer<model::Starman>>(view::atlas::Starman);
+    // The coin comes off the main Mario sheet instead, which needs its backdrop keyed out.
+    entityRenderers->registerRenderer<model::Coin, view::ItemFrameRenderer<model::Coin>>(
+        view::atlas::Coin, view::atlas::MarioAssetSheet, view::atlas::MarioAssetColorKey);
+
+    // Everything below has a single pose and shares the generic atlas renderer; the frames
+    // themselves are named in View/Enemy/EnemyAtlas.h.
+    entityRenderers->registerRenderer<model::HammerBro,
+                                      view::AtlasFrameRenderer<model::HammerBro>>(view::atlas::HammerBro);
+    entityRenderers->registerRenderer<model::Lakitu,
+                                      view::AtlasFrameRenderer<model::Lakitu>>(view::atlas::Lakitu);
+    entityRenderers->registerRenderer<model::Spiny,
+                                      view::AtlasFrameRenderer<model::Spiny>>(view::atlas::Spiny);
+    entityRenderers->registerRenderer<model::Bowser,
+                                      view::AtlasFrameRenderer<model::Bowser>>(view::atlas::Bowser);
+    entityRenderers->registerRenderer<model::PiranhaPlant,
+                                      view::AtlasFrameRenderer<model::PiranhaPlant>>(view::atlas::PiranhaPlant);
+    entityRenderers->registerRenderer<model::Hammer,
+                                      view::AtlasFrameRenderer<model::Hammer>>(view::atlas::Hammer);
+    entityRenderers->registerRenderer<model::SpinyEgg,
+                                      view::AtlasFrameRenderer<model::SpinyEgg>>(view::atlas::SpinyEgg);
+    entityRenderers->registerRenderer<model::Fireball,
+                                      view::AtlasFrameRenderer<model::Fireball>>(view::atlas::BowserFire);
+    // Mario's fireball is its own animated ball (4 rolling frames), unlike Bowser's flat
+    // breath above, so it needs its own renderer.
+    entityRenderers->registerRenderer<model::MarioFireball, view::FireballRenderer>();
 }
 
 bool LevelScene::loadLevel() {
@@ -251,16 +302,92 @@ void LevelScene::resetLevel() {
         entities.push_back(std::move(mario));
     }
 
+    // Enemies placed as digit markers (EnemyFactory ids). These are stripped to empty
+    // tiles at load, so they never double as terrain; the factory is the only place an
+    // enemy is constructed for a level.
+    for (const model::SpawnPoint& spawn : map.getSpawnPoints()) {
+        const model::Vector2 origin = model::TileMap::tileOrigin(spawn.row, spawn.column);
+        if (auto enemy = model::EnemyFactory::create(spawn.id, origin)) {
+            trace("spawn-enemy id=" + std::to_string(spawn.id) + " "
+                  + std::to_string(enemy->getPosition().x) + " "
+                  + std::to_string(enemy->getPosition().y));
+            enemy->setMap(&map);  // for ledge detection
+            entities.push_back(std::move(enemy));
+        }
+    }
+
     // Level completion zone, in the padded columns: flagpole, then the goal castle.
     // (Guard inside build: with a failed load columns is 0 and there is nothing to
     // spawn.)
     completion.build(map, entities);
 
-    // Every character obeys the current world's physics (gravity/fall/drag, swim).
+    // Every character obeys the current world's physics (gravity/fall/drag, swim), and
+    // every entity gets this scene as its spawn channel (model::World) so emitters can
+    // put projectiles and rewards into the level without knowing a controller exists.
     const model::WorldTheme& world = model::WorldSet::forType(worldType);
     for (const auto& e : entities) {
+        e->setWorld(this);
         if (auto* character = dynamic_cast<model::Character*>(e.get())) {
             character->setWorld(world);
+        }
+    }
+
+    // Everything ahead of the camera starts asleep; the player is always awake.
+    armDormancy();
+}
+
+void LevelScene::spawn(std::unique_ptr<model::Entity> entity) {
+    if (!entity) return;
+    entity->setWorld(this);
+    if (auto* character = dynamic_cast<model::Character*>(entity.get())) {
+        character->setWorld(model::WorldSet::forType(worldType));
+        character->setMap(&map);
+    }
+    // A spawned entity is always awake: it was created by something already in play.
+    entity->isDormant = false;
+    pendingEntities.push_back(std::move(entity));
+}
+
+const model::Entity* LevelScene::getPlayer() const {
+    return playerPtr;
+}
+
+model::Entity* LevelScene::addEntity(std::unique_ptr<model::Entity> entity) {
+    if (!entity) return nullptr;
+    model::Entity* raw = entity.get();
+    entity->setWorld(this);
+    entities.push_back(std::move(entity));
+    return raw;
+}
+
+void LevelScene::armDormancy() {
+    // The frontier starts at the camera's right edge, so the opening screenful is awake
+    // and everything beyond it waits to be scrolled into view.
+    const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    cameraX = playerPtr ? playerPtr->getPosition().x + playerPtr->getSize().x / 2.0f : halfWidth;
+    activationFrontier = cameraX + halfWidth + ActivationMargin;
+
+    for (const auto& e : entities) {
+        // The player and the level's fixed furniture are never dormant: a pipe or the
+        // flagpole must collide and draw from the first frame, and dormancy exists to
+        // stop enemies acting off-screen, not to hide terrain.
+        if (e.get() == playerPtr || e->isSolid()) {
+            e->isDormant = false;
+            continue;
+        }
+        e->isDormant = e->getPosition().x > activationFrontier;
+    }
+}
+
+void LevelScene::updateActivation() {
+    // Monotonic: the frontier only ever moves right, so backtracking never re-arms an
+    // enemy the player has already woken and walked past.
+    const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    activationFrontier = std::max(activationFrontier, cameraX + halfWidth + ActivationMargin);
+
+    for (const auto& e : entities) {
+        if (e->isDormant && e->getPosition().x <= activationFrontier) {
+            e->isDormant = false;
         }
     }
 }
@@ -282,7 +409,9 @@ LevelScene::Event LevelScene::update(float deltaTime) {
 
     std::vector<model::Entity*> activeEntities;
     for (auto& e : entities) {
-        if (!e->isActive) continue;
+        // Dormant entities do not update, collide or draw — they are placed but not yet
+        // woken by the camera.
+        if (!e->isActive || e->isDormant) continue;
 
         // Input gathering is delegated polymorphically: only the player reacts (input is
         // a Character capability — static world objects have no input). It runs BEFORE
@@ -361,6 +490,27 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         }
     }
 
+    // Splice in anything spawned during this frame's update/collision passes. Deferred to
+    // here because growing `entities` while the loops above iterate it invalidates them.
+    if (!pendingEntities.empty()) {
+        for (auto& pending : pendingEntities) {
+            entities.push_back(std::move(pending));
+        }
+        pendingEntities.clear();
+    }
+
+    // Recompute the camera and wake anything that has scrolled into range. Done at the end
+    // of update() so render() and next frame's activation check agree on where the view is.
+    {
+        const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
+        const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+        float target = playerPtr
+            ? playerPtr->getPosition().x + playerPtr->getSize().x / 2.0f
+            : halfWidth;
+        cameraX = std::clamp(target, halfWidth, std::max(halfWidth, mapWidth - halfWidth));
+        updateActivation();
+    }
+
     // The player's death fall is over: the owner either ends the run or restarts.
     if (playerFinishedDeathFall) {
         return Event::RunEnded;
@@ -388,7 +538,9 @@ void LevelScene::render(sf::RenderTarget& window) {
     // fixed vertically. The view keeps the fixed viewport set by AppEngine.
     const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
     const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
-    float cameraX = halfWidth;
+    // update() already resolved the camera for this frame; recompute the clamp here only
+    // so a render before the first update (or while a cinematic freezes update) is sane.
+    float cameraX = this->cameraX;
     if (playerPtr) {
         cameraX = playerPtr->getPosition().x + playerPtr->getSize().x / 2.0f;
     }
@@ -411,13 +563,23 @@ void LevelScene::render(sf::RenderTarget& window) {
 
     // World space: the tile map, then every active entity through its registered
     // renderer (no type checks here — the view dispatches polymorphically).
-    if (mapLoaded && renderer) {
+    if (!entityRenderers && mapLoaded && renderer) {
         renderer->render(window, map);
     }
     if (entityRenderers) {
         const view::RenderContext ctx{worldType};
+        // Two passes so entities that hide behind terrain (a Piranha Plant sliding out of
+        // its pipe) are covered by the tile map instead of floating in front of it.
         for (const auto& e : entities) {
-            if (e->isActive) {
+            if (e->isActive && !e->isDormant && e->drawsBehindTerrain()) {
+                entityRenderers->render(window, *e, ctx);
+            }
+        }
+        if (mapLoaded && renderer) {
+            renderer->render(window, map);
+        }
+        for (const auto& e : entities) {
+            if (e->isActive && !e->isDormant && !e->drawsBehindTerrain()) {
                 entityRenderers->render(window, *e, ctx);
             }
         }

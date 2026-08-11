@@ -191,10 +191,10 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
     for (std::size_t i = 0; i < entities.size(); ++i) {
         Entity* a = entities[i];
         if (!a || !a->isActive) continue;
-        // Dying bodies ignore interaction until the level removes them. Only Characters
-        // carry life state; static world objects are never dying.
-        auto* aCharacter = dynamic_cast<Character*>(a);
-        if (aCharacter && aCharacter->isDying()) continue;
+        // Dying bodies ignore interaction until the level removes them. isDying() is a
+        // virtual on Entity that static world objects answer false to, so this pass needs
+        // no downcast — which matters here: it runs once per entity pair, every frame.
+        if (a->isDying()) continue;
 
         // The player can overlap several solid blocks in one frame (a head pressed into a
         // row of bricks). Only the deepest contact is resolved — ties go to the block that
@@ -208,8 +208,7 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
         for (std::size_t j = i + 1; j < entities.size(); ++j) {
             Entity* b = entities[j];
             if (!b || !b->isActive) continue;
-            auto* bCharacter = dynamic_cast<Character*>(b);
-            if (bCharacter && bCharacter->isDying()) continue;
+            if (b->isDying()) continue;
 
             // At exact contact (feet == block top) the strict AABB reports no overlap, so
             // the pair is only kept when the player is resting on a solid top within the

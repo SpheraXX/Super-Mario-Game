@@ -1,5 +1,5 @@
-#ifndef MODEL_WORLD_WORLD_H
-#define MODEL_WORLD_WORLD_H
+#ifndef MODEL_WORLD_WORLDTHEME_H
+#define MODEL_WORLD_WORLDTHEME_H
 
 #include "Model/World/WorldType.h"
 
@@ -12,9 +12,9 @@ namespace model {
 // A playable world: the graphics theme (background colour + tileset) together with the
 // physics tuning applied to every character that spawns into it. Worlds are immutable
 // descriptors built once by the WorldSet registry; the gameplay reads them, never mutates.
-class World {
+class WorldTheme {
 public:
-    World(WorldType type, sf::Color backgroundColor, std::string tilesetPath,
+    WorldTheme(WorldType type, sf::Color backgroundColor, std::string tilesetPath,
           float gravityScale, float maxFallScale, float horizontalDrag);
 
     WorldType getType() const;

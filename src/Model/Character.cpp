@@ -1,6 +1,6 @@
 #include "Model/Character.h"
 #include "Model/Map/TileMap.h"
-#include "Model/World/World.h"
+#include "Model/World/WorldTheme.h"
 
 #include <algorithm>
 
@@ -105,7 +105,7 @@ void Character::setMap(const TileMap* map) {
     mapPtr = map;
 }
 
-void Character::setWorld(const World& world) {
+void Character::setWorld(const WorldTheme& world) {
     worldPtr = &world;
 }
 

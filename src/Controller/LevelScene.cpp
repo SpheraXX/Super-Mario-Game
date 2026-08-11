@@ -257,7 +257,7 @@ void LevelScene::resetLevel() {
     completion.build(map, entities);
 
     // Every character obeys the current world's physics (gravity/fall/drag, swim).
-    const model::World& world = model::WorldSet::forType(worldType);
+    const model::WorldTheme& world = model::WorldSet::forType(worldType);
     for (const auto& e : entities) {
         if (auto* character = dynamic_cast<model::Character*>(e.get())) {
             character->setWorld(world);

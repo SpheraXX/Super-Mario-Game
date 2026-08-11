@@ -1,8 +1,8 @@
-#include "Model/World/World.h"
+#include "Model/World/WorldTheme.h"
 
 namespace model {
 
-World::World(WorldType type, sf::Color backgroundColor, std::string tilesetPath,
+WorldTheme::WorldTheme(WorldType type, sf::Color backgroundColor, std::string tilesetPath,
              float gravityScale, float maxFallScale, float horizontalDrag)
     : type(type),
       backgroundColor(backgroundColor),
@@ -12,27 +12,27 @@ World::World(WorldType type, sf::Color backgroundColor, std::string tilesetPath,
       horizontalDrag(horizontalDrag) {
 }
 
-WorldType World::getType() const {
+WorldType WorldTheme::getType() const {
     return type;
 }
 
-const sf::Color& World::getBackgroundColor() const {
+const sf::Color& WorldTheme::getBackgroundColor() const {
     return backgroundColor;
 }
 
-const std::string& World::getTilesetPath() const {
+const std::string& WorldTheme::getTilesetPath() const {
     return tilesetPath;
 }
 
-float World::getGravityScale() const {
+float WorldTheme::getGravityScale() const {
     return gravityScale;
 }
 
-float World::getMaxFallScale() const {
+float WorldTheme::getMaxFallScale() const {
     return maxFallScale;
 }
 
-float World::getHorizontalDrag() const {
+float WorldTheme::getHorizontalDrag() const {
     return horizontalDrag;
 }
 

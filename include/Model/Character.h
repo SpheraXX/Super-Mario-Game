@@ -6,7 +6,7 @@
 namespace model {
 
 class TileMap;
-class World;
+class WorldTheme;
 
 enum class AnimState {
     Idle,
@@ -38,8 +38,8 @@ public:
     // Dying bodies ignore tile collisions and stop all other interaction until the
     // level removes them after the fall.
     virtual void beginDying(bool bounce);
-    bool isDying() const;
-    bool isAlive() const;
+    bool isDying() const override;
+    bool isAlive() const override;
 
     // Movement tuning: subclasses (Mario/Luigi) override with their own numbers so the
     // player controller never needs to know which character it is driving. Jumps are
@@ -59,7 +59,7 @@ public:
     // The world this character lives in (set by PlayState at spawn, like setMap). It
     // carries the gravity/fall/drag tuning the physics below reads; with no world set
     // the classic land constants apply, so existing tests keep their exact numbers.
-    void setWorld(const World& world);
+    void setWorld(const WorldTheme& world);
     float getGravity() const;
     float getMaxFallSpeed() const;
     float getHorizontalDrag() const;
@@ -90,7 +90,7 @@ protected:
     AnimState animState;
     bool facingRight;
     const TileMap* mapPtr = nullptr;
-    const World* worldPtr = nullptr;
+    const WorldTheme* worldPtr = nullptr;
 
     // Land (Overworld) physics constants. Worlds scale these through their World
     // descriptor; keeping them here means a character without a world behaves exactly

@@ -225,13 +225,14 @@ void LevelScene::resetLevel() {
         }
     }
 
-    // Pipes: contiguous vertical runs of 'P' (and, temporarily, 'p') on one column
-    // become a single Pipe whose box covers the whole run (cap on the top cell, plain
-    // body below). 'P' marks the LEFT column of a 2-tile-wide pipe: the cell to its
-    // right must stay empty ('.'/'-'), so the pipe spans two tiles while the map only
-    // encodes its left column. If the right-hand cells are occupied the run falls back
-    // to a 1-wide pipe to stay playable. The column is what links the entity to its
-    // level portal, if any.
+    // Pipes are solid TERRAIN (TileMap::isSolidTile), drawn per cell by the tile renderer:
+    // 'P'/'Q' are the mouth's left/right cells and 'p'/'q' the shaft below. That is what
+    // makes enemies collide with them — the entity pass only resolves the player against
+    // solid entities, so an entity-only pipe is invisible to everything else.
+    //
+    // A Pipe ENTITY is still spawned, but only for a column that carries a warp portal:
+    // PortalSystem matches a Portal to a Pipe by its source column, so the entity is the
+    // linkage that makes "hold Down to enter" work. Ordinary scenery pipes need no entity.
     for (std::size_t column = 0; column < columns; ++column) {
         std::size_t runStart = 0;
         while (runStart < rows) {
@@ -250,21 +251,31 @@ void LevelScene::resetLevel() {
             // Row 0 is the bottom row; the cap is the topmost row of the run.
             const float pipeTop = static_cast<float>((rows - 1 - runEnd) * tileHeight);
             const float pipeHeight = static_cast<float>((runEnd - runStart + 1) * tileHeight);
+            // The right column is explicit in the map ('Q'/'q'); an empty cell is also
+            // accepted so older maps that only encoded the left column still work.
             bool wide = column + 1 < columns;
             if (wide) {
                 for (std::size_t row = runStart; row <= runEnd && wide; ++row) {
                     const char rightCell = map.getTile(row, column + 1);
-                    wide = (rightCell == '.' || rightCell == '-');
-                }
-                if (!wide) {
+                    wide = (rightCell == 'Q' || rightCell == 'q'
+                            || rightCell == '.' || rightCell == '-');
                 }
             }
             const float pipeWidth =
                 wide ? 2.0f * static_cast<float>(tileWidth) : static_cast<float>(tileWidth);
-            auto pipe = std::make_unique<model::Pipe>(
-                model::Vector2{static_cast<float>(column * tileWidth), pipeTop},
-                model::Vector2{pipeWidth, pipeHeight}, column);
-            entities.push_back(std::move(pipe));
+            bool hasPortal = false;
+            for (const auto& portal : level.portals(currentArea)) {
+                if (portal.sourceColumn == column) {
+                    hasPortal = true;
+                    break;
+                }
+            }
+            if (hasPortal) {
+                auto pipe = std::make_unique<model::Pipe>(
+                    model::Vector2{static_cast<float>(column * tileWidth), pipeTop},
+                    model::Vector2{pipeWidth, pipeHeight}, column);
+                entities.push_back(std::move(pipe));
+            }
             runStart = runEnd + 1;
         }
     }

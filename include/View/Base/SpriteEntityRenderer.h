@@ -60,6 +60,23 @@ protected:
         window.draw(sprite);
     }
 
+    // Draw into a box that is not the entity's own. Needed when a pose is a different shape
+    // from the entity's collision box — a squished Goomba is half the height of the Goomba
+    // that was walking a moment ago, and stretching that frame over the full box would
+    // un-squash it. `drawOffset` is relative to the entity's top-left, so a caller lowers a
+    // short frame onto the ground rather than leaving it floating at head height.
+    void drawCharacterFrame(sf::RenderTarget& window, const T& entity, sf::IntRect frame,
+                            model::Vector2 drawSize, model::Vector2 drawOffset) const {
+        if (!textureLoaded) return;
+
+        sf::Sprite sprite(texture);
+        sprite.setTextureRect(frame);
+        setupEntitySprite(sprite, frame, drawSize, sourceFacesRight != entity.isFacingRight());
+        sprite.setPosition({std::round(entity.getPosition().x + drawOffset.x),
+                            std::round(entity.getPosition().y + drawOffset.y)});
+        window.draw(sprite);
+    }
+
     sf::Texture texture;
 
 private:

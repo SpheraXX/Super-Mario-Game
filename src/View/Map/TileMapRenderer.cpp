@@ -11,6 +11,7 @@ namespace view {
 namespace {
 const std::string MarioAssetPath = "assets/super_mario_asset.png";
 const sf::Color SceneryBackdrop(148, 148, 255);
+constexpr unsigned int PipeCell = 16;
 }
 
 TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldType worldType) {
@@ -38,6 +39,18 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldTyp
     // tileset's blue backdrop.
     registerTile(model::TileMap::CloudSymbol, MarioAssetPath, 344, 632, 3 * 16, 2 * 16, SceneryBackdrop);
     registerTile(model::TileMap::SmallTreeSymbol, MarioAssetPath, 264, 656, 16, 2 * 16, SceneryBackdrop);
+
+    // Pipes are built from one-cell tiles rather than a single oversized sprite. Collision
+    // is decided per cell (TileMap::isSolidTile reads one char), so a pipe drawn as one wide
+    // sprite would leave its right-hand column passable and everything would walk into it.
+    //
+    // Standing pipe, two cells wide and as tall as the author writes:
+    //     PQ      <- mouth
+    //     pq      <- shaft, repeated
+    registerTile('P', MarioAssetPath, 119, 196, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('Q', MarioAssetPath, 136, 196, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('p', MarioAssetPath, 119, 213, PipeCell, PipeCell, SceneryBackdrop);
+    registerTile('q', MarioAssetPath, 136, 213, PipeCell, PipeCell, SceneryBackdrop);
     // The goal castle is painted into the padded completion zone by the controller
     // from its 21-tile sheet. The symbols (see TileMap::CastleSymbols) were chosen to
     // not clash with the map's own symbols, and are mapped row-major over the castle's

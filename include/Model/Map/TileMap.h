@@ -32,11 +32,15 @@ public:
     // The goal castle is painted into the map's completion zone from its dedicated
     // 21-tile sheet. Each symbol must not collide with any symbol the map or the
     // renderer already uses: 'G' (ground), 'O'/'T' (scenery), 'M'/'E'/'K'/'C'/'B'/'#'
-    // (spawns) and 'P'/'p' (pipes) are all taken, so the castle uses the remaining
-    // letters of the alphabet (row-major over the 5x5 silhouette).
+    // (spawns) and 'P'/'Q'/'p'/'q' (pipes) are all taken, so the castle uses the
+    // remaining letters of the alphabet (row-major over the 5x5 silhouette).
+    //
+    // NOTE: the 9th entry is 'r', not 'Q'. 'Q' is the pipe mouth's right-hand cell, and
+    // both the castle painter and the tile renderer index THIS array, so a shared symbol
+    // would have made one of them draw the other's artwork.
     static constexpr std::size_t CastleTiles = 21;
     static constexpr char CastleSymbols[CastleTiles] =
-        {'A', 'D', 'F', 'H', 'I', 'J', 'L', 'N', 'Q', 'R', 'S',
+        {'A', 'D', 'F', 'H', 'I', 'J', 'L', 'N', 'r', 'R', 'S',
          'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd'};
 
     static bool isCastleSymbol(char symbol);
@@ -74,6 +78,9 @@ public:
     bool hasNextMap() const;
 
     static bool isSolidTile(char symbol);
+    // True for the four pipe cells ('P'/'Q' mouth, 'p'/'q' shaft). Pipes are solid terrain
+    // so that enemies collide with them, not just the player.
+    static bool isPipeSymbol(char symbol);
 
 private:
     void parseHeader(const std::string& line);

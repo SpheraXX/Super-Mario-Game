@@ -37,6 +37,10 @@ private:
     static constexpr float WalkSpeed = 40.0f;
     static constexpr float SpinSpeed = 250.0f;
     static constexpr float HopSpeed = -300.0f;
+    // Standing Koopa is taller than one tile (16x23 art at 2x); the shell frame is a
+    // square 16x16, so entering a shell state shrinks the box to match.
+    static constexpr float StandHeight = 46.0f;
+    static constexpr float ShellHeight = 32.0f;
 };
 
 }

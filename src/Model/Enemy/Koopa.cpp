@@ -6,7 +6,7 @@ namespace model {
 // enemy sheet draws every enemy at the same size; make this taller only once Koopa gets
 // its own taller artwork, or the sprite will be stretched to fit.)
 Koopa::Koopa(Vector2 position, bool winged)
-    : Enemy(position, {32.0f, 32.0f}),
+    : Enemy(position, {32.0f, StandHeight}),
       state(KoopaState::Walking),
       shellSpeed(SpinSpeed),
       winged(winged) {
@@ -45,11 +45,15 @@ void Koopa::onStomped(Entity& player) {
     if (state == KoopaState::Walking) {
         state = KoopaState::ShellIdle;
         velocity.x = 0.0f;
-        // Shell is the same one-tile box as the walking Koopa while both share the
-        // placeholder 16x16 artwork; give it a shorter box once the real shell art lands.
-        hitbox.height = 32.0f;
+        // Retreating into the shell shrinks the box from the standing height down to the
+        // shell frame's, and drops it so the shell rests where the feet were rather than
+        // hanging at head height.
+        Vector2 pos = getPosition();
+        pos.y += getSize().y - ShellHeight;
+        setPosition(pos);
+        hitbox.height = ShellHeight;
         Vector2 sz = getSize();
-        sz.y = 32.0f;
+        sz.y = ShellHeight;
         setSize(sz);
     } else if (state == KoopaState::ShellIdle) {
         state = KoopaState::ShellSpinning;

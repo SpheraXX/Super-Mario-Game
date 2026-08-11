@@ -138,10 +138,22 @@ bool TileMap::hasNextMap() const {
 }
 
 bool TileMap::isSolidTile(char symbol) {
-    // Only the ground is static tile geometry now: 'C', 'B', 'M', 'E', 'K' and '#'
-    // spawn as entities (blocks and characters) that manage their own collision, and
-    // scenery ('O', 'T') is decorative. The painted castle is solid.
-    return symbol == 'G' || isCastleSymbol(symbol);
+    // Static tile geometry: ground, the painted castle, and pipes. 'C', 'B', 'M', 'E', 'K'
+    // and '#' spawn as entities (blocks and characters) that manage their own collision,
+    // and scenery ('O', 'T') is decorative.
+    //
+    // Pipes are terrain rather than entities. The entity pass only ever resolves the
+    // PLAYER against solid entities (see CollisionManager::resolveEntityInteraction, which
+    // returns early unless exactly one side is the player), so a pipe modelled purely as an
+    // entity is invisible to enemies and they walk straight through it. As tiles they are
+    // resolved by the tile pass, which runs for every Character. A Pipe entity is still
+    // spawned for columns that carry a warp portal, since that needs the column linkage.
+    return symbol == 'G' || isPipeSymbol(symbol) || isCastleSymbol(symbol);
+}
+
+bool TileMap::isPipeSymbol(char symbol) {
+    // 'P'/'Q' are the mouth's left/right cells, 'p'/'q' the shaft below them.
+    return symbol == 'P' || symbol == 'Q' || symbol == 'p' || symbol == 'q';
 }
 
 bool TileMap::isCastleSymbol(char symbol) {

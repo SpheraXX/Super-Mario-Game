@@ -45,7 +45,6 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -56,11 +55,6 @@ namespace controller {
 namespace {
 constexpr float TimerStartSeconds = 400.0f;
 
-// TEMP trace instrumentation (removed after playtest).
-void trace(const std::string& msg) {
-    std::ofstream out("trace_log.txt", std::ios::app);
-    out << msg << '\n';
-}
 }
 
 LevelScene::LevelScene()
@@ -131,13 +125,7 @@ bool LevelScene::loadLevel() {
 
     // TEMP diagnostics (removed after playtest).
     if (mapLoaded && map.getColumns() > 0) {
-        trace("mapLoad cols=" + std::to_string(map.getColumns())
-              + " g00=" + std::string(1, map.getTile(0, 0))
-              + " m26=" + std::string(1, map.getTile(2, 6))
-              + " loaded=" + std::to_string(mapLoaded)
-              + " world=" + std::to_string(static_cast<int>(worldType)));
     } else {
-        trace("mapLoad FAILED loaded=" + std::to_string(mapLoaded));
     }
     return true;
 }
@@ -190,7 +178,6 @@ void LevelScene::resetLevel() {
     const std::size_t rows = map.getRows();
     const std::size_t columns = map.getColumns();
 
-    trace("resetLevel");
     entities.clear();
     playerPtr = nullptr;
     completion.clear();
@@ -207,8 +194,6 @@ void LevelScene::resetLevel() {
             switch (symbol) {
                 case 'M':
                     if (!marioSpawned) {
-                        trace("spawn " + std::string(typeid(model::Mario).name()) + " "
-                              + std::to_string(position.x) + " " + std::to_string(position.y));
                         auto mario = std::make_unique<model::Mario>(position);
                         playerPtr = mario.get();
                         entities.push_back(std::move(mario));
@@ -216,30 +201,22 @@ void LevelScene::resetLevel() {
                     }
                     break;
                 case 'E': {
-                    trace("spawn " + std::string(typeid(model::Goomba).name()) + " "
-                          + std::to_string(position.x) + " " + std::to_string(position.y));
                     auto goomba = std::make_unique<model::Goomba>(position);
                     goomba->setMap(&map);  // for ledge detection
                     entities.push_back(std::move(goomba));
                     break;
                 }
                 case 'K': {
-                    trace("spawn " + std::string(typeid(model::Koopa).name()) + " "
-                          + std::to_string(position.x) + " " + std::to_string(position.y));
                     auto koopa = std::make_unique<model::Koopa>(position);
                     koopa->setMap(&map);  // for ledge detection
                     entities.push_back(std::move(koopa));
                     break;
                 }
                 case 'C':
-                    trace("spawn " + std::string(typeid(model::CoinBlock).name()) + " "
-                          + std::to_string(position.x) + " " + std::to_string(position.y));
                     entities.push_back(std::make_unique<model::CoinBlock>(position, size));
                     break;
                 case '#':
                 case 'B':
-                    trace("spawn " + std::string(typeid(model::BrickBlock).name()) + " "
-                          + std::to_string(position.x) + " " + std::to_string(position.y));
                     entities.push_back(std::make_unique<model::BrickBlock>(position, size));
                     break;
                 default:
@@ -280,8 +257,6 @@ void LevelScene::resetLevel() {
                     wide = (rightCell == '.' || rightCell == '-');
                 }
                 if (!wide) {
-                    trace("pipe at column " + std::to_string(column) +
-                          ": right cell not empty, spawning 1-wide");
                 }
             }
             const float pipeWidth =
@@ -308,9 +283,6 @@ void LevelScene::resetLevel() {
     for (const model::SpawnPoint& spawn : map.getSpawnPoints()) {
         const model::Vector2 origin = model::TileMap::tileOrigin(spawn.row, spawn.column);
         if (auto enemy = model::EnemyFactory::create(spawn.id, origin)) {
-            trace("spawn-enemy id=" + std::to_string(spawn.id) + " "
-                  + std::to_string(enemy->getPosition().x) + " "
-                  + std::to_string(enemy->getPosition().y));
             enemy->setMap(&map);  // for ledge detection
             entities.push_back(std::move(enemy));
         }
@@ -444,9 +416,6 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         // TEMP diagnostics (removed after playtest).
         static int failFrame = 0;
         if (!mapLoaded && ++failFrame % 10 == 0 && e.get() == playerPtr) {
-            trace("fail pos=" + std::to_string(pos.x) + "," + std::to_string(pos.y)
-                  + " g=" + std::to_string(playerPtr->isGrounded)
-                  + " vy=" + std::to_string(playerPtr->getVelocity().y));
         }
 
         // Bodies that finished their (non-animated) death are gone for good, e.g.

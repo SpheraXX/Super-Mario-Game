@@ -6,7 +6,6 @@
 #include "Model/Player/Player.h"
 
 #include <algorithm>
-#include <fstream>
 #include <string>
 
 namespace controller {
@@ -21,11 +20,6 @@ constexpr float SlideDuration = 0.45f;
 // Auto-walk speed on the flat completion zone after the slide.
 constexpr float CinematicWalkSpeed = 220.0f;
 
-// TEMP trace instrumentation (removed after playtest).
-void trace(const std::string& msg) {
-    std::ofstream out("trace_log.txt", std::ios::app);
-    out << msg << '\n';
-}
 }
 
 void LevelClearSequence::begin(LevelScene& scene) {
@@ -36,7 +30,6 @@ void LevelClearSequence::begin(LevelScene& scene) {
     const int timeBonus = scene.getRemainingTime() * TimeBonusPerSecond;
     model::GameManager::instance().addScore(FlagBonus + timeBonus);
     model::GameManager::instance().setLevelClearBonus(FlagBonus + timeBonus);
-    trace("clearBonus bonus=" + std::to_string(FlagBonus + timeBonus));
 
     // Remember the geometry the sequence animates against.
     const model::Vector2 poleTop = scene.flagPole()->getPosition();

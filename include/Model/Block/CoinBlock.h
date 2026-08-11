@@ -31,6 +31,15 @@ private:
     bool coinAvailable;
     float coinPopElapsed;
     static constexpr float CoinPopDuration = 0.7f;
+
+    // Reward table, rolled once per bump. Weighted heavily towards coins: a power-up from
+    // every '?' block reads as far too generous for a Mario level, so the item rate is kept
+    // low and the star rarest of all. Must sum to 1.0.
+    static constexpr float MushroomChance = 0.15f;
+    static constexpr float FlowerChance   = 0.05f;
+    static constexpr float StarmanChance  = 0.05f;
+    // Remainder (0.75) is a plain coin.
+    static constexpr int CoinScore = 200;
 };
 
 }

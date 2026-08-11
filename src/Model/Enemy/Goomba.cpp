@@ -1,17 +1,8 @@
 #include "Model/Enemy/Goomba.h"
 
-#include <fstream>
 #include <string>
 
 namespace model {
-
-namespace {
-// TEMP trace instrumentation (removed after playtest).
-void trace(const std::string& msg) {
-    std::ofstream out("trace_log.txt", std::ios::app);
-    out << msg << '\n';
-}
-}
 
 // World units: one world tile (the 16x16 source frame is scaled up 2x by the renderer).
 Goomba::Goomba(Vector2 position)
@@ -31,7 +22,6 @@ void Goomba::updateAI(float /* deltaTime */) {
 }
 
 void Goomba::onStomped(Entity& /* player */) {
-    trace("goombaStomped");
     isStomped = true;
     despawnTimer = 0.5f; // Squish sprite shows for 0.5 seconds
     hitbox.isTrigger = true; // Disable solid collision

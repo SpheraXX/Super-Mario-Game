@@ -93,14 +93,27 @@ void FireState::shoot() {
     fireCooldown = FireCooldownDuration;
 }
 
+bool StarState::canShoot() const {
+    return previousState && previousState->canShoot();
+}
+
+void StarState::shoot() {
+    if (previousState) previousState->shoot();
+}
+
 StarState::StarState(std::unique_ptr<PlayerState> previous)
     : duration(StarDuration), previousState(std::move(previous)) {
 }
 
-void StarState::update(Player& /* player */, float deltaTime) {
+void StarState::update(Player& player, float deltaTime) {
     duration -= deltaTime;
     if (duration < 0.0f) {
         duration = 0.0f;
+    }
+    // Tick the wrapped state too, or its timers freeze for the star's whole duration: a
+    // starred Fire Mario would fire once and then never clear the cooldown.
+    if (previousState) {
+        previousState->update(player, deltaTime);
     }
 }
 

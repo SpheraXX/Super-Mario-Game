@@ -1,21 +1,15 @@
 #include "Model/Player/Player.h"
+
+#include "Model/Core/World.h"
+#include "Model/Projectile/MarioFireball.h"
 #include "Model/Core/GameManager.h"
 
 #include <cmath>
-#include <fstream>
 #include <string>
 
 #include <SFML/Window/Keyboard.hpp>
 
 namespace model {
-
-namespace {
-// TEMP trace instrumentation (removed after playtest).
-void trace(const std::string& msg) {
-    std::ofstream out("trace_log.txt", std::ios::app);
-    out << msg << '\n';
-}
-}
 
 Player::Player(Vector2 position, Vector2 size)
     : Character(position, size),
@@ -34,8 +28,6 @@ void Player::update(float deltaTime) {
     // never be boosted by a held jump key.
     if (velocity.y >= 0.0f) {
         if (playerInitiatedJump) {
-            trace("apex y=" + std::to_string(getPosition().y)
-                  + " vy=" + std::to_string(velocity.y));
         }
         playerInitiatedJump = false;
     }
@@ -124,8 +116,6 @@ void Player::handleInput(float deltaTime) {
 
     // Fire while the press is fresh and we are grounded or still inside the coyote window.
     if (jumpBufferTime > 0.0f && coyoteTime > 0.0f) {
-        trace("jumpFire coyote=" + std::to_string(coyoteTime)
-              + " buffer=" + std::to_string(jumpBufferTime));
         velocity.y = JumpInitialSpeed;
         playerInitiatedJump = true;
         jumpHoldTime = 0.0f;
@@ -141,7 +131,6 @@ void Player::handleInput(float deltaTime) {
         if (jumpHoldTime < MaxJumpHoldTime) {
             velocity.y -= getJumpAccel() * deltaTime;
             if (velocity.y < -getMaxJumpSpeed()) {
-                trace("cap vy=" + std::to_string(velocity.y));
                 velocity.y = -getMaxJumpSpeed();
             }
             jumpHoldTime += deltaTime;
@@ -156,6 +145,20 @@ void Player::handleInput(float deltaTime) {
         if (velocity.y < -SwimMaxSpeed) {
             velocity.y = -SwimMaxSpeed;
         }
+    }
+
+    // Fireball: holding the key re-fires whenever the cooldown clears. Works in the air
+    // too — only the underlying Fire state may shoot, and a Star wrapped around Fire keeps
+    // the ability (StarState forwards canShoot/shoot to its previous state).
+    const bool firePressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
+    if (firePressed && state->canShoot() && world) {
+        state->shoot();
+        // Spawn just in front of the facing side, around mouth height, so the ball never
+        // overlaps the player (and never spawns inside the ground).
+        const Vector2 pos = getPosition();
+        const Vector2 origin{pos.x + (getDirection() > 0 ? getSize().x : -MarioFireball::Width),
+                             pos.y + getSize().y * 0.3f};
+        world->spawn(std::make_unique<MarioFireball>(origin, this, getDirection()));
     }
 
     jumpHeld = jumpPressed;
@@ -179,7 +182,6 @@ void Player::takeDamage(int amount) {
 
 void Player::die(bool bounce) {
     if (!alive || isDying()) return;
-    trace("playerDied lives=" + std::to_string(getLives()));
     model::GameManager::instance().loseLife();
     beginDying(bounce);
 }
@@ -189,6 +191,24 @@ void Player::setState(std::unique_ptr<PlayerState> newState) {
     state->onExit(*this);
     state = std::move(newState);
     state->onEnter(*this);
+    syncPowerSize();
+}
+
+void Player::syncPowerSize() {
+    const float targetHeight = (state->isSuper() || state->isFire()) ? BigHeight : SmallHeight;
+    if (getSize().y == targetHeight) return;
+
+    // Anchor the feet: keep the bottom edge fixed while the box grows upward (or shrinks
+    // back down). Screen y grows downward, so the top edge moves by the height delta.
+    Vector2 pos = getPosition();
+    pos.y += getSize().y - targetHeight;
+    setPosition(pos);
+    setSize({getSize().x, targetHeight});
+
+    // Entity::setSize only touches `size`; the collision hitbox carries its own
+    // width/height and would keep colliding with the old box unless we bring it along.
+    hitbox.height = targetHeight;
+    hitbox.width = getSize().x;
 }
 
 bool Player::isFire() const {

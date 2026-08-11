@@ -9,7 +9,6 @@
 #include <SFML/Graphics/View.hpp>
 
 #include <algorithm>
-#include <fstream>
 #include <memory>
 #include <optional>
 #include <iostream>
@@ -37,11 +36,6 @@ float maxScaleForDesktop() {
     return std::min(horizontal, vertical);
 }
 
-// TEMP trace instrumentation (removed after playtest).
-void trace(const std::string& msg) {
-    std::ofstream out("trace_log.txt", std::ios::app);
-    out << msg << '\n';
-}
 }
 
 AppEngine::AppEngine()
@@ -99,13 +93,10 @@ void AppEngine::processInput() {
         }
         if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
             // TEMP diagnostics (removed after playtest).
-            trace("key=" + std::to_string(static_cast<int>(key->code))
-                  + " focus=" + std::to_string(window.hasFocus()));
             if (key->code == sf::Keyboard::Key::F2) {
                 // Toggle the window scale: 1x -> 1.5x -> 2x -> 1x.
                 scaleIndex = (scaleIndex + 1) % 3;
                 applyWindowScale();
-                trace("scaleIndex=" + std::to_string(scaleIndex));
             }
         }
         states.handleEvent(*event);
@@ -121,7 +112,6 @@ void AppEngine::applyWindowScale() {
         static_cast<unsigned int>(ScreenWidth * scale),
         static_cast<unsigned int>(ScreenHeight * scale)};
     window.setSize(newSize);
-    trace("window=" + std::to_string(newSize.x) + "x" + std::to_string(newSize.y));
 
     // Re-center the window on the desktop so a shrink stays fully visible. All arithmetic
     // is signed and the position is clamped: a window larger than the desktop must never

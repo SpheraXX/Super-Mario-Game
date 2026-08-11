@@ -90,6 +90,7 @@ protected:
     static constexpr float DamageCooldownTime = 1.0f;
     // Height of the one-tile (Small) form, used by isBig(). Super/Fire are two tiles.
     static constexpr float SmallHeight = 32.0f;
+    static constexpr float BigHeight = 64.0f;
     static constexpr float CoyoteTime = 0.1f;
     static constexpr float JumpBufferTime = 0.1f;
     static constexpr float MaxJumpHoldTime = 0.16f;
@@ -118,6 +119,12 @@ protected:
 
 private:
     void syncAnimation();
+    // Keep the entity box (and its collision hitbox) in step with the current power state:
+    // Super and Fire are two tiles tall, Small is one. The feet stay anchored, so growing
+    // and shrinking never shoves the player through the floor. Called on every state swap.
+    // Star deliberately bypasses it (becomeStar never calls setState), which is exactly why
+    // a star preserves whatever size the player had before it.
+    void syncPowerSize();
 };
 
 }

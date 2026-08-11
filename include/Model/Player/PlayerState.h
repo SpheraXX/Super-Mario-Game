@@ -28,6 +28,12 @@ public:
     virtual PlayerAnimState getAnimState(const Player& player) const = 0;
 
     // Power-up queries so the player never checks concrete state types.
+    // Fire ability. Declared on the base so the player never needs to know which concrete
+    // state it holds: a Star wrapping a Fire state forwards these through, so the star does
+    // not silently take the fireball away.
+    virtual bool canShoot() const { return false; }
+    virtual void shoot() {}
+
     virtual bool isSuper() const { return false; }
     virtual bool isFire() const { return false; }
     virtual bool isStar() const { return false; }
@@ -71,8 +77,8 @@ public:
     PlayerAnimState getAnimState(const Player& player) const override;
 
     bool isFire() const override { return true; }
-    bool canShoot() const;
-    void shoot();
+    bool canShoot() const override;
+    void shoot() override;
 
     const char* getStateName() const override { return "Fire"; }
 
@@ -95,6 +101,9 @@ public:
     std::unique_ptr<PlayerState> checkExpiration() override;
 
     bool isStar() const override { return true; }
+    // A star does not remove the fireball: forward to whatever state it wrapped.
+    bool canShoot() const override;
+    void shoot() override;
     const char* getStateName() const override { return "Star"; }
     float getRemainingTime() const override { return duration; }
 

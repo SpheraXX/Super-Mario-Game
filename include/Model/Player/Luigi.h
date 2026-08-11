@@ -14,6 +14,10 @@ public:
     float getMaxJumpSpeed() const override;
     float getJumpAccel() const override;
 
+    // The view picks its spritesheet rows off this rather than dynamic_casting the
+    // concrete type; without the override Luigi would render with Mario's palette.
+    bool isLuigi() const override { return true; }
+
     static constexpr float WalkSpeed = 160.0f;
     static constexpr float RunSpeed = 350.0f;
     static constexpr float MaxJumpSpeed = 600.0f;

@@ -205,10 +205,15 @@ void Player::syncPowerSize() {
     setPosition(pos);
     setSize({getSize().x, targetHeight});
 
-    // Entity::setSize only touches `size`; the collision hitbox carries its own
-    // width/height and would keep colliding with the old box unless we bring it along.
+    // Entity::setSize only touches `size`; the collision hitbox carries its own height and
+    // would keep colliding with the old box unless we bring it along.
+    //
+    // Only the HEIGHT changes. The width and x-offset are deliberately narrower than the
+    // sprite (see Mario's constructor: a 16-wide box inset by 8 inside a 32-wide sprite) so
+    // side grazes are as forgiving as the artwork suggests. Overwriting them with the full
+    // sprite width — as an earlier version of this did — silently widened the player's box
+    // by 100% on the first power-up and made every near-miss a hit.
     hitbox.height = targetHeight;
-    hitbox.width = getSize().x;
 }
 
 bool Player::isFire() const {

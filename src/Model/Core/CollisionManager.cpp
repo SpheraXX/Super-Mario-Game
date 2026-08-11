@@ -23,6 +23,7 @@ constexpr float StompBias = 0.75f;
 // cells keeps isGrounded stable on top of blocks (gravity + animation never flap).
 bool isGroundTile(char symbol) {
     return symbol == 'G' || symbol == 'C' || symbol == 'B' || symbol == '#'
+        || model::TileMap::isPipeSymbol(symbol)
         || model::TileMap::isCastleSymbol(symbol);
 }
 
@@ -155,30 +156,45 @@ void CollisionManager::processTileCollisions(Character& entity, float deltaTime)
         }
     }
 
+    // Horizontal checks probe the head, the centre AND the feet, for the same reason the
+    // downward check probes three columns: a single centre sample is blind to anything that
+    // only covers part of the body. Big Mario is two tiles tall, so a centre-only probe let
+    // him walk into the bottom cell of a pipe (the shaft) whenever his middle happened to
+    // line up with the empty row above it. The topmost/bottom samples are pulled a pixel
+    // inside the box so a body resting exactly on a floor does not read the floor itself as
+    // a wall.
+    const float sideProbes[3] = {headY + 1.0f, centerY, footY - 1.0f};
+
     // Check left
     if (vel.x < 0.0f) {
-        std::size_t col = static_cast<std::size_t>(leftX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
-
-        if (col < tileMap->getColumns() && row < TileMap::Rows) {
-            if (TileMap::isSolidTile(tileMap->getTile(row, col))) {
-                pos.x = (col + 1) * TileMap::TileWidth - hb.offset.x;
-                vel.x = 0.0f;
-                entity.onTileCollision(tileMap->getTile(row, col), CollisionType::Left);
+        const std::size_t col = static_cast<std::size_t>(leftX / TileMap::TileWidth);
+        if (col < tileMap->getColumns()) {
+            for (const float probeY : sideProbes) {
+                const std::size_t row =
+                    TileMap::Rows - 1 - static_cast<std::size_t>(probeY / TileMap::TileHeight);
+                if (row < TileMap::Rows && TileMap::isSolidTile(tileMap->getTile(row, col))) {
+                    pos.x = (col + 1) * TileMap::TileWidth - hb.offset.x;
+                    vel.x = 0.0f;
+                    entity.onTileCollision(tileMap->getTile(row, col), CollisionType::Left);
+                    break;
+                }
             }
         }
     }
 
     // Check right
     if (vel.x > 0.0f) {
-        std::size_t col = static_cast<std::size_t>(rightX / TileMap::TileWidth);
-        std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(centerY / TileMap::TileHeight);
-
-        if (col < tileMap->getColumns() && row < TileMap::Rows) {
-            if (TileMap::isSolidTile(tileMap->getTile(row, col))) {
-                pos.x = col * TileMap::TileWidth - hb.width - hb.offset.x;
-                vel.x = 0.0f;
-                entity.onTileCollision(tileMap->getTile(row, col), CollisionType::Right);
+        const std::size_t col = static_cast<std::size_t>(rightX / TileMap::TileWidth);
+        if (col < tileMap->getColumns()) {
+            for (const float probeY : sideProbes) {
+                const std::size_t row =
+                    TileMap::Rows - 1 - static_cast<std::size_t>(probeY / TileMap::TileHeight);
+                if (row < TileMap::Rows && TileMap::isSolidTile(tileMap->getTile(row, col))) {
+                    pos.x = col * TileMap::TileWidth - hb.width - hb.offset.x;
+                    vel.x = 0.0f;
+                    entity.onTileCollision(tileMap->getTile(row, col), CollisionType::Right);
+                    break;
+                }
             }
         }
     }

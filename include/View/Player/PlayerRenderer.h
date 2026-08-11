@@ -17,6 +17,10 @@ public:
 protected:
     void renderTyped(sf::RenderTarget& window, const model::Player& player,
                      const RenderContext& ctx) const override;
+
+    // Fire Mario's warmer palette, and the alpha blink for the post-damage / Star
+    // invulnerability windows.
+    sf::Color characterTint(const model::Player& player) const override;
 };
 
 }

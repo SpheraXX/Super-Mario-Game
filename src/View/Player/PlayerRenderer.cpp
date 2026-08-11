@@ -4,20 +4,38 @@
 
 #include <SFML/Graphics/RenderTarget.hpp>
 
+#include <cmath>
+#include <cstdint>
+
 namespace view {
 
 namespace {
-// mario-luigi.png: the small-Mario poses are 16x16 frames sharing one row, each drawn
-// facing right (hence the `true` passed to the base renderer, which mirrors them when
-// Mario walks left).
+// mario-luigi.png: the small poses share one row and are drawn facing right (hence the
+// `true` passed to the base renderer, which mirrors them when the player walks left). The
+// big row sits directly above the small one; Super and Fire share those big frames — Fire
+// is told apart by a colour tint (characterTint) rather than a separate sheet row.
+//
+// Luigi lives in the matching block directly above Mario's: big-Luigi just above big-Mario
+// (192 vs 240) and small-Luigi just above small-Mario (224 vs 272). Every pose sits in the
+// same column for both, so the only difference is which two rows the rect is taken from.
 constexpr int SmallMarioRow = 272;
-constexpr int SmallMarioSize = 16;
+constexpr int BigMarioRow = 240;
+constexpr int SmallLuigiRow = 224;
+constexpr int BigLuigiRow = 192;
 
-// x offset of each pose within that row.
+// Source frame heights. A small pose is a 16x16 cell; a big pose is 16x32.
+constexpr int SmallFrameHeight = 16;
+constexpr int BigFrameHeight = 32;
+
+// World height of the one-tile (Small) form — the threshold that decides which row to draw.
+constexpr float SmallDrawSize = 32.0f;
+
+// x offset of each pose within its row. Shared by both sizes and both characters.
 constexpr int StandFrameX = 176;
 constexpr int WalkFrameX = 80;
 constexpr int RunFrameX = 112;
 constexpr int JumpFrameX = 144;
+constexpr int DieFrameX = 161;
 
 int frameXFor(model::AnimState state) {
     switch (state) {
@@ -29,12 +47,46 @@ int frameXFor(model::AnimState state) {
         case model::AnimState::Jump:
         case model::AnimState::Fall:
             return JumpFrameX;
-        // Small Mario has no death frame in this sheet yet, so death falls back to standing.
         case model::AnimState::Die:
+            return DieFrameX;
         case model::AnimState::Idle:
         default:
             return StandFrameX;
     }
+}
+
+// Smooth blink for the invulnerability windows (post-damage and Star): the sprite's alpha
+// breathes faint -> clear -> faint on a sine wave, so the player stays visible but clearly
+// flickering, never an on/off toggle. Driven by the countdown itself, so the pulsing stops
+// exactly when the window runs out — the blink can never outlast the invulnerability it
+// advertises. A dead player is always fully opaque.
+constexpr float MinBlinkAlpha = 100.0f;
+constexpr float MaxBlinkAlpha = 255.0f;
+constexpr float DamageBlinkDipsPerSecond = 4.0f;
+constexpr float StarBlinkDipsPerSecond = 8.0f;
+
+float blinkAlpha(const model::Player& player) {
+    if (!player.isAlive()) return MaxBlinkAlpha;
+
+    float countdown;
+    float dipsPerSecond;
+    if (player.isStar()) {
+        countdown = player.getRemainingTime();
+        dipsPerSecond = StarBlinkDipsPerSecond;
+    } else if (player.getBlinkRemaining() > 0.0f) {
+        countdown = player.getBlinkRemaining();
+        dipsPerSecond = DamageBlinkDipsPerSecond;
+    } else {
+        return MaxBlinkAlpha;
+    }
+
+    const float wave = (std::sin(countdown * dipsPerSecond * 3.14159265f) + 1.0f) * 0.5f;
+    return MinBlinkAlpha + (MaxBlinkAlpha - MinBlinkAlpha) * wave;
+}
+
+// Fire Mario reuses the big frames with a warmer palette rather than its own sheet row.
+sf::Color fireTint() {
+    return sf::Color(255, 236, 214);
 }
 }
 
@@ -42,13 +94,38 @@ PlayerRenderer::PlayerRenderer()
     : SpriteEntityRenderer("assets/mario-luigi.png", /*sourceFacesRight=*/true) {
 }
 
+sf::Color PlayerRenderer::characterTint(const model::Player& player) const {
+    sf::Color color = player.isFire() ? fireTint() : sf::Color::White;
+    color.a = static_cast<std::uint8_t>(std::lround(blinkAlpha(player)));
+    return color;
+}
+
 void PlayerRenderer::renderTyped(sf::RenderTarget& window, const model::Player& player,
                                  const RenderContext& /* ctx */) const {
-    // Big Mario is a 16x32 frame elsewhere in this sheet; wire it up here once the Super/
-    // Fire states actually resize the player.
+    // Mario and Luigi lay out identically on the sheet, so one pair of rows serves both.
+    const int smallRow = player.isLuigi() ? SmallLuigiRow : SmallMarioRow;
+    const int bigRow = player.isLuigi() ? BigLuigiRow : BigMarioRow;
+
+    // Death: both sizes show the small dead pose. There is no big dead frame — the big cell
+    // above it is the sitting pose, and a dying Mario is not sitting. That sprite is one
+    // tile tall, so it is drawn into a 32x32 box anchored at the bottom of the (still
+    // full-size) body rather than stretched over it.
+    if (player.getAnimState() == model::AnimState::Die) {
+        const float offsetY = player.getSize().y - SmallDrawSize;
+        drawCharacterFrame(window, player,
+                           {{DieFrameX, smallRow}, {16, SmallFrameHeight}},
+                           {player.getSize().x, SmallDrawSize}, {0.0f, offsetY});
+        return;
+    }
+
+    // Player::syncPowerSize grows the box to 32x64 on power-up and shrinks it back on hit,
+    // so the size alone says which row to draw — no state-type checks here, and a Star
+    // automatically keeps whatever size it entered with. Drawing the small 16x16 frame over
+    // a grown box is exactly what stretched the sprite before the big row was wired up.
+    const bool big = player.getSize().y > SmallDrawSize;
     drawCharacterFrame(window, player,
-                       {{frameXFor(player.getAnimState()), SmallMarioRow},
-                        {SmallMarioSize, SmallMarioSize}});
+                       {{frameXFor(player.getAnimState()), big ? bigRow : smallRow},
+                        {16, big ? BigFrameHeight : SmallFrameHeight}});
 }
 
 }

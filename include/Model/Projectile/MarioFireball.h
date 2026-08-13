@@ -7,8 +7,8 @@ namespace model {
 
 // Mario's bouncing fireball, shot by Fire (or Star-wrapped-Fire) Mario. Rolls forward at a
 // constant speed, bounces off the ground instead of resting, is destroyed by side walls, and
-// kills any enemy it touches — items pass straight through it. The 7x7 source frame at the
-// sheet's 2x scale makes the ball one 14x14 world box.
+// kills any enemy it touches — items pass straight through it. The 7x7 source frame maps 1:1
+// onto a 7x7 world box.
 //
 // Kept separate from Fireball (Bowser's breath, which flies flat through walls): this one
 // falls under gravity and resolves against tiles, so it needs its own update and tile hook.
@@ -25,12 +25,12 @@ public:
     // off this, like the player's walk clock.
     float getAnimationClock() const { return animationClock; }
 
-    static constexpr float Width = 14.0f;
+    static constexpr float Width = 7.0f;
 
 private:
     static constexpr float Height = Width;
-    static constexpr float TravelSpeed = 240.0f;
-    static constexpr float BounceSpeed = 320.0f;
+    static constexpr float TravelSpeed = 120.0f;
+    static constexpr float BounceSpeed = 160.0f;
 
     float animationClock = 0.0f;
 };

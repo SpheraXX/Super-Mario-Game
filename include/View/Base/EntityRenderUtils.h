@@ -9,8 +9,9 @@
 
 namespace view {
 
-// World size of one source pixel: character frames are 16x32 while world tiles are
-// 32x32, so sprites are scaled up 2x.
+// World size of one source pixel. The tile is the same 16px as the source art, so
+// these are 1.0 and a frame draws at its native size; they stay expressed in terms of
+// TileWidth/TileHeight so a future change of tile size still rescales the art.
 inline constexpr float SpriteScaleX = static_cast<float>(model::TileMap::TileWidth) / 16.0f;
 inline constexpr float SpriteScaleY = static_cast<float>(model::TileMap::TileHeight) / 16.0f;
 

@@ -22,47 +22,109 @@ namespace {
 // Upper bound on a single frame's elapsed time, so a stall (e.g. window drag) cannot make
 // the fixed-step loop try to catch up with a huge burst of updates ("spiral of death").
 constexpr float MaxFrameTime = 0.25f;
+}
 
-// Height of the window chrome (title bar + borders) in pixels, so a window that exactly
-// fills the desktop height still leaves the whole client area visible.
-constexpr float WindowChrome = 32.0f;
+// Starts on the first windowed size; applyDisplayMode() overwrites this before the first
+// frame, including for fullscreen, where the width is measured off the display.
+unsigned int AppEngine::logicalWidth = AppEngine::SizeOptions[0].logicalWidth;
 
-// Largest scale at which the logical frame still fits the desktop with room for the
-// chrome. A bigger window would be parked off-screen by the OS (seen as "does not render").
-float maxScaleForDesktop() {
+unsigned int AppEngine::screenWidth() {
+    return logicalWidth;
+}
+
+AppEngine::AppEngine() {
+    applyDisplayMode();  // creates the window, the offscreen target and both views
+
+    // Offscreen target could not be sized: nothing can be drawn, so fail loudly here
+    // rather than rendering black for the rest of the run.
+    if (scene.getSize().x == 0) {
+        throw std::runtime_error("Could not create the offscreen render target");
+    }
+
+    states.pushState(std::make_unique<PlayState>());
+    states.applyPending(); // make the initial state live before the loop starts
+}
+
+void AppEngine::applyDisplayMode() {
     const sf::Vector2u desktop = sf::VideoMode::getDesktopMode().size;
-    const float horizontal = static_cast<float>(desktop.x) / AppEngine::ScreenWidth;
-    const float vertical =
-        (static_cast<float>(desktop.y) - WindowChrome) / AppEngine::ScreenHeight;
-    return std::min(horizontal, vertical);
-}
 
-}
+    unsigned int scale = 1;
+    sf::VideoMode mode;
+    if (fullscreen) {
+        // 16 rows must fill the display, so the magnification comes from the height and is
+        // rounded DOWN to an integer: on a 1080p screen that is 4x (1024 of 1080 rows used)
+        // and the 56 leftover pixels become the letterbox. Keeping it whole is the point —
+        // a fractional scale is what makes tile edges shimmer.
+        scale = std::max(1u, desktop.y / ScreenHeight);
+        // Then as many logical columns as the width allows.
+        logicalWidth = std::max(ScreenHeight, desktop.x / scale);
+        mode = sf::VideoMode::getDesktopMode();
+    } else {
+        const DisplayOption& option = SizeOptions[sizeIndex];
+        // Shrink the magnification — never the logical frame — until the window fits the
+        // desktop. A 4x window on a small display would otherwise be parked partly
+        // off-screen by the OS, which reads as the game failing to render.
+        scale = option.scale;
+        while (scale > 1
+               && (option.logicalWidth * scale > desktop.x
+                   || ScreenHeight * scale + WindowChrome > desktop.y)) {
+            --scale;
+        }
+        logicalWidth = option.logicalWidth;
+        mode = sf::VideoMode({option.logicalWidth * scale, ScreenHeight * scale});
+    }
 
-AppEngine::AppEngine()
-    : window(sf::VideoMode({static_cast<unsigned int>(
-                                ScreenWidth * std::min(DefaultWindowScale, maxScaleForDesktop())),
-                            static_cast<unsigned int>(
-                                ScreenHeight * std::min(DefaultWindowScale, maxScaleForDesktop()))}),
-             "CS202 Super Mario",
-             sf::Style::Titlebar | sf::Style::Close) {
+    window.create(mode, "CS202 Super Mario",
+                  fullscreen ? static_cast<std::uint32_t>(sf::Style::None)
+                             : static_cast<std::uint32_t>(sf::Style::Titlebar | sf::Style::Close),
+                  fullscreen ? sf::State::Fullscreen : sf::State::Windowed);
     window.setFramerateLimit(60);
 
     // Offscreen target at the logical resolution; the whole frame is composited here and
     // upscaled in one blit (see render()).
-    if (!scene.resize({ScreenWidth, ScreenHeight})) {
-        throw std::runtime_error("Could not create the offscreen render target");
+    if (!scene.resize({logicalWidth, ScreenHeight})) {
+        return;  // the constructor turns this into an exception
     }
     scene.setSmooth(false);
 
-    // Fixed, non-resizable window: the view always covers exactly the logical resolution.
-    // No letterboxing is needed since the aspect ratio is fixed.
-    fixedView.setSize({static_cast<float>(ScreenWidth), static_cast<float>(ScreenHeight)});
-    fixedView.setCenter({ScreenWidth / 2.0f, ScreenHeight / 2.0f});
-    fixedView.setViewport({{0.0f, 0.0f}, {1.0f, 1.0f}});
+    // The view the states draw through: exactly the logical frame, spanning the whole
+    // offscreen target.
+    sceneView.setSize({static_cast<float>(logicalWidth), static_cast<float>(ScreenHeight)});
+    sceneView.setCenter({logicalWidth / 2.0f, ScreenHeight / 2.0f});
+    sceneView.setViewport({{0.0f, 0.0f}, {1.0f, 1.0f}});
 
-    states.pushState(std::make_unique<PlayState>());
-    states.applyPending(); // make the initial state live before the loop starts
+    // The view the finished frame is blitted through: the same logical frame, but confined
+    // to a centred, integer-scaled rectangle of the window. Whatever the rectangle does not
+    // cover stays the black the window is cleared to — the letterbox.
+    const sf::Vector2u client = window.getSize();
+    const sf::Vector2f used{static_cast<float>(logicalWidth * scale),
+                            static_cast<float>(ScreenHeight * scale)};
+    const float offsetX = std::floor(std::max(0.0f, (client.x - used.x) / 2.0f));
+    const float offsetY = std::floor(std::max(0.0f, (client.y - used.y) / 2.0f));
+    presentView = sceneView;
+    presentView.setViewport({{offsetX / client.x, offsetY / client.y},
+                             {used.x / client.x, used.y / client.y}});
+
+    std::cerr << "display: " << (fullscreen ? "fullscreen" : "windowed")
+              << " window " << client.x << 'x' << client.y
+              << "  logical " << logicalWidth << 'x' << ScreenHeight
+              << " (" << logicalWidth / model::TileMap::TileWidth << " cols x "
+              << model::TileMap::Rows << " rows)"
+              << "  scale " << scale << 'x'
+              << "  bars " << offsetX << ',' << offsetY << '\n';
+}
+
+void AppEngine::cycleDisplayMode() {
+    // The windowed sizes in order, then fullscreen, then back to the smallest window.
+    if (fullscreen) {
+        fullscreen = false;
+        sizeIndex = 0;
+    } else if (sizeIndex + 1 < SizeOptionCount) {
+        ++sizeIndex;
+    } else {
+        fullscreen = true;
+    }
+    applyDisplayMode();
 }
 
 void AppEngine::run() {
@@ -111,34 +173,20 @@ void AppEngine::processInput() {
             return;
         }
         if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
-            // TEMP diagnostics (removed after playtest).
+            // Cycle the window size / fullscreen. Deferred to after the queue is drained:
+            // applyDisplayMode() recreates the window, and doing that mid-poll would
+            // destroy the queue this loop is reading.
             if (key->code == sf::Keyboard::Key::F2) {
-                // Toggle the window scale: 1x -> 1.5x -> 2x -> 1x.
-                scaleIndex = (scaleIndex + 1) % 3;
-                applyWindowScale();
+                displayChangePending = true;
             }
         }
         states.handleEvent(*event);
     }
-}
 
-void AppEngine::applyWindowScale() {
-    // Clamp to what fits the desktop: the requested scale may be 2x on a display that
-    // cannot host a 1280x1024 window. (Unsigned underflow in the centering below once
-    // parked oversized windows at y=32767, off the visible screen.)
-    const float scale = std::min(ScaleOptions[scaleIndex], maxScaleForDesktop());
-    const sf::Vector2u newSize{
-        static_cast<unsigned int>(ScreenWidth * scale),
-        static_cast<unsigned int>(ScreenHeight * scale)};
-    window.setSize(newSize);
-
-    // Re-center the window on the desktop so a shrink stays fully visible. All arithmetic
-    // is signed and the position is clamped: a window larger than the desktop must never
-    // wrap into a huge (off-screen) coordinate.
-    const sf::Vector2u desktop = sf::VideoMode::getDesktopMode().size;
-    window.setPosition({
-        std::max(0, (static_cast<int>(desktop.x) - static_cast<int>(newSize.x)) / 2),
-        std::max(0, (static_cast<int>(desktop.y) - static_cast<int>(newSize.y)) / 2)});
+    if (displayChangePending) {
+        displayChangePending = false;
+        cycleDisplayMode();
+    }
 }
 
 void AppEngine::update(float deltaTime) {
@@ -147,21 +195,18 @@ void AppEngine::update(float deltaTime) {
 
 void AppEngine::render() {
     // Pass 1 — compose the frame offscreen at the logical resolution, where one world unit
-    // is exactly one pixel. Re-apply the fixed view every frame, since states may install
-    // their own (e.g. the scrolling camera in PlayState).
-    scene.setView(fixedView);
+    // is exactly one pixel. Re-apply the view every frame, since states install their own
+    // (e.g. the scrolling camera in PlayState).
+    scene.setView(sceneView);
 
     // Each state owns its own clear colour, so the engine just delegates.
     states.render(scene);
     scene.display();
 
-    // Pass 2 — blit the finished frame to the window through the FIXED view, not a scaled
-    // sprite. The view always spans the whole window, so the logical frame fills the entire
-    // client area at every scale: at 1x this is a direct 1:1 translation, and 1.5x/2x are
-    // handled by the window's view transform. Because the scene is already composited, this
-    // single draw cannot introduce seams between tiles the way scaling each sprite
-    // individually did.
-    window.setView(fixedView);
+    // Pass 2 — blit the finished frame through the letterboxed view. The clear paints the
+    // bars: any part of the window the integer-scaled frame does not cover stays black.
+    window.clear(sf::Color::Black);
+    window.setView(presentView);
     sf::Sprite frame(scene.getTexture());
     window.draw(frame);
     window.display();

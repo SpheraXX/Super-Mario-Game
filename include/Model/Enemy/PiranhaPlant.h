@@ -29,9 +29,9 @@ public:
     // Drawn before the tile map so the pipe hides it while it is down.
     bool drawsBehindTerrain() const override { return true; }
 
-    // World size: 16x23 source art at 2x.
-    static constexpr float Width = 32.0f;
-    static constexpr float Height = 46.0f;
+    // World size: the 16x23 source art, drawn 1:1.
+    static constexpr float Width = 16.0f;
+    static constexpr float Height = 23.0f;
 
 private:
     enum class Phase { Hidden, Rising, Extended, Retracting };

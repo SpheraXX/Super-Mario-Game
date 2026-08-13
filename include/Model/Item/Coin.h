@@ -29,7 +29,7 @@ private:
 
     // Tuned so the arc clears roughly one tile above the block and is gone before the
     // player can land on top of the block and wonder why a coin is still sitting there.
-    static constexpr float PopSpeed = -420.0f;
+    static constexpr float PopSpeed = -210.0f;
     static constexpr float Lifetime = 0.6f;
 };
 

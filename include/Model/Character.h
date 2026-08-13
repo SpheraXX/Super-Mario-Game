@@ -112,10 +112,10 @@ protected:
     // Land (Overworld) physics constants. Worlds scale these through their World
     // descriptor; keeping them here means a character without a world behaves exactly
     // like the tuned default.
-    static constexpr float DefaultGravity = 1600.0f;
-    static constexpr float DefaultMaxFallSpeed = 900.0f;
+    static constexpr float DefaultGravity = 800.0f;
+    static constexpr float DefaultMaxFallSpeed = 450.0f;
     // Small upward pop applied when a death animation starts (e.g. from enemy contact).
-    static constexpr float DeathBounceSpeed = -400.0f;
+    static constexpr float DeathBounceSpeed = -200.0f;
 };
 
 }

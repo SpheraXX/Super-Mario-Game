@@ -15,7 +15,7 @@ namespace view {
 //
 // The values come from a HudData snapshot built by the controller each frame, so the
 // renderer never reaches into the game state itself. Labels and values share the same
-// 16px size and left-aligned columns, so the monospaced pixel font makes the four
+// 8px size and left-aligned columns, so the monospaced pixel font makes the four
 // groups perfectly equidistant.
 class HudRenderer {
 public:
@@ -25,7 +25,11 @@ public:
 private:
     sf::Font font;
     bool fontLoaded;
-    unsigned int hintSize = 12;
+    // Fitted lazily against the view width in force, and re-fitted only when that width
+    // changes (cycling the window size changes it). Mutable because the fit is a render-time
+    // cache, not observable state: render() stays const.
+    mutable unsigned int hintSize = 6;
+    mutable float fittedForWidth = -1.0f;
 };
 
 }

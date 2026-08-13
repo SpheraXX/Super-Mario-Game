@@ -17,7 +17,7 @@ namespace view {
 // The sheet has no alpha channel; the background is a flat key colour that is masked out at
 // load time (see SpriteEntityRenderer).
 //
-// Source art is 16px to the world tile's 32, so world sizes are twice the frame size. Model
+// Source art is 16px and so is the world tile, so a world size equals its frame size. Model
 // classes state their own size in world units; when a frame here changes shape, the matching
 // constructor has to change with it or the sprite will be stretched to fit.
 namespace atlas {
@@ -33,28 +33,28 @@ inline const sf::Color EnemyColorKey(146, 144, 255);
 // what made the Koopa, Paratroopa and Hammer Bro frames show fragments of their neighbours.
 //
 // {{x, y}, {width, height}}
-inline const sf::IntRect Goomba({0, 16}, {16, 16});          // world 32x32
-inline const sf::IntRect GoombaStomped({36, 24}, {16, 8});   // world 32x16, drawn bottom-aligned
-inline const sf::IntRect Koopa({0, 113}, {16, 23});          // world 32x46
-inline const sf::IntRect KoopaShell({72, 120}, {16, 16});    // world 32x32
-inline const sf::IntRect KoopaParatroopa({54, 113}, {16, 23});  // world 32x46
-inline const sf::IntRect HammerBro({18, 183}, {16, 23});     // world 32x46
-inline const sf::IntRect Hammer({54, 52}, {16, 16});         // world 32x32
-inline const sf::IntRect Bowser({102, 208}, {32, 32});       // world 64x64
-inline const sf::IntRect BowserFire({102, 242}, {24, 8});    // world 48x16
-inline const sf::IntRect Lakitu({54, 138}, {16, 23});        // world 32x46
-inline const sf::IntRect SpinyEgg({36, 352}, {16, 16});      // world 32x32
-inline const sf::IntRect Spiny({72, 352}, {16, 16});         // world 32x32
+inline const sf::IntRect Goomba({0, 16}, {16, 16});          // world 16x16
+inline const sf::IntRect GoombaStomped({36, 24}, {16, 8});   // world 16x8, drawn bottom-aligned
+inline const sf::IntRect Koopa({0, 113}, {16, 23});          // world 16x23
+inline const sf::IntRect KoopaShell({72, 120}, {16, 16});    // world 16x16
+inline const sf::IntRect KoopaParatroopa({54, 113}, {16, 23});  // world 16x23
+inline const sf::IntRect HammerBro({18, 183}, {16, 23});     // world 16x23
+inline const sf::IntRect Hammer({54, 52}, {16, 16});         // world 16x16
+inline const sf::IntRect Bowser({102, 208}, {32, 32});       // world 32x32
+inline const sf::IntRect BowserFire({102, 242}, {24, 8});    // world 24x8
+inline const sf::IntRect Lakitu({54, 138}, {16, 23});        // world 16x23
+inline const sf::IntRect SpinyEgg({36, 352}, {16, 16});      // world 16x16
+inline const sf::IntRect Spiny({72, 352}, {16, 16});         // world 16x16
 
 // Not yet implemented in the model; recorded so the layout stays complete.
-inline const sf::IntRect CheepCheep({0, 370}, {16, 16});     // world 32x32
-inline const sf::IntRect PiranhaPlant({0, 139}, {16, 23});   // world 32x46
+inline const sf::IntRect CheepCheep({0, 370}, {16, 16});     // world 16x16
+inline const sf::IntRect PiranhaPlant({0, 139}, {16, 23});   // world 16x23
 
 // Mario's bouncing fireball lives in enemies.png, a DIFFERENT sheet from enemies-8.png
 // above: it carries a real alpha channel, so no colour-key masking is needed at load time.
 // A 22x22 cell at (26,150)-(48,172) holds four 7x7 rolling poses, one in each corner;
 // the roll order is left-to-right, then top-to-bottom (matching the sheet, not the order
-// the corner scan happens to visit). The 7x7 source scales 2x into the 14x14 world box.
+// the corner scan happens to visit). The 7x7 source maps 1:1 onto the 7x7 world box.
 inline const char* const FireballSheet = "assets/enemies.png";
 inline const sf::IntRect FireballRoll[4] = {
     {{26, 150}, {7, 7}},   // frame 0 — top-left

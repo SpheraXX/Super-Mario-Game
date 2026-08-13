@@ -182,6 +182,12 @@ void Player::takeDamage(int amount) {
         state->onExit(*this);
         state.reset(newState);
         state->onEnter(*this);
+        // Bring the BODY down with the state. Powering up goes through setState(), which
+        // syncs the size itself, but this path swaps the state directly and so has to do
+        // it too — without this a damaged Super Mario keeps the two-tile box: he still
+        // draws as big (the renderer picks the frame off the size), still collides as big,
+        // and still breaks bricks, while the state underneath says Small.
+        syncPowerSize();
         damageCooldown = DamageCooldownTime;
     }
 }

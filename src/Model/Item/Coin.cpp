@@ -3,7 +3,7 @@
 namespace model {
 
 Coin::Coin(Vector2 position)
-    : Item(position, {32.0f, 32.0f}),
+    : Item(position, {16.0f, 16.0f}),
       lifetime(Lifetime) {
     velocity = {0.0f, PopSpeed};
     // Purely decorative: no entity pair should ever resolve against it.

@@ -20,7 +20,7 @@ public:
     bool isStompable() const override { return false; }
 
 private:
-    static constexpr float WalkSpeed = 50.0f;
+    static constexpr float WalkSpeed = 25.0f;
 };
 
 }

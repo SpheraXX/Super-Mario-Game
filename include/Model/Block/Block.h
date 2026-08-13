@@ -30,7 +30,7 @@ public:
 protected:
     float bounceElapsed = 0.0f;
     static constexpr float BounceDuration = 0.22f;
-    static constexpr float BounceHeight = 6.0f;
+    static constexpr float BounceHeight = 3.0f;
 
 private:
     char tileSymbol;

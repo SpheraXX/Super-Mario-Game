@@ -4,9 +4,9 @@
 
 namespace model {
 
-// World units: one world tile (the 16x16 source frame is scaled up 2x by the renderer).
+// World units: one world tile (the 16x16 source frame draws 1:1).
 Goomba::Goomba(Vector2 position)
-    : Enemy(position, {32.0f, 32.0f}),
+    : Enemy(position, {16.0f, 16.0f}),
       squishTimer(0.0f) {
     velocity.x = -WalkSpeed; // Start walking left
     setDirection(-1);

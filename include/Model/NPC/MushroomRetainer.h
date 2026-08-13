@@ -12,8 +12,8 @@ public:
     void interact(Player& player) override;
 
 private:
-    static constexpr float DefaultWidth = 16.0f;
-    static constexpr float DefaultHeight = 16.0f;
+    static constexpr float DefaultWidth = 8.0f;
+    static constexpr float DefaultHeight = 8.0f;
 };
 
 }

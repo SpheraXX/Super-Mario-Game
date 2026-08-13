@@ -45,7 +45,7 @@ void LevelCompleteState::render(sf::RenderTarget& window) {
         return;
     }
     const sf::Font& font = view::AssetManager::instance().getUiFont();
-    const float centerX = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    const float centerX = static_cast<float>(AppEngine::screenWidth()) / 2.0f;
     const float centerY = static_cast<float>(AppEngine::ScreenHeight);
 
     sf::Text title(font, "COURSE CLEAR!", titleSize);
@@ -56,7 +56,7 @@ void LevelCompleteState::render(sf::RenderTarget& window) {
 
     const int bonus = model::GameManager::instance().getLevelClearBonus();
     const std::string bonusString = "BONUS: " + std::to_string(bonus);
-    const unsigned int fitted = view::text::fitCharacterSize(font, bonusString, 600.0f, bonusSize);
+    const unsigned int fitted = view::text::fitCharacterSize(font, bonusString, static_cast<float>(AppEngine::screenWidth()) * 0.94f, bonusSize);
     sf::Text bonusText(font, bonusString, fitted);
     bonusText.setFillColor(sf::Color::White);
     bonusText.setOutlineColor(sf::Color::Black);

@@ -2,27 +2,47 @@
 
 namespace model {
 
-// World units: one tile, matching the 16x16 source artwork scaled 2x. (The placeholder
+// World units: one tile wide, matching the source artwork drawn 1:1. (The placeholder
 // enemy sheet draws every enemy at the same size; make this taller only once Koopa gets
 // its own taller artwork, or the sprite will be stretched to fit.)
 Koopa::Koopa(Vector2 position, bool winged)
-    : Enemy(position, {32.0f, StandHeight}),
+    : Enemy(position, {16.0f, StandHeight}),
       state(KoopaState::Walking),
       shellSpeed(SpinSpeed),
-      winged(winged) {
+      winged(winged),
+      flyBaseY(position.y),
+      flyingDown(false) {
     velocity.x = -WalkSpeed;
     setDirection(-1);
+    // A Paratroopa is airborne from the moment it spawns, so it must not be pulled down
+    // by gravity at all — the wings, not the ground, hold it up. loseWings() puts this back.
+    if (winged) {
+        setGravityScale(0.0f);
+    }
 }
 
 void Koopa::updateAI(float /* deltaTime */) {
     switch (state) {
         case KoopaState::Walking:
-            velocity.x = WalkSpeed * getDirection();
-            // Paratroopas bounce along rather than walk. Green ones in the original hop in
-            // the player's general direction; only World 7-3 has genuinely flying ones.
-            if (winged && isOnGround()) {
-                velocity.y = HopSpeed;
+            // A winged Paratroopa flies: it cruises horizontally while patrolling up and
+            // down over its spawn altitude. Turning at walls is still handled by
+            // onTileCollision, and the ledge-turn in Enemy::update never fires because a
+            // flying Koopa is never grounded — which is what lets it cross pits.
+            if (winged) {
+                velocity.x = FlySpeed * getDirection();
+                // Reverse at the top and bottom of the patrol. Bounded rather than
+                // integrated, so a frame lost to a ceiling collision cannot make the
+                // patrol drift off its anchor.
+                const float altitude = getPosition().y;
+                if (altitude <= flyBaseY - FlyAmplitude) {
+                    flyingDown = true;
+                } else if (altitude >= flyBaseY) {
+                    flyingDown = false;
+                }
+                velocity.y = flyingDown ? FlyRiseSpeed : -FlyRiseSpeed;
+                break;
             }
+            velocity.x = WalkSpeed * getDirection();
             break;
         case KoopaState::ShellIdle:
             velocity.x = 0.0f;
@@ -34,10 +54,10 @@ void Koopa::updateAI(float /* deltaTime */) {
 }
 
 void Koopa::onStomped(Entity& player) {
-    // The first stomp on a Paratroopa only costs it the wings: it lands as an ordinary
-    // Koopa, and a second stomp is what produces the shell.
+    // The first stomp on a Paratroopa only costs it the wings: it falls out of the sky and
+    // lands as an ordinary Koopa, and a second stomp is what produces the shell.
     if (winged) {
-        winged = false;
+        loseWings();
         awardScore();
         return;
     }
@@ -68,6 +88,16 @@ void Koopa::onStomped(Entity& player) {
     }
 }
 
+void Koopa::loseWings() {
+    winged = false;
+    // Hand the body back to gravity. Without restoring the scale the de-winged Koopa would
+    // keep the Paratroopa's weightlessness and hang in mid-air, walking on nothing.
+    setGravityScale(1.0f);
+    // Drop the patrol's climb so the fall starts from rest rather than continuing upward.
+    velocity.y = 0.0f;
+    velocity.x = WalkSpeed * getDirection();
+}
+
 bool Koopa::isShell() const {
     return state != KoopaState::Walking;
 }
@@ -90,9 +120,21 @@ void Koopa::onTileCollision(char /* tile */, CollisionType side) {
     if (side == CollisionType::Left || side == CollisionType::Right) {
         setDirection(-getDirection());
         if (state == KoopaState::Walking) {
-            velocity.x = WalkSpeed * getDirection();
+            velocity.x = (winged ? FlySpeed : WalkSpeed) * getDirection();
         } else if (state == KoopaState::ShellSpinning) {
             velocity.x = shellSpeed * getDirection();
+        }
+        return;
+    }
+
+    // Terrain, not just the patrol bounds, can turn a Paratroopa around vertically. Without
+    // this a ceiling low enough to stop the climb short of the patrol's top would leave it
+    // pressed against that ceiling forever, since the altitude test below never trips.
+    if (winged) {
+        if (side == CollisionType::Top) {
+            flyingDown = true;
+        } else if (side == CollisionType::Bottom) {
+            flyingDown = false;
         }
     }
 }

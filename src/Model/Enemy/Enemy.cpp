@@ -25,6 +25,10 @@ void Enemy::update(float deltaTime) {
         return;
     }
 
+    if (stompLockout > 0.0f) {
+        stompLockout -= deltaTime;
+    }
+
     updateAI(deltaTime);
 
     // Turn around before walking off a ledge: probe the cell just ahead of the feet. A
@@ -33,9 +37,9 @@ void Enemy::update(float deltaTime) {
     // into the first pit and were gone before the player ever reached them.
     if (mapPtr && isGrounded && velocity.x != 0.0f) {
         const float aheadX = velocity.x > 0.0f
-            ? getPosition().x + hitbox.offset.x + hitbox.width + 2.0f
-            : getPosition().x + hitbox.offset.x - 2.0f;
-        const float probeY = getPosition().y + hitbox.offset.y + hitbox.height + 4.0f;
+            ? getPosition().x + hitbox.offset.x + hitbox.width + 1.0f
+            : getPosition().x + hitbox.offset.x - 1.0f;
+        const float probeY = getPosition().y + hitbox.offset.y + hitbox.height + 2.0f;
         const std::size_t col = static_cast<std::size_t>(aheadX / TileMap::TileWidth);
         const std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(probeY / TileMap::TileHeight);
 
@@ -59,6 +63,24 @@ void Enemy::update(float deltaTime) {
             die();
         }
     }
+}
+
+void Enemy::stompedBy(Entity& player) {
+    if (!acceptsPlayerContact()) {
+        return;
+    }
+    stompLockout = StompLockoutTime;
+    onStomped(player);
+}
+
+void Enemy::holdStompLockout() {
+    stompLockout = StompLockoutTime;
+}
+
+bool Enemy::acceptsPlayerContact() const {
+    // A squished body is a corpse counting down to its despawn: it can neither be stomped
+    // again nor hurt the player it is lying under.
+    return stompLockout <= 0.0f && !isStomped;
 }
 
 void Enemy::onStomped(Entity& /* player */) {

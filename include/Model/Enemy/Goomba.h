@@ -15,7 +15,7 @@ public:
 
 private:
     float squishTimer;
-    static constexpr float WalkSpeed = 50.0f;
+    static constexpr float WalkSpeed = 25.0f;
 };
 
 }

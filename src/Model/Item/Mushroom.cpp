@@ -4,7 +4,7 @@
 namespace model {
 
 Mushroom::Mushroom(Vector2 position, int direction)
-    : Item(position, {32.0f, 32.0f}) {
+    : Item(position, {16.0f, 16.0f}) {
     setDirection(direction);
     velocity.x = WalkSpeed * direction;
 }

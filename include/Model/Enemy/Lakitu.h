@@ -21,12 +21,12 @@ public:
 private:
     float hoverY;  // the altitude the level placed it at; it never changes height
 
-    static constexpr float TrackSpeed = 60.0f;
-    static constexpr float DeadZone = 16.0f;      // stops the hover jittering when overhead
+    static constexpr float TrackSpeed = 30.0f;
+    static constexpr float DeadZone = 8.0f;      // stops the hover jittering when overhead
     static constexpr float ThrowInterval = 3.0f;
     // Horizontal kick given to a dropped egg, so it lands ahead of a running player instead
     // of straight down. See DesignDoc/ENEMIES.md on why this deviates from the shipped ROM.
-    static constexpr float EggLeadSpeed = 70.0f;
+    static constexpr float EggLeadSpeed = 35.0f;
 };
 
 }

@@ -96,8 +96,8 @@ protected:
 protected:
     static constexpr float DamageCooldownTime = 1.0f;
     // Height of the one-tile (Small) form, used by isBig(). Super/Fire are two tiles.
-    static constexpr float SmallHeight = 32.0f;
-    static constexpr float BigHeight = 64.0f;
+    static constexpr float SmallHeight = 16.0f;
+    static constexpr float BigHeight = 32.0f;
     static constexpr float CoyoteTime = 0.1f;
     static constexpr float JumpBufferTime = 0.1f;
     static constexpr float MaxJumpHoldTime = 0.16f;
@@ -106,7 +106,7 @@ protected:
     // only rises barely over the 128px of a 4-tile wall (Mario: ≈136px) and stays clearly
     // under the 160px of a 5-tile wall — the deliberate "barely 4 blocks" jump. The weak
     // graze at the top of that arc is filtered by the bump-speed gate in CollisionManager.
-    static constexpr float JumpInitialSpeed = -220.0f;
+    static constexpr float JumpInitialSpeed = -110.0f;
     // Horizontal inertia: velocity approaches the target speed, never snapping.
     //
     // Retuned for responsiveness. The original 800/600/1600 (with the Overworld's 0.4/s
@@ -114,24 +114,24 @@ protected:
     // as skating on ice: the player moved a beat after the key went down and kept going a
     // beat after it came up. These values keep the weighty feel — the velocity is still
     // never snapped — while cutting that to 0.23s and 0.15s.
-    static constexpr float GroundAccel = 1600.0f;
+    static constexpr float GroundAccel = 800.0f;
     // Air control stays below ground accel on purpose: committing to a jump direction is
     // part of the platforming. At 1200 the run speed is reachable in the first third of a
     // full jump (0.34s of 0.85s) instead of the last fifth.
-    static constexpr float AirAccel = 1200.0f;
-    static constexpr float Friction = 2400.0f;
+    static constexpr float AirAccel = 600.0f;
+    static constexpr float Friction = 1200.0f;
 
     // Animation hysteresis thresholds (self-explanatory in syncAnimation): entering walk
     // needs >10px/s, leaving it needs to drop below 2px/s (or lose the input), and the
     // walk/run split sits at 200px/s. The gaps stop the pose from flickering frame menus.
-    static constexpr float IdleSpeedThreshold = 10.0f;
-    static constexpr float StoppedSpeedThreshold = 2.0f;
-    static constexpr float RunSpeedThreshold = 200.0f;
+    static constexpr float IdleSpeedThreshold = 5.0f;
+    static constexpr float StoppedSpeedThreshold = 1.0f;
+    static constexpr float RunSpeedThreshold = 100.0f;
 
     // Underwater (simplified): holding the jump key continuously swims upward. The
     // world's scaled gravity + drag then keep the motion floaty instead of jumpy.
-    static constexpr float SwimAccel = 900.0f;
-    static constexpr float SwimMaxSpeed = 220.0f;
+    static constexpr float SwimAccel = 450.0f;
+    static constexpr float SwimMaxSpeed = 110.0f;
 
 private:
     void syncAnimation();

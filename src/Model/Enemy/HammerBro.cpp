@@ -7,9 +7,9 @@
 
 namespace model {
 
-// 16x23 source artwork at 2x.
+// 16x23 source artwork, drawn 1:1.
 HammerBro::HammerBro(Vector2 position)
-    : Enemy(position, {32.0f, 46.0f}),
+    : Enemy(position, {16.0f, 23.0f}),
       patrolCentreX(position.x),
       hopTimer(HopInterval) {
     attackCooldown = ThrowInterval;
@@ -53,7 +53,7 @@ std::unique_ptr<Projectile> HammerBro::createProjectile() {
     const int throwDirection = isFacingRight() ? 1 : -1;
     // Launch from the top of the sprite so the arc starts above the Bro's head.
     Vector2 origin = getPosition();
-    origin.y -= 8.0f;
+    origin.y -= 4.0f;
     return std::make_unique<Hammer>(origin, this, throwDirection);
 }
 

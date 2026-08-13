@@ -29,7 +29,7 @@ constexpr int SmallFrameHeight = 16;
 constexpr int BigFrameHeight = 32;
 
 // World height of the one-tile (Small) form — the threshold that decides which row to draw.
-constexpr float SmallDrawSize = 32.0f;
+constexpr float SmallDrawSize = 16.0f;
 
 // x offset of each pose within its row. Shared by both sizes and both characters.
 constexpr int StandFrameX = 176;
@@ -46,7 +46,7 @@ constexpr int WalkFrameCount = static_cast<int>(std::size(WalkFrames));
 // World units of ground covered per frame of the cycle. Because the phase comes from
 // distance rather than time, walking (180 u/s) cycles at ~10fps and running (320 u/s) at
 // ~18fps for free, and the cycle freezes when the player is stopped against a wall.
-constexpr float DistancePerWalkFrame = 18.0f;
+constexpr float DistancePerWalkFrame = 9.0f;
 
 int frameXFor(const model::Player& player) {
     switch (player.getAnimState()) {

@@ -32,7 +32,7 @@ bool isGroundTile(char symbol) {
 // below always applies) but is too weak to open it. Mario's full-hold jump touches a block
 // 5 tiles above his feet with only ~162px/s, while a real 4-tile bump lands at ~360px/s —
 // this gate is what keeps the "barely 4 blocks" jump from opening blocks 5 tiles up.
-constexpr float MinBumpSpeed = 200.0f;
+constexpr float MinBumpSpeed = 100.0f;
 
 // Landing tolerance for the downward snap. The feet only snap onto a tile when they crossed
 // its top edge this frame (foot above the top at the start, on/below it at the end). A
@@ -40,13 +40,13 @@ constexpr float MinBumpSpeed = 200.0f;
 // been above it — snapping him up there is the "rounded up, standing on the block" bug. The
 // epsilon absorbs float noise so the resting-on-ground case (prevFoot == tile top, vel.y = 0)
 // keeps grounding every frame.
-constexpr float LandingEpsilon = 1.0f;
+constexpr float LandingEpsilon = 0.5f;
 
 // Rest tolerance for standing on a solid ENTITY top (pipe caps). The strict AABB test
 // reports no overlap at exact contact (feet == block top), so without this the player
 // would drop one frame and snap back the next — the "glitch dance" on pipes. A solid top
 // within this epsilon of the feet counts as a standing contact, mirroring LandingEpsilon.
-constexpr float TopRestEpsilon = 2.0f;
+constexpr float TopRestEpsilon = 1.0f;
 
 // True when one of the pair is the player resting on the other's solid top: feet within
 // TopRestEpsilon of the top (or a sub-pixel overlap), a real horizontal footprint, and no
@@ -362,10 +362,19 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
 
     if (other->hitbox.layer == CollisionLayer::Enemy) {
         Enemy& enemy = static_cast<Enemy&>(*other);
+        // Just stomped, or already squished: the player is falling on past it (or standing
+        // in the shell it left behind), so the pair does not interact at all. Holding the
+        // lockout open for as long as they remain overlapped is what stops it expiring
+        // while he is still inside the enemy — see Enemy::acceptsPlayerContact.
+        if (!enemy.acceptsPlayerContact()) {
+            enemy.holdStompLockout();
+            return;
+        }
         if (playerSide == CollisionType::Bottom) {
-            // Player landed on top of the enemy: squash it and bounce.
-            enemy.onStomped(*player);
-            playerCharacter.setVelocity({playerCharacter.getVelocity().x, -350.0f}); // Bounce force
+            // Player landed on top of the enemy: squash it. His velocity is deliberately
+            // left alone — no bounce. He keeps the momentum he arrived with and drops on
+            // through, rather than being launched back up the way the original does it.
+            enemy.stompedBy(*player);
         } else {
             // Player hit the enemy from the side or from below: take damage.
             playerCharacter.takeDamage(enemy.getDamageValue());

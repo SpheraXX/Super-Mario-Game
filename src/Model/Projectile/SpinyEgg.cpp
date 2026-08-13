@@ -8,7 +8,7 @@
 namespace model {
 
 SpinyEgg::SpinyEgg(Vector2 position, Entity* owner, float throwVelocityX)
-    : Projectile(position, {32.0f, 32.0f}, owner) {
+    : Projectile(position, {16.0f, 16.0f}, owner) {
     velocity = {throwVelocityX, 0.0f};
     setDirection(throwVelocityX < 0.0f ? -1 : 1);
 }

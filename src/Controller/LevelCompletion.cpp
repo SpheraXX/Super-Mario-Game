@@ -23,7 +23,7 @@ void LevelCompletion::build(
     const std::size_t tileHeight = model::TileMap::TileHeight;
     const std::size_t baseColumns = columns - LevelPaddingTiles;
     const float groundTop = geometry::groundTopAt(map, baseColumns > 0 ? baseColumns - 1 : 0);
-    const float poleHeight = 224.0f;
+    const float poleHeight = 112.0f;
 
     // The goal castle is painted into the grid from its 21-tile sheet (see
     // TileMap::CastleSymbols), row-major over a 5x5 silhouette standing on the ground:
@@ -48,7 +48,7 @@ void LevelCompletion::build(
     auto flag = std::make_unique<model::FlagPole>(
         model::Vector2{static_cast<float>((baseColumns + PoleOffsetTiles) * tileWidth),
                        groundTop - poleHeight},
-        model::Vector2{8.0f, poleHeight});
+        model::Vector2{4.0f, poleHeight});
     flagPolePtr = flag.get();
     entities.push_back(std::move(flag));
 }

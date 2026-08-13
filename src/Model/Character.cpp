@@ -50,19 +50,19 @@ void Character::update(float deltaTime) {
 }
 
 float Character::getWalkSpeed() const {
-    return 180.0f;
+    return 90.0f;
 }
 
 float Character::getRunSpeed() const {
-    return 320.0f;
+    return 160.0f;
 }
 
 float Character::getMaxJumpSpeed() const {
-    return 500.0f;
+    return 250.0f;
 }
 
 float Character::getJumpAccel() const {
-    return 3400.0f;
+    return 1700.0f;
 }
 
 void Character::takeDamage(int amount) {

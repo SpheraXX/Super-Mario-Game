@@ -283,7 +283,8 @@ void LevelScene::resetLevel() {
     // Fallback: if the map has no 'M', keep the game playable with a fixed spawn.
     if (!marioSpawned) {
         const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
-        auto mario = std::make_unique<model::Mario>(model::Vector2{64.0f, groundY});
+        auto mario = std::make_unique<model::Mario>(
+            model::Vector2{static_cast<float>(2 * tileWidth), groundY});
         playerPtr = mario.get();
         entities.push_back(std::move(mario));
     }
@@ -346,7 +347,7 @@ model::Entity* LevelScene::addEntity(std::unique_ptr<model::Entity> entity) {
 void LevelScene::armDormancy() {
     // The frontier starts at the camera's right edge, so the opening screenful is awake
     // and everything beyond it waits to be scrolled into view.
-    const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    const float halfWidth = static_cast<float>(AppEngine::screenWidth()) / 2.0f;
     cameraX = playerPtr ? playerPtr->getPosition().x + playerPtr->getSize().x / 2.0f : halfWidth;
     activationFrontier = cameraX + halfWidth + ActivationMargin;
 
@@ -365,7 +366,7 @@ void LevelScene::armDormancy() {
 void LevelScene::updateActivation() {
     // Monotonic: the frontier only ever moves right, so backtracking never re-arms an
     // enemy the player has already woken and walked past.
-    const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    const float halfWidth = static_cast<float>(AppEngine::screenWidth()) / 2.0f;
     activationFrontier = std::max(activationFrontier, cameraX + halfWidth + ActivationMargin);
 
     for (const auto& e : entities) {
@@ -483,7 +484,7 @@ LevelScene::Event LevelScene::update(float deltaTime) {
     // of update() so render() and next frame's activation check agree on where the view is.
     {
         const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
-        const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+        const float halfWidth = static_cast<float>(AppEngine::screenWidth()) / 2.0f;
         float target = playerPtr
             ? playerPtr->getPosition().x + playerPtr->getSize().x / 2.0f
             : halfWidth;
@@ -517,7 +518,7 @@ void LevelScene::render(sf::RenderTarget& window) {
     // Camera: follows the player horizontally, but never pans past the map fringes; it is
     // fixed vertically. The view keeps the fixed viewport set by AppEngine.
     const float mapWidth = static_cast<float>(map.getColumns()) * model::TileMap::TileWidth;
-    const float halfWidth = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    const float halfWidth = static_cast<float>(AppEngine::screenWidth()) / 2.0f;
     // update() already resolved the camera for this frame; recompute the clamp here only
     // so a render before the first update (or while a cinematic freezes update) is sane.
     float cameraX = this->cameraX;
@@ -533,7 +534,7 @@ void LevelScene::render(sf::RenderTarget& window) {
 
     const sf::View baseView = window.getView();
     sf::View cameraView = baseView;
-    cameraView.setSize({static_cast<float>(AppEngine::ScreenWidth),
+    cameraView.setSize({static_cast<float>(AppEngine::screenWidth()),
                         static_cast<float>(AppEngine::ScreenHeight)});
     cameraView.setCenter({cameraX, static_cast<float>(AppEngine::ScreenHeight) / 2.0f});
     window.setView(cameraView);

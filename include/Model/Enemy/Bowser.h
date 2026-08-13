@@ -23,14 +23,14 @@ private:
     float patrolCentreX;
     float jumpTimer;
 
-    static constexpr float WalkSpeed = 30.0f;
-    static constexpr float PatrolRange = 64.0f;
+    static constexpr float WalkSpeed = 15.0f;
+    static constexpr float PatrolRange = 32.0f;
     static constexpr float JumpInterval = 3.0f;
-    static constexpr float JumpSpeed = -420.0f;
+    static constexpr float JumpSpeed = -210.0f;
     static constexpr float FireInterval = 2.5f;
     static constexpr int MaxHealth = 5;
     // Must track Fireball's world width, used to place the breath clear of his left side.
-    static constexpr float FireballWidth = 48.0f;
+    static constexpr float FireballWidth = 24.0f;
 };
 
 }

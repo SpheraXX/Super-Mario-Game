@@ -42,7 +42,7 @@ void FlagPoleRenderer::renderTyped(sf::RenderTarget& window,
     // rest to just above the ground when the clear play ends.
     const float pennantOffset = size.y * (0.4f + 0.55f * pole.getSlideProgress());
     painter.drawCell(window, {{GoldTileX, GoldTileY}, {16, 16}},
-                     {pos.x + 8.0f, pos.y + pennantOffset});
+                     {pos.x + 4.0f, pos.y + pennantOffset});
 }
 
 }

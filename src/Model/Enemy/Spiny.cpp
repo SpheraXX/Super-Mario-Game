@@ -3,7 +3,7 @@
 namespace model {
 
 Spiny::Spiny(Vector2 position)
-    : Enemy(position, {32.0f, 32.0f}) {
+    : Enemy(position, {16.0f, 16.0f}) {
     velocity.x = -WalkSpeed;
     setDirection(-1);
 }

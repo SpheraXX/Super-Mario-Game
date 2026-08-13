@@ -4,7 +4,7 @@
 namespace model {
 
 FireFlower::FireFlower(Vector2 position)
-    : Item(position, {32.0f, 32.0f}) {
+    : Item(position, {16.0f, 16.0f}) {
     velocity = {0.0f, 0.0f};
     // No gravity and no movement: the flower waits on the block for the player.
     setGravityScale(0.0f);

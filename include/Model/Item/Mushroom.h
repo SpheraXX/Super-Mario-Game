@@ -17,7 +17,7 @@ public:
     void onCollect(Entity& collector) override;
 
 private:
-    static constexpr float WalkSpeed = 60.0f;
+    static constexpr float WalkSpeed = 30.0f;
 };
 
 }

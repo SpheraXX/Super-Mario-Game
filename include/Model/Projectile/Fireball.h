@@ -15,7 +15,7 @@ public:
     bool usesTileCollision() const override { return false; }
 
 private:
-    static constexpr float TravelSpeed = 200.0f;
+    static constexpr float TravelSpeed = 100.0f;
 };
 
 }

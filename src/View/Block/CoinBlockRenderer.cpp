@@ -60,7 +60,7 @@ void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
     // animation finishes. The model owns the timer; the renderer only draws it.
     if (coinTextureLoaded && coinBlock.isCoinPopping()) {
         const float progress = coinBlock.getCoinPopProgress();
-        const float rise = progress * 48.0f;  // world units (one tile = 32)
+        const float rise = progress * 24.0f;  // world units (one tile = 16)
         sf::Sprite coin(coinTexture);
         coin.setTextureRect({{CoinAtlasX, CoinAtlasY}, {16, 16}});
         coin.setScale({SpriteScaleX, SpriteScaleY});

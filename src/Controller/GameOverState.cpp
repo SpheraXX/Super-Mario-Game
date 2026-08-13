@@ -20,8 +20,9 @@ void GameOverState::onEnter() {
     font = view::AssetManager::instance().getUiFont();
     fontLoaded = view::AssetManager::instance().isFontLoaded();
     if (fontLoaded) {
-        titleSize = view::text::fitCharacterSize(font, "GAME OVER", 600.0f, 56);
-        hintSize = view::text::fitCharacterSize(font, "Press ENTER to return to Menu", 600.0f, 20);
+        const float fitWidth = static_cast<float>(AppEngine::screenWidth()) * 0.94f;
+        titleSize = view::text::fitCharacterSize(font, "GAME OVER", fitWidth, 28);
+        hintSize = view::text::fitCharacterSize(font, "Press ENTER to return to Menu", fitWidth, 10);
     }
 }
 
@@ -45,7 +46,7 @@ void GameOverState::render(sf::RenderTarget& window) {
         return;
     }
 
-    const float centerX = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    const float centerX = static_cast<float>(AppEngine::screenWidth()) / 2.0f;
     const float centerY = static_cast<float>(AppEngine::ScreenHeight);
     const int score = model::GameManager::instance().getScore();
 
@@ -54,7 +55,7 @@ void GameOverState::render(sf::RenderTarget& window) {
     view::text::drawCentered(window, title, centerX, centerY * 0.35f);
 
     const std::string scoreString = "Final Score: " + std::to_string(score);
-    const unsigned int fitted = view::text::fitCharacterSize(font, scoreString, 600.0f, scoreSize);
+    const unsigned int fitted = view::text::fitCharacterSize(font, scoreString, static_cast<float>(AppEngine::screenWidth()) * 0.94f, scoreSize);
     sf::Text scoreText(font, scoreString, fitted);
     scoreText.setFillColor(sf::Color::White);
     view::text::drawCentered(window, scoreText, centerX, centerY * 0.55f);

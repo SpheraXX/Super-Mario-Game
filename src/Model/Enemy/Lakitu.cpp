@@ -9,9 +9,9 @@
 
 namespace model {
 
-// 16x23 source artwork at 2x.
+// 16x23 source artwork, drawn 1:1.
 Lakitu::Lakitu(Vector2 position)
-    : Enemy(position, {32.0f, 46.0f}),
+    : Enemy(position, {16.0f, 23.0f}),
       hoverY(position.y) {
     setGravityScale(0.0f);
     attackCooldown = ThrowInterval;

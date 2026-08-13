@@ -127,9 +127,10 @@ private:
     void armDormancy();
     void updateActivation();
 
-    // How far beyond the right edge of the view an entity wakes. A small lead-in means
-    // enemies are already moving by the time they scroll into sight, instead of popping.
-    static constexpr float ActivationMargin = 64.0f;
+    // How far beyond the right edge of the view an entity wakes (two tiles). A small
+    // lead-in means enemies are already moving by the time they scroll into sight,
+    // instead of popping.
+    static constexpr float ActivationMargin = 32.0f;
 
     model::WorldType worldType = model::WorldType::Overworld;
     view::HitboxRenderer hitboxRenderer;

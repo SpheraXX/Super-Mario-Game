@@ -15,8 +15,14 @@ public:
     bool usesTileCollision() const override { return false; }
 
 private:
-    static constexpr float ThrowSpeedX = 90.0f;
-    static constexpr float ThrowSpeedY = -420.0f;
+    static constexpr float ThrowSpeedX = 45.0f;
+    static constexpr float ThrowSpeedY = -210.0f;
+    // A hammer is lobbed, not dropped. Under full gravity this launch speed peaks after a
+    // quarter second and lands about a tile and a half away, so the hammer appeared to fall
+    // out of the Bro's hand the instant it left it; at this scale the same launch arcs
+    // roughly four tiles up and travels close to four across, which is the lazy overhand
+    // throw the original has. Composes with the world's gravity like any other character.
+    static constexpr float ArcGravityScale = 0.4f;
 };
 
 }

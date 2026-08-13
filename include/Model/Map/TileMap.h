@@ -21,8 +21,8 @@ struct SpawnPoint {
 class TileMap {
 public:
     static constexpr std::size_t Rows = 16;
-    static constexpr unsigned int TileWidth = 32;
-    static constexpr unsigned int TileHeight = 32;
+    static constexpr unsigned int TileWidth = 16;
+    static constexpr unsigned int TileHeight = 16;
 
     // Background/decorative symbols: rendered like any other tile but passable
     // (excluded from tile collision).

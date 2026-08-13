@@ -52,9 +52,9 @@ const model::Portal* PortalSystem::findEntryPortal(
         const float onTop = std::abs(feetY - pipe->getPosition().y);
         // Entry needs the player's feet resting on the cap and a real footprint
         // overlap with it (slightly forgiving at the very edge).
-        const bool overlapsCap = pPos.x + player.getSize().x > pipe->getPosition().x + 2.0f &&
-                                 pPos.x < pipe->getPosition().x + pipe->getSize().x - 2.0f;
-        if (player.isGrounded && onTop < 8.0f && overlapsCap) {
+        const bool overlapsCap = pPos.x + player.getSize().x > pipe->getPosition().x + 1.0f &&
+                                 pPos.x < pipe->getPosition().x + pipe->getSize().x - 1.0f;
+        if (player.isGrounded && onTop < 4.0f && overlapsCap) {
             return portal;
         }
     }

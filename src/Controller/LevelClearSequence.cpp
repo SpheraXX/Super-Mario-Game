@@ -18,7 +18,7 @@ constexpr int TimeBonusPerSecond = 10;
 // Duration of the pole-slide segment before Mario walks on.
 constexpr float SlideDuration = 0.45f;
 // Auto-walk speed on the flat completion zone after the slide.
-constexpr float CinematicWalkSpeed = 220.0f;
+constexpr float CinematicWalkSpeed = 110.0f;
 
 }
 

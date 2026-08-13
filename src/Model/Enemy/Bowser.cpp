@@ -6,9 +6,9 @@
 
 namespace model {
 
-// Two tiles square, the largest enemy on the sheet: 32x32 source artwork at 2x.
+// Two tiles square, the largest enemy on the sheet: 32x32 source artwork, drawn 1:1.
 Bowser::Bowser(Vector2 position)
-    : Enemy(position, {64.0f, 64.0f}),
+    : Enemy(position, {32.0f, 32.0f}),
       patrolCentreX(position.x),
       jumpTimer(JumpInterval) {
     health = MaxHealth;

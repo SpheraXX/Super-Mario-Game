@@ -21,9 +21,10 @@ void MenuState::onEnter() {
     font = view::AssetManager::instance().getUiFont();
     fontLoaded = view::AssetManager::instance().isFontLoaded();
     if (fontLoaded) {
-        titleSize = view::text::fitCharacterSize(font, "SUPER MARIO", 600.0f, 56);
-        startHintSize = view::text::fitCharacterSize(font, "Press ENTER or SPACE to Start", 600.0f, 24);
-        quitHintSize = view::text::fitCharacterSize(font, "Press ESC to Quit", 600.0f, 20);
+        const float fitWidth = static_cast<float>(AppEngine::screenWidth()) * 0.94f;
+        titleSize = view::text::fitCharacterSize(font, "SUPER MARIO", fitWidth, 28);
+        startHintSize = view::text::fitCharacterSize(font, "Press ENTER or SPACE to Start", fitWidth, 12);
+        quitHintSize = view::text::fitCharacterSize(font, "Press ESC to Quit", fitWidth, 10);
     }
 }
 
@@ -54,7 +55,7 @@ void MenuState::render(sf::RenderTarget& window) {
         return;
     }
 
-    const float centerX = static_cast<float>(AppEngine::ScreenWidth) / 2.0f;
+    const float centerX = static_cast<float>(AppEngine::screenWidth()) / 2.0f;
     const float centerY = static_cast<float>(AppEngine::ScreenHeight);
 
     sf::Text title(font, "SUPER MARIO", titleSize);

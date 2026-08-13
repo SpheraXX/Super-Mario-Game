@@ -4,7 +4,7 @@
 namespace model {
 
 Starman::Starman(Vector2 position)
-    : Item(position, {32.0f, 32.0f}) {
+    : Item(position, {16.0f, 16.0f}) {
     velocity = {0.0f, 0.0f};
     // No gravity and no movement: the star waits on the block for the player, exactly
     // like the Fire Flower it shares its behaviour with.

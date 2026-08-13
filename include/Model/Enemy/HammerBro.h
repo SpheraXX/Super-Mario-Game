@@ -18,10 +18,10 @@ private:
     float patrolCentreX;  // captured at spawn: the beat is relative to the map placement
     float hopTimer;
 
-    static constexpr float WalkSpeed = 30.0f;
-    static constexpr float PatrolRange = 48.0f;   // half-width of the beat, in world units
+    static constexpr float WalkSpeed = 15.0f;
+    static constexpr float PatrolRange = 24.0f;   // half-width of the beat, in world units
     static constexpr float HopInterval = 1.2f;
-    static constexpr float HopSpeed = -380.0f;
+    static constexpr float HopSpeed = -190.0f;
     static constexpr float ThrowInterval = 2.0f;
 };
 

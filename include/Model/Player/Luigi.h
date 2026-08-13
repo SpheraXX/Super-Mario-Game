@@ -18,10 +18,10 @@ public:
     // concrete type; without the override Luigi would render with Mario's palette.
     bool isLuigi() const override { return true; }
 
-    static constexpr float WalkSpeed = 160.0f;
-    static constexpr float RunSpeed = 350.0f;
-    static constexpr float MaxJumpSpeed = 600.0f;
-    static constexpr float JumpAccel = 3400.0f;
+    static constexpr float WalkSpeed = 80.0f;
+    static constexpr float RunSpeed = 175.0f;
+    static constexpr float MaxJumpSpeed = 300.0f;
+    static constexpr float JumpAccel = 1700.0f;
 };
 
 }

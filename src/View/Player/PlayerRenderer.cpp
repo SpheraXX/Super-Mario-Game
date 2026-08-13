@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <iterator>
 
 namespace view {
 
@@ -32,17 +33,33 @@ constexpr float SmallDrawSize = 32.0f;
 
 // x offset of each pose within its row. Shared by both sizes and both characters.
 constexpr int StandFrameX = 176;
-constexpr int WalkFrameX = 80;
-constexpr int RunFrameX = 112;
 constexpr int JumpFrameX = 144;
 constexpr int DieFrameX = 161;
 
-int frameXFor(model::AnimState state) {
-    switch (state) {
+// The walk cycle is three frames, laid out consecutively on the sheet. Walking and running
+// use the same three: the original has no separate running artwork, the legs simply move
+// faster. Pinning Walk to the first frame and Run to the third — which is what the code did
+// before — meant neither ever animated, so a moving player looked frozen mid-stride.
+constexpr int WalkFrames[] = {80, 96, 112};
+constexpr int WalkFrameCount = static_cast<int>(std::size(WalkFrames));
+
+// World units of ground covered per frame of the cycle. Because the phase comes from
+// distance rather than time, walking (180 u/s) cycles at ~10fps and running (320 u/s) at
+// ~18fps for free, and the cycle freezes when the player is stopped against a wall.
+constexpr float DistancePerWalkFrame = 18.0f;
+
+int frameXFor(const model::Player& player) {
+    switch (player.getAnimState()) {
         case model::AnimState::Walk:
-            return WalkFrameX;
-        case model::AnimState::Run:
-            return RunFrameX;
+        case model::AnimState::Run: {
+            // fmod first: the accumulator only ever grows, and folding it before the cast
+            // keeps the conversion well away from int range on a long level.
+            const float cycleLength = DistancePerWalkFrame * WalkFrameCount;
+            const float phase = std::fmod(player.getWalkCycleDistance(), cycleLength);
+            int index = static_cast<int>(phase / DistancePerWalkFrame);
+            if (index < 0 || index >= WalkFrameCount) index = 0;  // guard against fp edges
+            return WalkFrames[index];
+        }
         // Rising and falling share the airborne pose; there is no separate falling frame.
         case model::AnimState::Jump:
         case model::AnimState::Fall:
@@ -124,7 +141,7 @@ void PlayerRenderer::renderTyped(sf::RenderTarget& window, const model::Player& 
     // a grown box is exactly what stretched the sprite before the big row was wired up.
     const bool big = player.getSize().y > SmallDrawSize;
     drawCharacterFrame(window, player,
-                       {{frameXFor(player.getAnimState()), big ? bigRow : smallRow},
+                       {{frameXFor(player), big ? bigRow : smallRow},
                         {16, big ? BigFrameHeight : SmallFrameHeight}});
 }
 

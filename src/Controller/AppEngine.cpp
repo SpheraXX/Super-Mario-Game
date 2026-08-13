@@ -9,6 +9,7 @@
 #include <SFML/Graphics/View.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <iostream>
@@ -68,8 +69,26 @@ void AppEngine::run() {
     sf::Clock clock;
     float accumulator = 0.0f;
 
+    // A frame this close to the fixed step is treated as exactly one step.
+    //
+    // The limiter paces the loop with sleeps, and sleep is not precise: real frames land at
+    // 16.4ms, 16.9ms, 17.1ms... around the 16.67ms step. Fed straight into the accumulator
+    // that beats against the fixed step — a frame measuring a hair under runs ZERO updates
+    // (the identical picture is presented twice) and the next runs TWO (the world lurches a
+    // double step). One duplicate plus one double-step, several times a second, is the
+    // stutter.
+    //
+    // It is worst in the air because of the camera: it tracks the player horizontally, so
+    // sideways a repeated frame barely registers, but it is pinned vertically, so every
+    // hitch in y is drawn straight to the screen with nothing moving alongside to mask it.
+    constexpr float FrameSnapTolerance = TimeStep * 0.25f;  // ~4ms at 60Hz
+
     while (window.isOpen() && !states.empty()) {
-        accumulator += std::min(clock.restart().asSeconds(), MaxFrameTime);
+        float frameTime = std::min(clock.restart().asSeconds(), MaxFrameTime);
+        if (std::fabs(frameTime - TimeStep) < FrameSnapTolerance) {
+            frameTime = TimeStep;
+        }
+        accumulator += frameTime;
 
         processInput();
 

@@ -45,6 +45,12 @@ void Player::update(float deltaTime) {
     Character::update(deltaTime);
     syncAnimation();
 
+    // Advance the walk cycle by ground covered rather than by elapsed time. Driving it off
+    // distance means the legs speed up on their own when running and stop dead when the
+    // player is pushed against a wall — no second frame rate, and no cycle running on the
+    // spot. Only horizontal motion counts; a falling player is showing the jump pose anyway.
+    walkCycleDistance += std::fabs(getVelocity().x) * deltaTime;
+
     if (damageCooldown > 0.0f) {
         damageCooldown -= deltaTime;
         if (damageCooldown < 0.0f) damageCooldown = 0.0f;
@@ -232,6 +238,10 @@ bool Player::isBig() const {
 
 bool Player::canBreakBricks() const {
     return isBig();
+}
+
+float Player::getWalkCycleDistance() const {
+    return walkCycleDistance;
 }
 
 float Player::getBlinkRemaining() const {

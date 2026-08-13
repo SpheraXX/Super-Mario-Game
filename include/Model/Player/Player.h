@@ -38,6 +38,11 @@ public:
     bool isBig() const;
     // Big Mario headbutts breakable bricks apart; small Mario just bounces off them.
     bool canBreakBricks() const override;
+
+    // Total horizontal ground covered, in world units. The view picks the walk frame off
+    // this instead of a timer, so the cycle stays in step with how fast the player is
+    // actually moving.
+    float getWalkCycleDistance() const;
     // Remaining post-damage invulnerability; the view fades the sprite off this, so the
     // blink and the invulnerability window always end together.
     float getBlinkRemaining() const;
@@ -76,6 +81,8 @@ protected:
     // boosted; playerInitiatedJump marks the ascent as started by the player (so releasing
     // the key stops the boost, but a stomp bounce is never boosted).
     float jumpHoldTime = 0.0f;
+    // Accumulated horizontal distance driving the walk cycle. See getWalkCycleDistance.
+    float walkCycleDistance = 0.0f;
     bool jumpHeld = false;
     bool playerInitiatedJump = false;
     // Horizontal-input intent from the last handleInput(): used by syncAnimation so that

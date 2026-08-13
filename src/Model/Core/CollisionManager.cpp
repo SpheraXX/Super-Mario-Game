@@ -156,6 +156,20 @@ void CollisionManager::processTileCollisions(Character& entity, float deltaTime)
         }
     }
 
+    // The vertical checks above can move pos.y — landing snaps the body up out of the tile it
+    // had sunk into during the frame. Recompute the vertical extents from the *updated* pos.y
+    // before probing sideways.
+    //
+    // Reading the pre-snap values here is what made the player jerk backwards in mid-air: a
+    // body falling fast has its foot inside the ground row by the time this runs, so the
+    // stale `footY - 1` probe sampled the floor, the side check read that floor as a wall,
+    // and pos.x was snapped to the tile boundary the player had already passed. It only
+    // showed up while airborne, because a body already resting on the ground is never
+    // snapped and its stale extents are still correct.
+    headY = pos.y + hb.offset.y;
+    footY = pos.y + hb.offset.y + hb.height;
+    centerY = pos.y + hb.offset.y + hb.height / 2.0f;
+
     // Horizontal checks probe the head, the centre AND the feet, for the same reason the
     // downward check probes three columns: a single centre sample is blind to anything that
     // only covers part of the body. Big Mario is two tiles tall, so a centre-only probe let

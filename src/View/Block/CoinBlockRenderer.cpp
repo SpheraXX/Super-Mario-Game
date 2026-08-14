@@ -2,16 +2,11 @@
 
 #include "View/Base/EntityRenderUtils.h"
 #include "View/Base/RenderContext.h"
-#include "View/Item/ItemAtlas.h"
 #include "Model/Block/CoinBlock.h"
 #include "Model/World/WorldType.h"
 
-#include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Sprite.hpp>
-
-#include <cmath>
-#include <cstdint>
 
 namespace view {
 
@@ -28,18 +23,8 @@ constexpr int TealAtlasRow = 8;
 }
 
 CoinBlockRenderer::CoinBlockRenderer()
-    : textureLoaded(texture.loadFromFile("assets/blocks.png")),
-      coinTextureLoaded(false) {
+    : textureLoaded(texture.loadFromFile("assets/blocks.png")) {
     texture.setSmooth(false);
-    // The coin lives on the main Mario sheet, which has no alpha channel: the backdrop
-    // is a flat colour keyed out at load (see ItemAtlas), exactly as the item renderers
-    // do. A plain load would draw the sheet's opaque background around the coin.
-    sf::Image sheet;
-    if (sheet.loadFromFile(atlas::MarioAssetSheet)) {
-        sheet.createMaskFromColor(atlas::MarioAssetColorKey);
-        coinTextureLoaded = coinTexture.loadFromImage(sheet);
-    }
-    coinTexture.setSmooth(false);
 }
 
 void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
@@ -61,24 +46,6 @@ void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
     sprite.setPosition({std::round(coinBlock.getPosition().x),
                         std::round(coinBlock.getPosition().y - coinBlock.getBounceOffsetY())});
     window.draw(sprite);
-
-    // The collected coin rises ~1.5 tiles out of the block and fades away as the pop
-    // animation finishes. The model owns the timer; the renderer only draws it.
-    if (coinTextureLoaded && coinBlock.isCoinPopping()) {
-        const float progress = coinBlock.getCoinPopProgress();
-        const float rise = progress * 24.0f;  // world units (one tile = 16)
-        sf::Sprite coin(coinTexture);
-        coin.setTextureRect(atlas::Coin);
-        coin.setScale({SpriteScaleX, SpriteScaleY});
-        coin.setOrigin({0.0f, 0.0f});
-        coin.setPosition({std::round(coinBlock.getPosition().x),
-                          std::round(coinBlock.getPosition().y - rise)});
-        if (progress > 0.75f) {  // fade out over the last quarter
-            const float fade = (1.0f - progress) / 0.25f;
-            coin.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(fade * 255.0f)));
-        }
-        window.draw(coin);
-    }
 }
 
 }

@@ -5,10 +5,11 @@
 
 namespace model {
 
-// A '?' block. The first bump from below collects the coin (200 points) and starts a
-// short bounce; afterwards it renders as an opened (used) block. The coin is delivered
-// through the event-driven hook (BlockHitEvent), not via onCollision — bump detection
-// lives in CollisionManager.
+// A '?' block. The first bump from below collects the reward (weighted heavily towards a
+// plain coin) and starts a short bounce; afterwards it renders as an opened (used) block.
+// Rewards are delivered through the event-driven hook (BlockHitEvent), not via onCollision
+// — bump detection lives in CollisionManager. The coin is a spawned Coin entity that pops
+// out of the block's own cell; power-ups are spawned at the cell above it.
 class CoinBlock : public Block {
 public:
     CoinBlock(Vector2 position, Vector2 size);
@@ -16,21 +17,11 @@ public:
     // True while the coin is still inside (closed '?' sprite).
     bool isOpened() const;
 
-    // Pop animation: while the coin is bouncing out of the block the renderer draws the
-    // coin sprite rising above it (see CoinBlockRenderer). Timer advances via update().
-    bool isCoinPopping() const;
-    // 0..1, 0 = just bumped, 1 = pop finished (coin faded out).
-    float getCoinPopProgress() const;
-
-    void update(float deltaTime) override;
-
-    // Bumped from below by the player: collects the coin exactly once.
+    // Bumped from below by the player: collects the reward exactly once.
     void onBlockHit(const BlockHitEvent& event) override;
 
 private:
     bool coinAvailable;
-    float coinPopElapsed;
-    static constexpr float CoinPopDuration = 0.7f;
 
     // Reward table, rolled once per bump. Weighted heavily towards coins: a power-up from
     // every '?' block reads as far too generous for a Mario level, so the item rate is kept

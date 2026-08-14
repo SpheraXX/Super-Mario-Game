@@ -90,6 +90,11 @@ void CollisionManager::update(std::vector<Entity*>& entities, float deltaTime) {
         auto* character = dynamic_cast<Character*>(entity);
         if (!character || character->isDying()) continue;
         character->isGrounded = false;
+        // Trigger bodies (a popped coin, decorative floats) take no part in collision at
+        // all: the tile pass must not resolve them either, or a coin falling back onto
+        // its block would be snapped onto the block's top and stuck there instead of
+        // returning to its spawn height and disappearing.
+        if (character->hitbox.isTrigger) continue;
         processTileCollisions(*character, deltaTime);
     }
 

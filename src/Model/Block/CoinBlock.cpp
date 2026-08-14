@@ -2,6 +2,7 @@
 
 #include "Model/Character.h"
 #include "Model/Core/World.h"
+#include "Model/Item/Coin.h"
 #include "Model/Item/FireFlower.h"
 #include "Model/Item/Mushroom.h"
 #include "Model/Item/Starman.h"
@@ -10,9 +11,6 @@
 #include <random>
 
 #include "Model/Core/GameManager.h"
-
-#include <algorithm>
-#include <string>
 
 namespace model {
 
@@ -28,8 +26,7 @@ float randomChance() {
 
 CoinBlock::CoinBlock(Vector2 position, Vector2 size)
     : Block(position, size, 'C'),
-      coinAvailable(true),
-      coinPopElapsed(CoinPopDuration) {
+      coinAvailable(true) {
     // Solid block: the default hitbox (from Entity) is already full-size, but be
     // explicit so the block always participates in entity-vs-entity collisions.
     hitbox = Hitbox({0.0f, 0.0f}, size.x, size.y, false, CollisionLayer::Environment);
@@ -39,32 +36,17 @@ bool CoinBlock::isOpened() const {
     return !coinAvailable;
 }
 
-bool CoinBlock::isCoinPopping() const {
-    return coinPopElapsed < CoinPopDuration;
-}
-
-float CoinBlock::getCoinPopProgress() const {
-    return coinPopElapsed / CoinPopDuration;
-}
-
-void CoinBlock::update(float deltaTime) {
-    Block::update(deltaTime);
-    if (coinPopElapsed < CoinPopDuration) {
-        coinPopElapsed = std::min(coinPopElapsed + deltaTime, CoinPopDuration);
-    }
-}
-
 void CoinBlock::onBlockHit(const BlockHitEvent& event) {
     // Dispatched when the player's top face bumps this block's bottom. A block is spent
     // exactly once; afterwards it stays as a plain used block.
     if (!coinAvailable) return;
 
     coinAvailable = false;
-    coinPopElapsed = 0.0f;  // start the pop-out animation
     startBounce();
 
-    // Reward is rolled once per bump. Spawned items rise out of the block's top face; the
-    // world queues them so the running update loop is never invalidated.
+    // Reward is rolled once per bump. Power-ups are spawned in the cell above the block
+    // and rise into play; the world queues everything so the running update loop is
+    // never invalidated.
     const Vector2 spawnPos{getPosition().x,
                            getPosition().y - static_cast<float>(TileMap::TileHeight)};
     const float roll = randomChance();
@@ -84,9 +66,11 @@ void CoinBlock::onBlockHit(const BlockHitEvent& event) {
     } else {
         // Plain coin. Credited here and now rather than when the sprite is touched — the
         // coin is never in doubt, and the player is underneath the block, not where the
-        // coin pops to. The pop-out animation is purely visual; nothing is spawned.
+        // coin pops to. The Coin entity is only the flourish: it pops out of the block's
+        // own cell and disappears the moment it falls back to its starting height.
         GameManager::instance().addCoin();
         GameManager::instance().addScore(CoinScore);
+        if (world) world->spawn(std::make_unique<Coin>(getPosition()));
     }
 }
 

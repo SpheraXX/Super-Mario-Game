@@ -302,7 +302,15 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
         // Resolve the single best player-vs-block contact. Neighbouring blocks that only
         // overlapped because of the pre-push positions are intentionally skipped.
         if (bestBlock) {
-            resolveEntityInteraction(*a, *bestBlock, bestSide);
+            // The pair is unordered — either end of it can be the block — so pick the
+            // solid one for the bump scan; the other is the player who bumped.
+            Entity* const player = a->hitbox.layer == CollisionLayer::Player ? a : bestBlock;
+            Entity* const block = (player == a) ? bestBlock : a;
+            // A real bump also knocks out whatever stands on the block's top face; the
+            // block reacts first, then the scan runs over the same active entity list.
+            if (resolveEntityInteraction(*a, *bestBlock, bestSide)) {
+                defeatEnemiesAbove(*block, *player, entities);
+            }
         }
     }
 }
@@ -332,7 +340,7 @@ CollisionType CollisionManager::calculateSide(const Entity& a, const Entity& b) 
     }
 }
 
-void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionType sideA) {
+bool CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionType sideA) {
     // Notify both entities of the collision: each one reacts through its own hooks
     // (e.g. CoinBlock collects its coin when bumped from below).
     a.onCollision(b, sideA);
@@ -354,7 +362,7 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
     // by Player (a Character) and the Enemy layer only by Enemy subclasses.
     const bool aIsPlayer = a.hitbox.layer == CollisionLayer::Player;
     const bool bIsPlayer = b.hitbox.layer == CollisionLayer::Player;
-    if (aIsPlayer == bIsPlayer) return;
+    if (aIsPlayer == bIsPlayer) return false;
 
     Entity* player = aIsPlayer ? &a : &b;
     Entity* other = aIsPlayer ? &b : &a;
@@ -371,7 +379,7 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         // skipped on purpose: a star hit is a defeat, not a pass-through-while-dying case.
         if (hero.isStar()) {
             enemy.onHit(*player);
-            return;
+            return false;
         }
         // Just stomped, or already squished: the player is falling on past it (or standing
         // in the shell it left behind), so the pair does not interact at all. Holding the
@@ -379,7 +387,7 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         // while he is still inside the enemy — see Enemy::acceptsPlayerContact.
         if (!enemy.acceptsPlayerContact()) {
             enemy.holdStompLockout();
-            return;
+            return false;
         }
         if (playerSide == CollisionType::Bottom && enemy.isStompable()) {
             // Player landed on top of a stompable enemy: squash it and bounce. The bounce
@@ -397,6 +405,7 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
             // that cannot be stomped at all (Spiny's spikes, Bowser): take damage.
             playerCharacter.takeDamage(enemy.getDamageValue());
         }
+        return false;
     } else if (other->isSolid()) {
         // Solid blocks stop the player (push-out). A bump from below also dispatches the
         // block-hit event — but only when the head is moving into the block fast enough
@@ -407,9 +416,43 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         if (playerSide == CollisionType::Top && upwardSpeed >= MinBumpSpeed) {
             if (auto* block = dynamic_cast<Block*>(other)) {
                 block->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
+                return true;
             }
         }
+        return false;
     }
+    return false;
+}
+
+bool CollisionManager::defeatEnemiesAbove(const Entity& block, Entity& player,
+                                          const std::vector<Entity*>& entities) {
+    // A real bump knocks out every enemy standing on the block's top face: the classic
+    // headbutt flip. Only feet actually resting on the top within the standing epsilon
+    // qualify — an enemy brushing the block's side or falling past it is untouched. The
+    // Enemy layer is the type contract for the cast, as in resolveEntityInteraction.
+    const float topY = block.getPosition().y + block.hitbox.offset.y;
+    const float blockLeft = block.getPosition().x + block.hitbox.offset.x;
+    const float blockRight = blockLeft + block.hitbox.width;
+    bool defeatedAny = false;
+
+    for (Entity* entity : entities) {
+        if (!entity || !entity->isActive || entity->isDying()) continue;
+        if (entity->hitbox.layer != CollisionLayer::Enemy) continue;
+
+        const float feetY = entity->getPosition().y + entity->hitbox.offset.y
+                            + entity->hitbox.height;
+        if (std::fabs(feetY - topY) > TopRestEpsilon) continue;
+
+        const float myLeft = entity->getPosition().x + entity->hitbox.offset.x;
+        const float myRight = myLeft + entity->hitbox.width;
+        if (myRight <= blockLeft || myLeft >= blockRight) continue;
+
+        // The same one-shot flip-and-fall defeat a spinning shell deals out; no stomp
+        // lockout and no bounce — the bump already spent the player's upward motion.
+        static_cast<Enemy&>(*entity).onHit(player);
+        defeatedAny = true;
+    }
+    return defeatedAny;
 }
 
 void CollisionManager::pushOutOfBlock(Character& mover, const Entity& blocker, CollisionType moverSide) {

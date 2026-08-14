@@ -1,6 +1,6 @@
 #include "Controller/AppEngine.h"
 
-#include "Controller/PlayState.h"
+#include "Controller/MainMenuState.h"
 #include "Model/Map/TileMap.h"
 
 #include <SFML/System/Clock.hpp>
@@ -26,7 +26,10 @@ constexpr float MaxFrameTime = 0.25f;
 
 // Starts on the first windowed size; applyDisplayMode() overwrites this before the first
 // frame, including for fullscreen, where the width is measured off the display.
-unsigned int AppEngine::logicalWidth = AppEngine::SizeOptions[0].logicalWidth;
+unsigned int AppEngine::logicalWidth  = AppEngine::SizeOptions[0].logicalWidth;
+float        AppEngine::displayOffsetX = 0.f;
+float        AppEngine::displayOffsetY = 0.f;
+unsigned int AppEngine::displayScale   = AppEngine::SizeOptions[0].scale;
 
 unsigned int AppEngine::screenWidth() {
     return logicalWidth;
@@ -41,7 +44,7 @@ AppEngine::AppEngine() {
         throw std::runtime_error("Could not create the offscreen render target");
     }
 
-    states.pushState(std::make_unique<PlayState>());
+    states.pushState(std::make_unique<MainMenuState>());
     states.applyPending(); // make the initial state live before the loop starts
 }
 
@@ -104,6 +107,11 @@ void AppEngine::applyDisplayMode() {
     presentView = sceneView;
     presentView.setViewport({{offsetX / client.x, offsetY / client.y},
                              {used.x / client.x, used.y / client.y}});
+
+    // Store statics so windowToLogical() works without an engine reference.
+    displayOffsetX = offsetX;
+    displayOffsetY = offsetY;
+    displayScale   = scale;
 
     std::cerr << "display: " << (fullscreen ? "fullscreen" : "windowed")
               << " window " << client.x << 'x' << client.y
@@ -212,4 +220,14 @@ void AppEngine::render() {
     window.display();
 }
 
+sf::Vector2f AppEngine::windowToLogical(sf::Vector2i windowPos) {
+    // Physical pixels → logical pixels.
+    // Subtract the letterbox bars, then divide by the integer scale.
+    const float lx = (static_cast<float>(windowPos.x) - displayOffsetX)
+                     / static_cast<float>(displayScale);
+    const float ly = (static_cast<float>(windowPos.y) - displayOffsetY)
+                     / static_cast<float>(displayScale);
+    return {lx, ly};
 }
+
+}  // namespace controller

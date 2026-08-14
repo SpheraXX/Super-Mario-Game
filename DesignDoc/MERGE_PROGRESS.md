@@ -6,12 +6,14 @@ Resumable state for the `tmp` × `feat` integration. Plan: `MERGE_TASKS.md`. Dec
 | | |
 |---|---|
 | Branch | `integration/merge-tmp-feat` (branched from `tmp` @ `39bcf13`) |
-| Last updated | 2026-08-11 |
-| **Status** | **All 3 tasks complete — awaiting human play-test sign-off** |
+| Last updated | 2026-08-14 |
+| **Status** | **All 3 tasks complete + stomp-routing follow-up — awaiting human play-test sign-off** |
 
 ## Commits
 
 ```
+4f1dc2d  feat: per-character stomp bounce tuning
+90aea68  fix: restore stomp bounce, isStompable routing and star contact
 59629d9  Task 3: player abilities, coin-block rewards, tuning and cleanup
 2416b90  Task 2: port feat's content layer and the runtime spawn channel
 8eb6d50  docs: add resumable merge progress tracker
@@ -41,6 +43,24 @@ Map `assets/maps/feat1_1.map` adapted from feat's `level1_1` — now the default
 `PlayerState` base with Star forwarding **and** ticking the wrapped state; CoinBlock random rewards
 via `world->spawn()` behind tmp's `onBlockHit`; D-5/D-7/D-8/D-9 tuning; all 28 `trace()` calls
 removed; `CMakeUserPresets.json` untracked.
+
+## ✅ Follow-up — stomp routing restored (90aea68, 4f1dc2d)
+`MERGE_PLAN.md` §5.2 listed `isStompable()` routing among the merge tasks; it and the stomp
+bounce were dropped in the resolution and went unnoticed until the play test. `90aea68`
+re-applies all three behaviors in `resolveEntityInteraction`:
+- **Bounce** — landing on a stompable enemy squashes it and relaunches the player. The bounce
+  is a rebound, not the fixed `-350` kick: `bounceUp = max(0, ratio * fallSpeed - constant)`
+  with `fallSpeed` = downward speed at impact. The `max(0, …)` floor absorbs slow drops; a
+  hard fall throws the player right back up. Horizontal momentum is kept.
+- **`isStompable()` gate** — only stompable enemies are squashed from above; landing on
+  Spiny / Bowser / Piranha Plant now damages the player again instead of squashing them.
+- **Star contact** — a starred player defeats any enemy on contact (checked before the
+  stomp lockout, which is skipped for star hits).
+`4f1dc2d` moves the two tuneables onto `Player` (`getStompBounceRatio` /
+`getStompBounceConstant`, polymorphic like `getWalkSpeed`): stock defaults live on `Player`
+(0.85 / 30), Mario keeps them explicitly, Luigi springs higher (0.9 / 20). The
+`dynamic_cast` checkpoint count is unchanged (2); the player cast uses the documented
+layer contract instead.
 
 ---
 
@@ -83,6 +103,11 @@ is build verification plus process-level runtime checks. **These still need play
 - [ ] Fire Mario shoots with **X**; cooldown ≈ 0.5s; a starred Fire Mario can still shoot
 - [ ] `?` block drops all four rewards over ~20 hits, **mostly coins**
 - [ ] Big Mario smashes a brick; small Mario bounces
+- [ ] **Stomp:** Goomba squash + bounce; bounce height scales with fall height (near-apex trickle ≈ no bounce, full drop relaunches ~2.5 tiles); a held jump key does **not** boost the bounce
+- [ ] **Stomp ladder:** Koopa walking → shell; shell → spins + bounce; spinning → idle + bounce
+- [ ] **Non-stompables:** landing on Spiny / Bowser / Piranha Plant from above **damages** the player and does not squash them; side/below contact still damages
+- [ ] **Star:** touching Goomba / Spiny / Koopa defeats them; Bowser drains health per hit
+- [ ] Mario (stock 0.85/30) vs Luigi (0.9/20) bounce feels slightly different
 - [ ] Hammer Bro throws; Spiny egg lobbed; Lakitu hovers; Piranha Plant draws behind its pipe
 - [ ] Enemies wake on camera approach and do **not** re-arm when backtracking
 - [ ] Damage → blink and invulnerability begin and end together

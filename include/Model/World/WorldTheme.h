@@ -15,7 +15,8 @@ namespace model {
 class WorldTheme {
 public:
     WorldTheme(WorldType type, sf::Color backgroundColor, std::string tilesetPath,
-          float gravityScale, float maxFallScale, float horizontalDrag);
+          float gravityScale, float maxFallScale, float horizontalDrag,
+          float deathBounceSpeed);
 
     WorldType getType() const;
     const sf::Color& getBackgroundColor() const;
@@ -28,6 +29,9 @@ public:
     // Extra horizontal resistance per second (0 = none). Underwater drag keeps motion
     // floaty and makes the player settle instead of skating around.
     float getHorizontalDrag() const;
+    // Upward launch of a dying body (units/s). Overworld and Castle use the base -200;
+    // Underwater's much smaller pop keeps the slow death fall from hovering.
+    float getDeathBounceSpeed() const;
 
 private:
     WorldType type;
@@ -36,6 +40,7 @@ private:
     float gravityScale;
     float maxFallScale;
     float horizontalDrag;
+    float deathBounceSpeed;
 };
 
 }

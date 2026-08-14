@@ -6,7 +6,6 @@
 #include "Model/Item/FireFlower.h"
 #include "Model/Item/Mushroom.h"
 #include "Model/Item/Starman.h"
-#include "Model/Map/TileMap.h"
 
 #include <random>
 
@@ -44,11 +43,10 @@ void CoinBlock::onBlockHit(const BlockHitEvent& event) {
     coinAvailable = false;
     startBounce();
 
-    // Reward is rolled once per bump. The mushroom and coin come out of the block's own
-    // cell; power-ups that do not emerge yet (Flower, Star) are spawned in the cell
-    // above. The world queues everything so the running update loop is never invalidated.
-    const Vector2 spawnPos{getPosition().x,
-                           getPosition().y - static_cast<float>(TileMap::TileHeight)};
+    // Reward is rolled once per bump. Every reward comes out of the block's own cell:
+    // the item is spawned inside it and rises through the block face via ItemEmergence
+    // (the coin pops on its own physics). The world queues everything so the running
+    // update loop is never invalidated.
     const float roll = randomChance();
 
     // A mushroom walks away from the side the player bumped from. Direction is a Character
@@ -58,16 +56,23 @@ void CoinBlock::onBlockHit(const BlockHitEvent& event) {
     const int bumpDirection = bumper ? bumper->getDirection() : 1;
 
     if (roll < MushroomChance) {
-        // Spawned inside the block and risen out through its face, then it walks.
         if (world) {
             auto mushroom = std::make_unique<Mushroom>(getPosition(), bumpDirection);
             mushroom->beginEmergence(getPosition(), getSize());
             world->spawn(std::move(mushroom));
         }
     } else if (roll < MushroomChance + FlowerChance) {
-        if (world) world->spawn(std::make_unique<FireFlower>(spawnPos));
+        if (world) {
+            auto flower = std::make_unique<FireFlower>(getPosition());
+            flower->beginEmergence(getPosition(), getSize());
+            world->spawn(std::move(flower));
+        }
     } else if (roll < MushroomChance + FlowerChance + StarmanChance) {
-        if (world) world->spawn(std::make_unique<Starman>(spawnPos));
+        if (world) {
+            auto starman = std::make_unique<Starman>(getPosition());
+            starman->beginEmergence(getPosition(), getSize());
+            world->spawn(std::move(starman));
+        }
     } else {
         // Plain coin. Credited here and now rather than when the sprite is touched — the
         // coin is never in doubt, and the player is underneath the block, not where the

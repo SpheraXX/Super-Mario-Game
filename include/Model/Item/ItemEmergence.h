@@ -26,7 +26,9 @@ public:
     bool advance(Item& item, float deltaTime);
 
 private:
-    static constexpr float RiseSpeed = 60.0f;
+    // One block cell (16 world units) in a brisk 0.2s. Tune here, not per item: every
+    // power-up shares the same pop.
+    static constexpr float RiseSpeed = 80.0f;
 
     float targetY;
     bool done = false;

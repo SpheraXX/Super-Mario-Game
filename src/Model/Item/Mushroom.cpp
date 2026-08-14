@@ -9,10 +9,15 @@ Mushroom::Mushroom(Vector2 position, int direction)
     velocity.x = WalkSpeed * direction;
 }
 
-void Mushroom::update(float deltaTime) {
+void Mushroom::updateBehavior(float deltaTime) {
     // Keep walking in the current direction; Character::update applies gravity + movement.
     velocity.x = WalkSpeed * getDirection();
     Character::update(deltaTime);
+}
+
+void Mushroom::onEmergenceComplete() {
+    // Fully clear of the block: start walking away from the side the player bumped from.
+    velocity.x = WalkSpeed * getDirection();
 }
 
 void Mushroom::onTileCollision(char /* tile */, CollisionType side) {

@@ -12,7 +12,10 @@ class Mushroom : public Item {
 public:
     Mushroom(Vector2 position, int direction = 1);
 
-    void update(float deltaTime) override;
+    // The Item emergence gate calls this once the mushroom has fully cleared its block,
+    // so it starts walking out of the block rather than drifting.
+    void updateBehavior(float deltaTime) override;
+    void onEmergenceComplete() override;
     void onTileCollision(char tile, CollisionType side) override;
     void onCollect(Entity& collector) override;
 

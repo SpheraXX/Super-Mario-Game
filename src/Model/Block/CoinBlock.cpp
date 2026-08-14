@@ -44,9 +44,9 @@ void CoinBlock::onBlockHit(const BlockHitEvent& event) {
     coinAvailable = false;
     startBounce();
 
-    // Reward is rolled once per bump. Power-ups are spawned in the cell above the block
-    // and rise into play; the world queues everything so the running update loop is
-    // never invalidated.
+    // Reward is rolled once per bump. The mushroom and coin come out of the block's own
+    // cell; power-ups that do not emerge yet (Flower, Star) are spawned in the cell
+    // above. The world queues everything so the running update loop is never invalidated.
     const Vector2 spawnPos{getPosition().x,
                            getPosition().y - static_cast<float>(TileMap::TileHeight)};
     const float roll = randomChance();
@@ -58,7 +58,12 @@ void CoinBlock::onBlockHit(const BlockHitEvent& event) {
     const int bumpDirection = bumper ? bumper->getDirection() : 1;
 
     if (roll < MushroomChance) {
-        if (world) world->spawn(std::make_unique<Mushroom>(spawnPos, bumpDirection));
+        // Spawned inside the block and risen out through its face, then it walks.
+        if (world) {
+            auto mushroom = std::make_unique<Mushroom>(getPosition(), bumpDirection);
+            mushroom->beginEmergence(getPosition(), getSize());
+            world->spawn(std::move(mushroom));
+        }
     } else if (roll < MushroomChance + FlowerChance) {
         if (world) world->spawn(std::make_unique<FireFlower>(spawnPos));
     } else if (roll < MushroomChance + FlowerChance + StarmanChance) {

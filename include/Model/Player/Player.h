@@ -52,6 +52,14 @@ public:
     // this instead of dynamic_casting the concrete type.
     virtual bool isLuigi() const;
 
+    // Stomp-bounce tuning, read by CollisionManager when the player lands on a stompable
+    // enemy: bounceUp = max(0, getStompBounceRatio() * fallSpeed - getStompBounceConstant()),
+    // where fallSpeed is his downward speed at the moment of impact. Movement tuning is
+    // polymorphic (see getWalkSpeed), so each character reports its own rebound; the Player
+    // defaults are the stock feel and Mario inherits them.
+    virtual float getStompBounceRatio() const;
+    virtual float getStompBounceConstant() const;
+
     void becomeSuper();
     void becomeFire();
     void becomeStar();
@@ -107,6 +115,12 @@ protected:
     // under the 160px of a 5-tile wall — the deliberate "barely 4 blocks" jump. The weak
     // graze at the top of that arc is filtered by the bump-speed gate in CollisionManager.
     static constexpr float JumpInitialSpeed = -110.0f;
+    // Stock stomp-bounce defaults (see getStompBounceRatio/getStompBounceConstant): a rebound
+    // off the impact speed, not a fixed kick. At a normal ~350px/s drop, 0.85 * 350 - 30 =
+    // 267px/s upward — a classic-feel relaunch; at a ~35px/s trickle the max(0, ...) floor
+    // cuts the bounce to nothing, so a slow drop is merely absorbed.
+    static constexpr float StompBounceRatio = 0.85f;
+    static constexpr float StompBounceConstant = 30.0f;
     // Horizontal inertia: velocity approaches the target speed, never snapping.
     //
     // Retuned for responsiveness. The original 800/600/1600 (with the Overworld's 0.4/s

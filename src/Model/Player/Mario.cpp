@@ -30,4 +30,12 @@ float Mario::getJumpAccel() const {
     return JumpAccel;
 }
 
+float Mario::getStompBounceRatio() const {
+    return StompBounceRatio;
+}
+
+float Mario::getStompBounceConstant() const {
+    return StompBounceConstant;
+}
+
 }

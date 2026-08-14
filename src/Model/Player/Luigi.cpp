@@ -25,4 +25,12 @@ float Luigi::getJumpAccel() const {
     return JumpAccel;
 }
 
+float Luigi::getStompBounceRatio() const {
+    return StompBounceRatio;
+}
+
+float Luigi::getStompBounceConstant() const {
+    return StompBounceConstant;
+}
+
 }

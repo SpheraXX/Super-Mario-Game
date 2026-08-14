@@ -35,16 +35,6 @@ bool isGroundTile(char symbol) {
 // this gate is what keeps the "barely 4 blocks" jump from opening blocks 5 tiles up.
 constexpr float MinBumpSpeed = 100.0f;
 
-// The stomp bounce is a rebound, not a fixed kick: the player leaves the enemy with a
-// fraction of the speed he fell at, minus a friction-like constant.
-//   bounceUp = max(0, StompBounceRatio * fallSpeed - StompBounceConstant)
-// where fallSpeed is his downward speed at the moment of impact (engine y, +y down). The
-// max(0, ...) floor means a slow drop is merely absorbed while a hard fall throws him right
-// back up. Tuned so a normal drop around 350px/s comes out near the classic -350 launch.
-// Stage-2 defaults on Player mirror these; keep them in sync.
-constexpr float StompBounceRatio = 0.85f;
-constexpr float StompBounceConstant = 30.0f;
-
 // Landing tolerance for the downward snap. The feet only snap onto a tile when they crossed
 // its top edge this frame (foot above the top at the start, on/below it at the end). A
 // player brushing a block's side mid-jump has his foot inside the tile without ever having
@@ -373,10 +363,13 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
 
     if (other->hitbox.layer == CollisionLayer::Enemy) {
         Enemy& enemy = static_cast<Enemy&>(*other);
+        // The Player layer is only ever carried by Player, so this cast is safe by the
+        // same layer contract as the Character cast above.
+        Player& hero = static_cast<Player&>(playerCharacter);
         // Star power overrides every stomp rule: contact defeats any enemy — no stomp
         // requirement, so Spiny's spikes and Bowser fall to it too. The stomp lockout is
         // skipped on purpose: a star hit is a defeat, not a pass-through-while-dying case.
-        if (auto* hero = dynamic_cast<Player*>(player); hero && hero->isStar()) {
+        if (hero.isStar()) {
             enemy.onHit(*player);
             return;
         }
@@ -390,12 +383,14 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         }
         if (playerSide == CollisionType::Bottom && enemy.isStompable()) {
             // Player landed on top of a stompable enemy: squash it and bounce. The bounce
-            // is a rebound off the impact speed — a fraction of the speed he fell at minus
-            // a friction-like constant — not a fixed kick: a hard fall throws him right
-            // back up, a slow drop is merely absorbed. Horizontal momentum is kept.
+            // is a rebound off the impact speed — a per-character fraction of the speed he
+            // fell at minus a friction-like constant (see Player::getStompBounceRatio) —
+            // not a fixed kick: a hard fall throws him right back up, a slow drop is merely
+            // absorbed. Horizontal momentum is kept.
             enemy.stompedBy(*player);
             const float fallSpeed = std::max(0.0f, playerCharacter.getVelocity().y);
-            const float bounceUp = std::max(0.0f, StompBounceRatio * fallSpeed - StompBounceConstant);
+            const float bounceUp = std::max(0.0f,
+                hero.getStompBounceRatio() * fallSpeed - hero.getStompBounceConstant());
             playerCharacter.setVelocity({playerCharacter.getVelocity().x, -bounceUp});
         } else {
             // Player hit the enemy from the side or from below — or landed on something

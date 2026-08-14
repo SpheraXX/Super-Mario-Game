@@ -258,6 +258,14 @@ bool Player::isLuigi() const {
     return false;
 }
 
+float Player::getStompBounceRatio() const {
+    return StompBounceRatio;
+}
+
+float Player::getStompBounceConstant() const {
+    return StompBounceConstant;
+}
+
 PlayerState& Player::getState() {
     return *state;
 }

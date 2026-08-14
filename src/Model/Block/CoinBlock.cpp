@@ -2,7 +2,6 @@
 
 #include "Model/Character.h"
 #include "Model/Core/World.h"
-#include "Model/Item/Coin.h"
 #include "Model/Item/FireFlower.h"
 #include "Model/Item/Mushroom.h"
 #include "Model/Item/Starman.h"
@@ -85,10 +84,9 @@ void CoinBlock::onBlockHit(const BlockHitEvent& event) {
     } else {
         // Plain coin. Credited here and now rather than when the sprite is touched — the
         // coin is never in doubt, and the player is underneath the block, not where the
-        // coin pops to. The spawned Coin is only the flourish.
+        // coin pops to. The pop-out animation is purely visual; nothing is spawned.
         GameManager::instance().addCoin();
         GameManager::instance().addScore(CoinScore);
-        if (world) world->spawn(std::make_unique<Coin>(spawnPos));
     }
 }
 

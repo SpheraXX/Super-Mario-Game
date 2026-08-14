@@ -7,7 +7,7 @@ Resumable state for the `tmp` × `feat` integration. Plan: `MERGE_TASKS.md`. Dec
 |---|---|
 | Branch | `integration/merge-tmp-feat` (branched from `tmp` @ `39bcf13`) |
 | Last updated | 2026-08-14 |
-| **Status** | **All 3 tasks complete + stomp-routing follow-up — awaiting human play-test sign-off** |
+| **Status** | **All 3 tasks complete + stomp follow-up + map-format unification (Stage 1, uncommitted) — awaiting human play-test sign-off** |
 
 ## Commits
 
@@ -62,6 +62,43 @@ re-applies all three behaviors in `resolveEntityInteraction`:
 `dynamic_cast` checkpoint count is unchanged (2); the player cast uses the documented
 layer contract instead.
 
+## ✅ Follow-up 2 — map-format unification (fixes the Koopa sink; working tree, uncommitted)
+The debug maps marked enemies with letters (`'E'` Goomba, `'K'` Koopa) while the feat maps
+used digits (EnemyFactory ids) — **two live enemy readers** in `LevelScene::resetLevel`. The
+letter path constructed enemies directly with **top-at-cell** placement, so the 23px Koopa
+spawned with its feet 7px inside the ground row below the marker; the tile pass's landing
+gate (`prevFootY > tileTop + LandingEpsilon`, `CollisionManager`) deliberately refuses to
+snap a body already inside a tile (side-brush protection), so the Koopa was never grounded
+and sank. The digit path (`EnemyFactory::footAligned`) already handled tall bodies — exactly
+why `feat1_1.map`'s digit Koopas were fine and the debug maps' letter Koopas were not.
+
+Resolution (decision: feat's digit format wins, maps converted rather than loader aliases):
+- `debug.map` / `debug2.map` / `debug3.map` converted `'E'`→`'0'`, `'K'`→`'1'` (Goomba=0,
+  Koopa=1 in `EnemyFactory::Id`). No other symbol differs between the two formats; the
+  uncommitted WIP layout of `debug3.map` (2-wide pipe tests) was preserved.
+- The `'E'`/`'K'` switch cases were deleted from `LevelScene::resetLevel`; `EnemyFactory`
+  is again the only place an enemy is constructed for a level (as its header documents).
+- Contract comments updated (`LevelScene.cpp` resetLevel header + digit-loop note,
+  `TileMap.h` castle-symbol note): markers are the digits 0-9 in the cell directly above
+  the ground; every enemy's feet rest on that marker cell's bottom edge.
+
+Why the Koopa sink is dead — chain for `debug.map`'s `'1'` at grid row 2, col 18:
+- Load: digit stripped to `'.'`, `SpawnPoint{1, 2, 18}`.
+- Factory: Koopa constructed at the marker cell's top-left `(288, 208)`, then `footAligned`
+  drops it by the overhang `23 − 16 = 7` → `(288, 201)`; feet = `224` = ground top exactly.
+- Landing gate never trips (feet are flush with the tile top, not inside it); grounding
+  works normally every frame.
+- The stomp→shell shrink (`Koopa::onStomped`) still re-anchors the feet — consistent with
+  the feet-based placement.
+
+Spawn-site audit for the same tall-body hazard (all safe; no change needed):
+- `'M'` Mario / fallback Mario / `'C'` / `'#'` / `'B'`: 16px tile-exact bodies — feet land
+  exactly on the cell bottom edge.
+- `PortalSystem::landingY`: `groundTop - playerHeight` — explicitly size-aware (and the
+  pipe-cap variant).
+- `PiranhaPlant` (digit 8): documented exception — hangs off the pipe below the marker
+  (+16 offset), never stands on the ground.
+
 ---
 
 ## Checkpoint status — automated: ALL PASS
@@ -115,6 +152,13 @@ is build verification plus process-level runtime checks. **These still need play
 - [ ] Flagpole → clear sequence → level-complete overlay
 - [ ] Pipe/portal transitions; timer expiry kills; death → life lost → Game Over at zero
 
+**Map-format unification (Follow-up 2):**
+- [ ] `debug.map`: the Goomba at col 15 and the Koopa at col 18 stand **flush on the ground** with no sink-in (the reported bug); both overlap the ground line only with the renderer's art buffer
+- [ ] Stomp the debug.map Koopa → shell still lands feet-anchored; stomp again → it pops up from the shell spot (never sinks)
+- [ ] **No visual difference** in `feat1_1.map` — digit Goombas / Koopas / Paratroopas spawn exactly as before
+- [ ] `debug2.map` (underwater carousels) and `debug3.map` (3 areas + portal transitions, including the 2-wide pipe WIP) load and play; enemies flush on their ground rows in every area
+- [ ] Blank cells that used to hold `E`/`K` render as empty space (no tile, no ghost sprite)
+
 ---
 
 ## Deferred / not done
@@ -130,13 +174,21 @@ is build verification plus process-level runtime checks. **These still need play
   `becomeSuper()`/`becomeFire()`/`becomeStar()`, which only `Player` has. The alternative — hoisting
   those onto `Character` — is worse. Left deliberately.
 - **`CheepCheep` (id 6)** returns nullptr; needs the water/swimming mechanic.
+- **Paratroopa patrol anchor** — `Koopa::flyBaseY` is captured in the constructor from the
+  marker position, but `EnemyFactory::make<>` repositions the body afterwards (feet-aligned,
+  −7px). The patrol arc therefore sits 7px below the intended altitude; a Paratroopa
+  (digit `'2'`) marked directly above the ground dips into it at the bottom of its arc
+  (visible in `feat1_1.map`). Suggested fix for later: `Koopa::reanchorFlight()` (sets
+  `flyBaseY` from the final position), called for winged Koopas in `EnemyFactory::make<>`.
 
 ---
 
 ## Build
 
 ```sh
-cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH="C:/SFML/SFML-3.0.2" -DSFML_STATIC_LIBRARIES=ON
-cmake --build build -j 8
-build/bin/SuperMario.exe
+make
+./main.exe   # run from the repo root (runtime DLLs live there)
 ```
+
+(The repo also carries a CMake setup, but the project builds with the Makefile; the CMake
+`build/` directory from earlier smoke-testing is not used anymore.)

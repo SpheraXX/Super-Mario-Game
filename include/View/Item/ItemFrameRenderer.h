@@ -18,12 +18,6 @@ public:
     explicit ItemFrameRenderer(sf::IntRect frame)
         : SpriteEntityRenderer<T>(atlas::ItemSheet, /*sourceFacesRight=*/true), frame(frame) {}
 
-    // For items whose art lives on a sheet without an alpha channel, where a flat backdrop
-    // colour stands in for transparency and has to be masked out at load.
-    ItemFrameRenderer(sf::IntRect frame, const std::string& sheetPath, sf::Color colorKey)
-        : SpriteEntityRenderer<T>(sheetPath, colorKey, /*sourceFacesRight=*/true),
-          frame(frame) {}
-
 protected:
     void renderTyped(sf::RenderTarget& window, const T& entity,
                      const RenderContext& /* ctx */) const override {

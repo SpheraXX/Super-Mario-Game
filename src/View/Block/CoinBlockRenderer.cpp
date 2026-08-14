@@ -2,9 +2,11 @@
 
 #include "View/Base/EntityRenderUtils.h"
 #include "View/Base/RenderContext.h"
+#include "View/Item/ItemAtlas.h"
 #include "Model/Block/CoinBlock.h"
 #include "Model/World/WorldType.h"
 
+#include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 
@@ -23,16 +25,20 @@ constexpr int UsedBlockAtlasColGold = 9;
 constexpr int UsedBlockAtlasColTeal = 8;
 constexpr int GoldAtlasRow = 7;
 constexpr int TealAtlasRow = 8;
-
-// Coin sprite in super_mario_asset.png (16x16 source tile, gold circle with outline).
-constexpr int CoinAtlasX = 96;
-constexpr int CoinAtlasY = 532;
 }
 
 CoinBlockRenderer::CoinBlockRenderer()
     : textureLoaded(texture.loadFromFile("assets/blocks.png")),
-      coinTextureLoaded(coinTexture.loadFromFile("assets/super_mario_asset.png")) {
+      coinTextureLoaded(false) {
     texture.setSmooth(false);
+    // The coin lives on the main Mario sheet, which has no alpha channel: the backdrop
+    // is a flat colour keyed out at load (see ItemAtlas), exactly as the item renderers
+    // do. A plain load would draw the sheet's opaque background around the coin.
+    sf::Image sheet;
+    if (sheet.loadFromFile(atlas::MarioAssetSheet)) {
+        sheet.createMaskFromColor(atlas::MarioAssetColorKey);
+        coinTextureLoaded = coinTexture.loadFromImage(sheet);
+    }
     coinTexture.setSmooth(false);
 }
 
@@ -62,7 +68,7 @@ void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
         const float progress = coinBlock.getCoinPopProgress();
         const float rise = progress * 24.0f;  // world units (one tile = 16)
         sf::Sprite coin(coinTexture);
-        coin.setTextureRect({{CoinAtlasX, CoinAtlasY}, {16, 16}});
+        coin.setTextureRect(atlas::Coin);
         coin.setScale({SpriteScaleX, SpriteScaleY});
         coin.setOrigin({0.0f, 0.0f});
         coin.setPosition({std::round(coinBlock.getPosition().x),

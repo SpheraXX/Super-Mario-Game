@@ -16,6 +16,9 @@ public:
 private:
     // Points for smashing a brick, matching the original.
     static constexpr int BreakScore = 50;
+
+    // Erase the brick's cell from the static map through the world channel.
+    void eraseFromMap();
 };
 
 }

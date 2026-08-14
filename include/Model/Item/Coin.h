@@ -35,8 +35,9 @@ private:
     // The height the coin popped from: it disappears when it falls back to it.
     float spawnY;
 
-    // Tuned like the classic: a snappy pop up, a short arc, gone on the way back down.
-    static constexpr float PopSpeed = -210.0f;
+    // Rise speed for a two-cell pop: the classic one-cell arc used 210, and a pop's
+    // height scales with the SQUARE of its speed, so doubling the arc needs ×sqrt(2).
+    static constexpr float PopSpeed = -296.98f;
 };
 
 }

@@ -85,6 +85,7 @@ public:
     // is over.
     void spawn(std::unique_ptr<model::Entity> entity) override;
     const model::Entity* getPlayer() const override;
+    void removeTile(std::size_t row, std::size_t column) override;
 
     // Rebuild the whole entity list from the working grid: called by loadArea and by
     // the owner to restart the level after a death. Idempotent (see the castle paint).

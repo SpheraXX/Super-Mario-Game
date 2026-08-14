@@ -327,6 +327,12 @@ const model::Entity* LevelScene::getPlayer() const {
     return playerPtr;
 }
 
+void LevelScene::removeTile(std::size_t row, std::size_t column) {
+    // A destroyed block's cell becomes air: the entity pass already forgets the inactive
+    // entity, and air keeps the tile pass from grounding bodies on the block's old spot.
+    map.setTile(row, column, '.');
+}
+
 model::Entity* LevelScene::addEntity(std::unique_ptr<model::Entity> entity) {
     if (!entity) return nullptr;
     model::Entity* raw = entity.get();

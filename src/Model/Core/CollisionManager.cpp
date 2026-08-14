@@ -5,6 +5,7 @@
 #include "Model/Enemy/Enemy.h"
 #include "Model/Entity.h"
 #include "Model/Map/TileMap.h"
+#include "Model/Player/Player.h"
 
 #include <algorithm>
 #include <cmath>
@@ -33,6 +34,16 @@ bool isGroundTile(char symbol) {
 // 5 tiles above his feet with only ~162px/s, while a real 4-tile bump lands at ~360px/s —
 // this gate is what keeps the "barely 4 blocks" jump from opening blocks 5 tiles up.
 constexpr float MinBumpSpeed = 100.0f;
+
+// The stomp bounce is a rebound, not a fixed kick: the player leaves the enemy with a
+// fraction of the speed he fell at, minus a friction-like constant.
+//   bounceUp = max(0, StompBounceRatio * fallSpeed - StompBounceConstant)
+// where fallSpeed is his downward speed at the moment of impact (engine y, +y down). The
+// max(0, ...) floor means a slow drop is merely absorbed while a hard fall throws him right
+// back up. Tuned so a normal drop around 350px/s comes out near the classic -350 launch.
+// Stage-2 defaults on Player mirror these; keep them in sync.
+constexpr float StompBounceRatio = 0.85f;
+constexpr float StompBounceConstant = 30.0f;
 
 // Landing tolerance for the downward snap. The feet only snap onto a tile when they crossed
 // its top edge this frame (foot above the top at the start, on/below it at the end). A
@@ -362,6 +373,13 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
 
     if (other->hitbox.layer == CollisionLayer::Enemy) {
         Enemy& enemy = static_cast<Enemy&>(*other);
+        // Star power overrides every stomp rule: contact defeats any enemy — no stomp
+        // requirement, so Spiny's spikes and Bowser fall to it too. The stomp lockout is
+        // skipped on purpose: a star hit is a defeat, not a pass-through-while-dying case.
+        if (auto* hero = dynamic_cast<Player*>(player); hero && hero->isStar()) {
+            enemy.onHit(*player);
+            return;
+        }
         // Just stomped, or already squished: the player is falling on past it (or standing
         // in the shell it left behind), so the pair does not interact at all. Holding the
         // lockout open for as long as they remain overlapped is what stops it expiring
@@ -370,13 +388,18 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
             enemy.holdStompLockout();
             return;
         }
-        if (playerSide == CollisionType::Bottom) {
-            // Player landed on top of the enemy: squash it. His velocity is deliberately
-            // left alone — no bounce. He keeps the momentum he arrived with and drops on
-            // through, rather than being launched back up the way the original does it.
+        if (playerSide == CollisionType::Bottom && enemy.isStompable()) {
+            // Player landed on top of a stompable enemy: squash it and bounce. The bounce
+            // is a rebound off the impact speed — a fraction of the speed he fell at minus
+            // a friction-like constant — not a fixed kick: a hard fall throws him right
+            // back up, a slow drop is merely absorbed. Horizontal momentum is kept.
             enemy.stompedBy(*player);
+            const float fallSpeed = std::max(0.0f, playerCharacter.getVelocity().y);
+            const float bounceUp = std::max(0.0f, StompBounceRatio * fallSpeed - StompBounceConstant);
+            playerCharacter.setVelocity({playerCharacter.getVelocity().x, -bounceUp});
         } else {
-            // Player hit the enemy from the side or from below: take damage.
+            // Player hit the enemy from the side or from below — or landed on something
+            // that cannot be stomped at all (Spiny's spikes, Bowser): take damage.
             playerCharacter.takeDamage(enemy.getDamageValue());
         }
     } else if (other->isSolid()) {

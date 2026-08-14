@@ -168,10 +168,12 @@ void LevelScene::teleportToPortal(const model::Portal& portal) {
 }
 
 // (Re)build the entity list from scratch: the map file drives what spawns where.
-// 'M' = Mario, 'E' = Goomba, 'K' = Koopa, 'C' = CoinBlock, '#'/'B' = BrickBlock.
-// Every entity spawns exactly at its cell (row 0 is the bottom row), so the map
-// encodes both position and height precisely — no support scan, no surprises.
-// Called on enter and after every death (the whole level restarts).
+// 'M' = Mario, 'C' = CoinBlock, '#'/'B' = BrickBlock. Enemy markers are the digits 0-9
+// (EnemyFactory ids), placed in the cell directly above the ground: every enemy's feet
+// rest on that marker cell's bottom edge, so a body taller than one tile is dropped by
+// its overhang (see the digit loop below). Digits are stripped to empty tiles at load,
+// so a marker never doubles as terrain. Called on enter and after every death (the
+// whole level restarts).
 void LevelScene::resetLevel() {
     const std::size_t tileWidth = model::TileMap::TileWidth;
     const std::size_t tileHeight = model::TileMap::TileHeight;
@@ -200,18 +202,6 @@ void LevelScene::resetLevel() {
                         marioSpawned = true;
                     }
                     break;
-                case 'E': {
-                    auto goomba = std::make_unique<model::Goomba>(position);
-                    goomba->setMap(&map);  // for ledge detection
-                    entities.push_back(std::move(goomba));
-                    break;
-                }
-                case 'K': {
-                    auto koopa = std::make_unique<model::Koopa>(position);
-                    koopa->setMap(&map);  // for ledge detection
-                    entities.push_back(std::move(koopa));
-                    break;
-                }
                 case 'C':
                     entities.push_back(std::make_unique<model::CoinBlock>(position, size));
                     break;
@@ -291,7 +281,8 @@ void LevelScene::resetLevel() {
 
     // Enemies placed as digit markers (EnemyFactory ids). These are stripped to empty
     // tiles at load, so they never double as terrain; the factory is the only place an
-    // enemy is constructed for a level.
+    // enemy is constructed for a level. (The old letter markers 'E'/'K' were retired —
+    // the debug maps now use the same digits as the feat maps.)
     for (const model::SpawnPoint& spawn : map.getSpawnPoints()) {
         const model::Vector2 origin = model::TileMap::tileOrigin(spawn.row, spawn.column);
         if (auto enemy = model::EnemyFactory::create(spawn.id, origin)) {

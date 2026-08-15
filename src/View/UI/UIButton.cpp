@@ -36,6 +36,17 @@ void UIButton::setFont(const sf::Font& font, unsigned int cs) {
     charSize = cs;
 }
 
+// ── UIElement overrides ──────────────────────────────────────────────────
+void UIButton::setPosition(float x, float y) {
+    UIElement::setPosition(x, y);
+    background.setPosition(pos);
+}
+
+void UIButton::setSize(float w, float h) {
+    UIElement::setSize(w, h);
+    background.setSize(size);
+}
+
 // ── IClickable ────────────────────────────────────────────────────────────────
 
 void UIButton::onHover(bool hovered) {
@@ -45,6 +56,10 @@ void UIButton::onHover(bool hovered) {
 
 void UIButton::onClick() {
     if (onClickCallback) onClickCallback();
+}
+
+void UIButton::onMouseLeave() {
+    onHover(false);
 }
 
 void UIButton::update(float deltaTime) {
@@ -59,11 +74,18 @@ void UIButton::update(float deltaTime) {
 bool UIButton::handleEvent(const sf::Event& event) {
     if (!visible) return false;
 
+    // Fix Bug: Sticky Hover on MouseLeft
+    if (event.is<sf::Event::MouseLeft>()) {
+        onHover(false);
+        return false;
+    }
+
     if (const auto* moved = event.getIf<sf::Event::MouseMoved>()) {
         // Transform from window pixels to logical game coordinates before hit-test.
         const sf::Vector2f lp = controller::AppEngine::windowToLogical(moved->position);
-        onHover(contains(lp.x, lp.y));
-        return false;
+        bool inside = contains(lp.x, lp.y);
+        onHover(inside);
+        return inside; // Fix Bug: Event Penetration (Consume if inside)
     }
 
     if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>()) {

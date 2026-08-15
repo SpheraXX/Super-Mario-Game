@@ -39,9 +39,13 @@ public:
     void setFont(const sf::Font& font, unsigned int cs);
 
     // ── UIElement overrides ──────────────────────────────────────────────────
+    void setPosition(float x, float y) override;
+    void setSize(float w, float h) override;
+
     void render(sf::RenderTarget& target) override;
     bool handleEvent(const sf::Event& event) override;
     void update(float deltaTime) override;
+    void onMouseLeave() override;
 
     // ── IClickable overrides ─────────────────────────────────────────────────
     void onHover(bool hovered) override;

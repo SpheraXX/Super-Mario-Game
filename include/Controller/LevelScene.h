@@ -89,10 +89,13 @@ public:
 
     // Rebuild the whole entity list from the working grid: called by loadArea and by
     // the owner to restart the level after a death. Idempotent (see the castle paint).
-    void resetLevel();
+    // With keepPlayer=true the current player is preserved across an area change
+    // (Mario keeps his size and power-ups); a death restart keeps the default and
+    // spawns a fresh Mario.
+    void resetLevel(bool keepPlayer = false);
 
 private:
-    void loadArea(std::size_t areaIndex);
+    void loadArea(std::size_t areaIndex, bool keepPlayer = false);
     void teleportToPortal(const model::Portal& portal);
 
     model::Level level;

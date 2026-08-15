@@ -135,7 +135,7 @@ bool LevelScene::loadLevel() {
 
 // Instantiate the given area: copy its grid into the working map, rebuild the themed
 // renderer, append the completion zone on the FINAL area only, then spawn the area.
-void LevelScene::loadArea(std::size_t areaIndex) {
+void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer) {
     currentArea = areaIndex;
     portals.clear();  // every visit to an area reactivates all its pipes
     worldType = level.areaWorld(areaIndex);
@@ -145,7 +145,7 @@ void LevelScene::loadArea(std::size_t areaIndex) {
     }
     renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png", worldType);
     mapLoaded = true;
-    resetLevel();
+    resetLevel(keepPlayer);
 }
 
 void LevelScene::teleportToPortal(const model::Portal& portal) {
@@ -155,8 +155,9 @@ void LevelScene::teleportToPortal(const model::Portal& portal) {
 
     // Rebuild the destination area and its entities, then place Mario either on the
     // cap of the destination pipe (if the arrival column has one) or on the ground.
-    // The camera, HUD and timer all keep their state.
-    loadArea(portal.destinationArea);
+    // The camera, HUD and timer all keep their state; the player is kept so that
+    // his size and power-ups survive the area change.
+    loadArea(portal.destinationArea, /* keepPlayer */ true);
     portals.markInert(portal.destinationColumn);  // one-way: no re-entry here
     if (!playerPtr) {
         return;
@@ -176,18 +177,32 @@ void LevelScene::teleportToPortal(const model::Portal& portal) {
 // rest on that marker cell's bottom edge, so a body taller than one tile is dropped by
 // its overhang (see the digit loop below). Digits are stripped to empty tiles at load,
 // so a marker never doubles as terrain. Called on enter and after every death (the
-// whole level restarts).
-void LevelScene::resetLevel() {
+// whole level restarts). With keepPlayer=true the current player survives the rebuild,
+// so his size and power-ups carry over when a warp pipe changes area.
+void LevelScene::resetLevel(bool keepPlayer) {
     const std::size_t tileWidth = model::TileMap::TileWidth;
     const std::size_t tileHeight = model::TileMap::TileHeight;
     const std::size_t rows = map.getRows();
     const std::size_t columns = map.getColumns();
 
+    // An area change keeps Mario: release his unique_ptr from the list before the clear
+    // destroys it, and re-add it below (the teleport re-sets his position afterwards).
+    std::unique_ptr<model::Entity> keptPlayer;
+    if (keepPlayer && playerPtr) {
+        for (auto& entity : entities) {
+            if (entity.get() == playerPtr) {
+                keptPlayer = std::move(entity);
+                break;
+            }
+        }
+    }
+
     entities.clear();
-    playerPtr = nullptr;
+    if (!keptPlayer) {
+        playerPtr = nullptr;  // full restart: a fresh Mario spawns below
+    }
     completion.clear();
 
-    bool marioSpawned = false;
     for (std::size_t row = 0; row < rows; ++row) {
         for (std::size_t column = 0; column < columns; ++column) {
             const char symbol = map.getTile(row, column);
@@ -198,11 +213,10 @@ void LevelScene::resetLevel() {
 
             switch (symbol) {
                 case 'M':
-                    if (!marioSpawned) {
+                    if (!playerPtr) {
                         auto mario = std::make_unique<model::Mario>(position);
                         playerPtr = mario.get();
                         entities.push_back(std::move(mario));
-                        marioSpawned = true;
                     }
                     break;
                 case 'C':
@@ -274,12 +288,19 @@ void LevelScene::resetLevel() {
     }
 
     // Fallback: if the map has no 'M', keep the game playable with a fixed spawn.
-    if (!marioSpawned) {
+    if (!playerPtr) {
         const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
         auto mario = std::make_unique<model::Mario>(
             model::Vector2{static_cast<float>(2 * tileWidth), groundY});
         playerPtr = mario.get();
         entities.push_back(std::move(mario));
+    }
+
+    // An area change keeps Mario: put him back ahead of pipes and enemies (matching the
+    // original spawn order) and refresh the pointer that owns the kept entity.
+    if (keptPlayer) {
+        playerPtr = static_cast<model::Player*>(keptPlayer.get());
+        entities.push_back(std::move(keptPlayer));
     }
 
     // Enemies placed as digit markers (EnemyFactory ids). These are stripped to empty

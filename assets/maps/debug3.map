@@ -36,7 +36,7 @@ GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 ...............................G
 GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 ; pipe=col:8,enter:down,to:0:12
-; pipe=col:20,enter:down,to:2:16
+; pipe=col:29,enter:down,to:6:4
 ; area
 ; world=overworld
 GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG

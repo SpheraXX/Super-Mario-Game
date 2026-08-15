@@ -21,6 +21,13 @@ Player::Player(Vector2 position, Vector2 size)
 Player::~Player() = default;
 
 void Player::update(float deltaTime) {
+    // Pipe entry owns the body: no physics, no timers — the scene freezes the world and
+    // drives the slide itself. (The gate is belt-and-braces; the frozen scene never
+    // reaches this update while a slide runs.)
+    if (pipeSlide) {
+        return;
+    }
+
     // A player-initiated ascent only owns the rising half of the jump: once the apex is
     // passed the flag is cleared, so a stomp bounce (which happens while falling) can
     // never be boosted by a held jump key.
@@ -68,7 +75,7 @@ void Player::update(float deltaTime) {
 }
 
 void Player::handleInput(float deltaTime) {
-    if (!alive) return;
+    if (!alive || pipeSlide) return;
 
     // Movement tuning is polymorphic: each concrete character reports its own numbers.
     const float walkSpeed = getWalkSpeed();
@@ -236,8 +243,33 @@ void Player::takeDamage(int amount) {
 
 void Player::die(bool bounce) {
     if (!alive || isDying()) return;
+    pipeSlide.reset();  // a death mid-slide (debug key) drops the animation state
     model::GameManager::instance().loseLife();
     beginDying(bounce);
+}
+
+bool Player::isPipeSliding() const {
+    return pipeSlide != nullptr;
+}
+
+void Player::beginPipeSlide(float targetY) {
+    pipeSlide = std::make_unique<VerticalSlide>();
+    pipeSlide->begin(getPosition().y, targetY, VerticalSlide::RiseSpeed);
+}
+
+bool Player::advancePipeSlide(float deltaTime) {
+    if (!pipeSlide) {
+        return false;
+    }
+    return pipeSlide->advance(*this, deltaTime);
+}
+
+void Player::endPipeSlide() {
+    pipeSlide.reset();
+}
+
+bool Player::drawsBehindTerrain() const {
+    return isPipeSliding();
 }
 
 void Player::syncPowerSize() {

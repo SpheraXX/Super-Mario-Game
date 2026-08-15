@@ -171,6 +171,67 @@ void LevelScene::teleportToPortal(const model::Portal& portal) {
     playerPtr->setVelocity({0.0f, 0.0f});
 }
 
+void LevelScene::beginPipeTransition(const model::Portal& portal) {
+    if (!playerPtr) {
+        return;
+    }
+    pendingPortal = portal;
+    timer.pause();
+    timerPausedByPipe = true;
+    // Sink the whole body below the pipe's mouth: findEntryPortal proved the feet rest on
+    // the cap, so one body height down hides the player fully behind the pipe shaft.
+    const float capTop = playerPtr->getPosition().y + playerPtr->getSize().y;
+    playerPtr->beginPipeSlide(capTop + playerPtr->getSize().y);
+    pipePhase = PipePhase::SlideIn;
+}
+
+void LevelScene::advancePipeTransition(float deltaTime) {
+    if (!playerPtr) {
+        return;
+    }
+
+    // A death mid-slide (debug key) aborts the travel and resumes the world.
+    if (!playerPtr->isAlive() || playerPtr->isDying()) {
+        playerPtr->endPipeSlide();
+        if (timerPausedByPipe) {
+            timer.resume();
+            timerPausedByPipe = false;
+        }
+        pipePhase = PipePhase::None;
+        return;
+    }
+
+    if (pipePhase == PipePhase::SlideIn) {
+        if (playerPtr->advancePipeSlide(deltaTime)) {
+            return;  // still sinking
+        }
+        // Fully inside the source pipe: travel, then set up the slide-out. The body is
+        // placed one height below the destination cap (hidden inside the pipe) and rises
+        // to rest on it; the snap is invisible because it draws behind the terrain.
+        teleportToPortal(pendingPortal);
+        if (!playerPtr) {
+            return;
+        }
+        const float sink = playerPtr->getSize().y;
+        playerPtr->setPosition(
+            {playerPtr->getPosition().x, playerPtr->getPosition().y + sink});
+        playerPtr->beginPipeSlide(playerPtr->getPosition().y - sink);
+        pipePhase = PipePhase::SlideOut;
+        return;
+    }
+
+    // SlideOut: the rise ends with Mario resting on the destination cap.
+    if (playerPtr->advancePipeSlide(deltaTime)) {
+        return;  // still rising
+    }
+    playerPtr->endPipeSlide();
+    if (timerPausedByPipe) {
+        timer.resume();
+        timerPausedByPipe = false;
+    }
+    pipePhase = PipePhase::None;
+}
+
 // (Re)build the entity list from scratch: the map file drives what spawns where.
 // 'M' = Mario, 'C' = CoinBlock, '#'/'B' = BrickBlock. Enemy markers are the digits 0-9
 // (EnemyFactory ids), placed in the cell directly above the ground: every enemy's feet
@@ -179,6 +240,12 @@ void LevelScene::teleportToPortal(const model::Portal& portal) {
 // so a marker never doubles as terrain. Called on enter and after every death (the
 // whole level restarts). With keepPlayer=true the current player survives the rebuild,
 // so his size and power-ups carry over when a warp pipe changes area.
+void LevelScene::restartLevel() {
+    // A death always restarts the whole run from the first area, whatever area the body
+    // fell in; loadArea(0) rebuilds area 0 with a fresh Mario (keepPlayer=false default).
+    loadArea(0);
+}
+
 void LevelScene::resetLevel(bool keepPlayer) {
     const std::size_t tileWidth = model::TileMap::TileWidth;
     const std::size_t tileHeight = model::TileMap::TileHeight;
@@ -407,6 +474,13 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         return Event::None;
     }
 
+    // Pipe travel freezes the world the same way: the transition drives the player
+    // directly (slide in, teleport, slide out) and everything else stands still.
+    if (pipePhase != PipePhase::None) {
+        advancePipeTransition(deltaTime);
+        return Event::None;
+    }
+
     // SMB timer: one tick per second. Running out of time is a death.
     if (playerPtr && !playerPtr->isDying()) {
         timer.update(deltaTime);
@@ -522,11 +596,11 @@ LevelScene::Event LevelScene::update(float deltaTime) {
     }
 
     // Pipe entry: holding Down while standing on a pipe's cap and a portal is bound to
-    // that pipe's column teleports the player to the portal's area.
+    // that pipe's column starts the slide-in/out travel to the portal's area.
     if (playerPtr) {
         if (const model::Portal* portal =
                 portals.findEntryPortal(*playerPtr, level, currentArea, entities)) {
-            teleportToPortal(*portal);
+            beginPipeTransition(*portal);
         }
     }
 

@@ -39,8 +39,8 @@ bool Item::drawsBehindTerrain() const {
 }
 
 void Item::beginEmergence(Vector2 blockPosition, Vector2 blockSize) {
-    emergence = std::make_unique<ItemEmergence>();
-    emergence->begin(blockPosition, blockSize);
+    emergence = std::make_unique<VerticalSlide>();
+    emergence->begin(getPosition().y, blockPosition.y - blockSize.y, VerticalSlide::RiseSpeed);
     // The rise takes full control of motion; the pop is the only thing that can follow
     // an item right after spawn (when the constructor may already have set a velocity).
     velocity = {0.0f, 0.0f};

@@ -2,7 +2,7 @@
 #define MODEL_ITEM_H
 
 #include "Model/Character.h"
-#include "Model/Item/ItemEmergence.h"
+#include "Model/Core/VerticalSlide.h"
 
 #include <memory>
 
@@ -56,7 +56,7 @@ protected:
     virtual void onEmergenceComplete();
 
 private:
-    std::unique_ptr<ItemEmergence> emergence;
+    std::unique_ptr<VerticalSlide> emergence;
 };
 
 }

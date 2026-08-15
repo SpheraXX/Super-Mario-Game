@@ -94,9 +94,33 @@ public:
     // spawns a fresh Mario.
     void resetLevel(bool keepPlayer = false);
 
+    // Restart the whole run from the FIRST area: a death in any later area rebuilds the
+    // level from the beginning (fresh Mario, portals reactivated). Nothing else resets —
+    // score, coins and the timer keep their state like a plain resetLevel does.
+    void restartLevel();
+
 private:
     void loadArea(std::size_t areaIndex, bool keepPlayer = false);
     void teleportToPortal(const model::Portal& portal);
+    // Pipe travel: SlideIn -> (teleport) -> SlideOut, with the world frozen the whole way
+    // (mirror of the clear cinematic). beginPipeTransition snapshots the portal and pauses
+    // the timer; advancePipeTransition drives the player's shared VerticalSlide and runs
+    // the actual teleport between the two legs.
+    void beginPipeTransition(const model::Portal& portal);
+    void advancePipeTransition(float deltaTime);
+
+    // The legs of a pipe travel; anything else is None (normal play).
+    enum class PipePhase {
+        None,     // normal play
+        SlideIn,  // Mario sinks into the source pipe; the world is frozen
+        SlideOut  // Mario rises out of the destination pipe; the world stays frozen
+    };
+    PipePhase pipePhase = PipePhase::None;
+    // The portal being travelled; snapshotted at begin so the teleport can run after the
+    // slide-in has finished sinking the player.
+    model::Portal pendingPortal{0, model::PortalDirection::Down, 0, 0};
+    // Whether the transition itself paused the timer (the clear play may pause it too).
+    bool timerPausedByPipe = false;
 
     model::Level level;
     std::size_t currentArea = 0;

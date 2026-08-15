@@ -2,6 +2,9 @@
 #define MODEL_PLAYER_H
 
 #include "Model/Character.h"
+#include "Model/Core/VerticalSlide.h"
+
+#include <memory>
 
 namespace model {
 
@@ -91,6 +94,21 @@ public:
 
     // Down-input intent from the last handleInput() (see the protected member).
     bool getInputDown() const { return inputDown; }
+
+    // Pipe-entry state (the shared VerticalSlide component, same motion as items popping
+    // out of blocks): while it runs the player has no physics, no input and no damage —
+    // the scene freezes the world and drives the slide directly, and the body is drawn
+    // behind the terrain so the pipe mouth covers it. beginPipeSlide() slides from the
+    // current y to targetY; advancePipeSlide() returns true while still sliding and
+    // false the frame the target is reached; endPipeSlide() drops the state.
+    bool isPipeSliding() const;
+    void beginPipeSlide(float targetY);
+    bool advancePipeSlide(float deltaTime);
+    void endPipeSlide();
+
+    // While the slide runs the player must not overdraw the pipe mouth (mirror of the
+    // items' emergence draw rule).
+    bool drawsBehindTerrain() const override;
 
 protected:
     // Orthogonal power-up axes. `big` is the size axis (Mushroom sets it, damage clears
@@ -182,6 +200,10 @@ private:
     // two tiles tall, small is one. The feet stay anchored, so growing and shrinking never
     // shove the player through the floor. Called after every change to `big`.
     void syncPowerSize();
+
+    // Pipe-entry state; owned here so it survives area changes (the scene's keepPlayer
+    // rebuild keeps the whole entity, state included).
+    std::unique_ptr<VerticalSlide> pipeSlide;
 };
 
 }

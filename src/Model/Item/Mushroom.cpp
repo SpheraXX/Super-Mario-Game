@@ -28,14 +28,10 @@ void Mushroom::onTileCollision(char /* tile */, CollisionType side) {
 }
 
 void Mushroom::onCollect(Entity& collector) {
+    // All power-up policy lives in Player::applyPowerUp (the size axis vs the ability
+    // slot, plus the redundant-power-up points). The item just hands the collect over.
     if (auto* player = dynamic_cast<Player*>(&collector)) {
-        // SMB1 behaviour: an extra mushroom when already powered up is worth 1000 points.
-        if (player->getState().isSuper() || player->getState().isFire() ||
-            player->getState().isStar()) {
-            player->addScore(1000);
-        } else {
-            player->becomeSuper();
-        }
+        player->applyPowerUp(PlayerPowerUp::Mushroom);
     }
     // Consumed: the level reclaims it on the next pass.
     isActive = false;

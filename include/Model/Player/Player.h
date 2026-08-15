@@ -2,11 +2,26 @@
 #define MODEL_PLAYER_H
 
 #include "Model/Character.h"
-#include "Model/Player/PlayerState.h"
-
-#include <memory>
 
 namespace model {
+
+// The power axis: one exclusive slot. Fire and Star replace each other — they are
+// incompatible, so a Star picked over Fire drops the fireball for good (no restore on
+// expiry), and a Flower picked over Star drops the invincibility. Size is a separate,
+// orthogonal axis (the `big` flag): Mushroom only touches that one.
+enum class PlayerPower {
+    None,
+    Fire,
+    Star
+};
+
+// What the collectible hands to Player::applyPowerUp. The compatibility rules and the
+// redundant-power-up scoring live in ONE place (applyPowerUp), not in the item classes.
+enum class PlayerPowerUp {
+    Mushroom,
+    FireFlower,
+    Star
+};
 
 class Player : public Character {
 public:
@@ -23,18 +38,22 @@ public:
     // used for pit falls (the body just keeps dropping).
     void die(bool bounce);
 
-    void setState(std::unique_ptr<PlayerState> newState);
-    PlayerState& getState();
-    const char* getStateName() const;
+    // Single entry point for every power-up item. Enforces the whole compatibility table
+    // (Mushroom = size only, Fire <-> Star override each other) and hands out the 1000
+    // points when the collected power-up is redundant.
+    void applyPowerUp(PlayerPowerUp type);
+
+    // Remaining star invincibility, or -1 when not starred. The view flashes the sprite
+    // off this, so the flashing and the invincibility always end together.
     float getRemainingTime() const;
 
     // Const power queries for the view and for gameplay routing: renderers receive a
-    // `const Player&` and must tell Fire from Super without a non-const state reference.
+    // `const Player&` and must tell Fire from Star without a non-const state reference.
     bool isFire() const;
     bool isStar() const;
-    // Whether the player is currently in a two-tile-tall form. Asked instead of the power
-    // state because a Star wraps whatever state it replaced and does not report isSuper(),
-    // so a Super Mario under a star would otherwise read as small.
+    // Whether the player is currently in a two-tile-tall form. Read off the size axis,
+    // not off the power: Fire and Star never change size, so the only way to grow is a
+    // Mushroom (and the only way to shrink is damage).
     bool isBig() const;
     // Big Mario headbutts breakable bricks apart; small Mario just bounces off them.
     bool canBreakBricks() const override;
@@ -60,10 +79,6 @@ public:
     virtual float getStompBounceRatio() const;
     virtual float getStompBounceConstant() const;
 
-    void becomeSuper();
-    void becomeFire();
-    void becomeStar();
-
     void addScore(int points);
     void addCoin();
     void addLife();
@@ -78,7 +93,14 @@ public:
     bool getInputDown() const { return inputDown; }
 
 protected:
-    std::unique_ptr<PlayerState> state;
+    // Orthogonal power-up axes. `big` is the size axis (Mushroom sets it, damage clears
+    // it); `power` is the exclusive ability slot (Fire/Star replace each other).
+    bool big = false;
+    PlayerPower power = PlayerPower::None;
+    // Star invincibility remaining, counting down to None on expiry.
+    float starDuration = 0.0f;
+    // Fireball refire gate; handleInput consumes it on a shot.
+    float fireCooldown = 0.0f;
     float damageCooldown;
     // Jump forgiveness: coyoteTime lets a jump fire shortly after leaving a platform,
     // jumpBufferTime remembers a press made slightly before landing. Both are tiny
@@ -148,12 +170,17 @@ protected:
     static constexpr float SwimMaxSpeed = 110.0f;
 
 private:
+    // The two axes above are driven from here only; nothing outside Player may mutate
+    // big/power directly.
+    // Fireball refire cooldown after a shot.
+    static constexpr float FireCooldownDuration = 0.5f;
+    // Star invincibility length; the countdown lives in starDuration.
+    static constexpr float StarDuration = 10.0f;
+
     void syncAnimation();
-    // Keep the entity box (and its collision hitbox) in step with the current power state:
-    // Super and Fire are two tiles tall, Small is one. The feet stay anchored, so growing
-    // and shrinking never shoves the player through the floor. Called on every state swap.
-    // Star deliberately bypasses it (becomeStar never calls setState), which is exactly why
-    // a star preserves whatever size the player had before it.
+    // Keep the entity box (and its collision hitbox) in step with the size axis: big is
+    // two tiles tall, small is one. The feet stay anchored, so growing and shrinking never
+    // shove the player through the floor. Called after every change to `big`.
     void syncPowerSize();
 };
 

@@ -12,9 +12,7 @@
 namespace model {
 
 Player::Player(Vector2 position, Vector2 size)
-    : Character(position, size),
-      state(std::make_unique<SmallState>()),
-      damageCooldown(0.0f) {
+    : Character(position, size), damageCooldown(0.0f) {
     // The collision layer drives the (type-check-free) routing in CollisionManager:
     // exactly one entity per pair must be the player for the pair to resolve.
     hitbox.layer = CollisionLayer::Player;
@@ -41,7 +39,19 @@ void Player::update(float deltaTime) {
     }
     jumpBufferTime = std::max(0.0f, jumpBufferTime - deltaTime);
 
-    state->update(*this, deltaTime);
+    // Power-up timers: the fireball refire gate, and the star countdown that drops the
+    // invincibility (and nothing else) when it hits zero — the star never restores a
+    // fire it replaced, the axes are independent.
+    if (fireCooldown > 0.0f) {
+        fireCooldown = std::max(0.0f, fireCooldown - deltaTime);
+    }
+    if (power == PlayerPower::Star) {
+        starDuration = std::max(0.0f, starDuration - deltaTime);
+        if (starDuration <= 0.0f) {
+            power = PlayerPower::None;
+        }
+    }
+
     Character::update(deltaTime);
     syncAnimation();
 
@@ -54,12 +64,6 @@ void Player::update(float deltaTime) {
     if (damageCooldown > 0.0f) {
         damageCooldown -= deltaTime;
         if (damageCooldown < 0.0f) damageCooldown = 0.0f;
-    }
-
-    if (auto newState = state->checkExpiration()) {
-        state->onExit(*this);
-        state = std::move(newState);
-        state->onEnter(*this);
     }
 }
 
@@ -154,11 +158,10 @@ void Player::handleInput(float deltaTime) {
     }
 
     // Fireball: holding the key re-fires whenever the cooldown clears. Works in the air
-    // too — only the underlying Fire state may shoot, and a Star wrapped around Fire keeps
-    // the ability (StarState forwards canShoot/shoot to its previous state).
+    // too — only the Fire power may shoot, and a Star (or anything else) never inherits it.
     const bool firePressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
-    if (firePressed && state->canShoot() && world) {
-        state->shoot();
+    if (firePressed && power == PlayerPower::Fire && fireCooldown <= 0.0f && world) {
+        fireCooldown = FireCooldownDuration;
         // Spawn just in front of the facing side, around mouth height, so the ball never
         // overlaps the player (and never spawns inside the ground).
         const Vector2 pos = getPosition();
@@ -170,26 +173,65 @@ void Player::handleInput(float deltaTime) {
     jumpHeld = jumpPressed;
 }
 
+void Player::applyPowerUp(PlayerPowerUp type) {
+    switch (type) {
+        // Mushroom touches ONLY the size axis: it grows a small player no matter what
+        // power she carries (small fire, small star...), and is pure points once big.
+        case PlayerPowerUp::Mushroom:
+            if (!big) {
+                big = true;
+                syncPowerSize();
+            } else {
+                addScore(1000);
+            }
+            break;
+
+        // Fire Flower fills the ability slot only: it overrides a Star (dropping the
+        // invincibility) and never changes size.
+        case PlayerPowerUp::FireFlower:
+            if (power == PlayerPower::Fire) {
+                addScore(1000);
+            } else {
+                power = PlayerPower::Fire;
+                starDuration = 0.0f;
+            }
+            break;
+
+        // Star fills the ability slot only: it overrides Fire (dropping the fireball for
+        // good — expiry does not bring it back) and never changes size.
+        case PlayerPowerUp::Star:
+            if (power == PlayerPower::Star) {
+                addScore(1000);
+            } else {
+                power = PlayerPower::Star;
+                starDuration = StarDuration;
+            }
+            break;
+    }
+}
+
 void Player::takeDamage(int amount) {
     if (!alive || isDying() || damageCooldown > 0.0f) return;
 
-    PlayerState* newState = state->takeDamage(*this);
-    if (newState == nullptr) {
-        // Small Mario with no power-up left to lose: full death.
-        die(true);
-    } else if (newState != state.get()) {
-        // Downgrade (e.g. Super -> Small): keep playing with brief invulnerability.
-        state->onExit(*this);
-        state.reset(newState);
-        state->onEnter(*this);
-        // Bring the BODY down with the state. Powering up goes through setState(), which
-        // syncs the size itself, but this path swaps the state directly and so has to do
-        // it too — without this a damaged Super Mario keeps the two-tile box: he still
-        // draws as big (the renderer picks the frame off the size), still collides as big,
-        // and still breaks bricks, while the state underneath says Small.
+    // Star is full invincibility: no downgrade, no blink window.
+    if (power == PlayerPower::Star) return;
+
+    // Damage ladder (SMB-style, one tier per hit):
+    //   Fire  -> hit -> Fire gone, keeps size
+    //   Big   -> hit -> shrink to Small
+    //   Small -> hit -> death
+    if (power == PlayerPower::Fire) {
+        power = PlayerPower::None;
+        damageCooldown = DamageCooldownTime;
+        return;
+    }
+    if (big) {
+        big = false;
         syncPowerSize();
         damageCooldown = DamageCooldownTime;
+        return;
     }
+    die(true);
 }
 
 void Player::die(bool bounce) {
@@ -198,16 +240,8 @@ void Player::die(bool bounce) {
     beginDying(bounce);
 }
 
-void Player::setState(std::unique_ptr<PlayerState> newState) {
-    if (!newState) return;
-    state->onExit(*this);
-    state = std::move(newState);
-    state->onEnter(*this);
-    syncPowerSize();
-}
-
 void Player::syncPowerSize() {
-    const float targetHeight = (state->isSuper() || state->isFire()) ? BigHeight : SmallHeight;
+    const float targetHeight = big ? BigHeight : SmallHeight;
     if (getSize().y == targetHeight) return;
 
     // Anchor the feet: keep the bottom edge fixed while the box grows upward (or shrinks
@@ -229,11 +263,11 @@ void Player::syncPowerSize() {
 }
 
 bool Player::isFire() const {
-    return state->isFire();
+    return power == PlayerPower::Fire;
 }
 
 bool Player::isStar() const {
-    return state->isStar();
+    return power == PlayerPower::Star;
 }
 
 bool Player::isBig() const {
@@ -244,6 +278,10 @@ bool Player::isBig() const {
 
 bool Player::canBreakBricks() const {
     return isBig();
+}
+
+float Player::getRemainingTime() const {
+    return isStar() ? starDuration : -1.0f;
 }
 
 float Player::getWalkCycleDistance() const {
@@ -264,36 +302,6 @@ float Player::getStompBounceRatio() const {
 
 float Player::getStompBounceConstant() const {
     return StompBounceConstant;
-}
-
-PlayerState& Player::getState() {
-    return *state;
-}
-
-const char* Player::getStateName() const {
-    return state->getStateName();
-}
-
-float Player::getRemainingTime() const {
-    return state->getRemainingTime();
-}
-
-void Player::becomeSuper() {
-    if (state->isSuper() || state->isFire() || state->isStar()) return;
-    setState(std::make_unique<SuperState>());
-}
-
-void Player::becomeFire() {
-    if (state->isFire() || state->isStar()) return;
-    setState(std::make_unique<FireState>());
-}
-
-void Player::becomeStar() {
-    if (state->isStar()) return;
-    state->onExit(*this);
-    auto prevState = std::move(state);
-    state = std::make_unique<StarState>(std::move(prevState));
-    state->onEnter(*this);
 }
 
 void Player::addScore(int points) {

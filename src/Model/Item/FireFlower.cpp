@@ -11,12 +11,10 @@ FireFlower::FireFlower(Vector2 position)
 }
 
 void FireFlower::onCollect(Entity& collector) {
+    // All power-up policy lives in Player::applyPowerUp (the size axis vs the ability
+    // slot, plus the redundant-power-up points). The item just hands the collect over.
     if (auto* player = dynamic_cast<Player*>(&collector)) {
-        if (player->getState().isFire() || player->getState().isStar()) {
-            player->addScore(1000);
-        } else {
-            player->becomeFire();
-        }
+        player->applyPowerUp(PlayerPowerUp::FireFlower);
     }
     isActive = false;
 }

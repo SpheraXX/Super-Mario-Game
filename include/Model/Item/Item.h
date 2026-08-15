@@ -11,10 +11,11 @@ namespace model {
 // Base class for collectibles (Mushroom, FireFlower, Star...). Derives from Character so
 // a walking item reuses gravity + velocity integration for free.
 //
-// An item does NOT need special-casing in CollisionManager: the manager already fires
-// Entity::onCollision for every pair it finds, so an item collects itself through that
-// hook the moment it touches the player (and since it is not solid, the player is never
-// pushed by it).
+// An item collects itself through Entity::onCollision the moment it touches the player
+// (and since it is not solid, the player is never pushed by it). The collision pair
+// resolver skips items outright on top of that — see CollisionManager — so no damage
+// path can ever reach one; collection stays safely in the hook that fires before the
+// routing.
 //
 // Items can pop out of a ? block: beginEmergence() parks the item inside the block's
 // cell and wraps all of its behaviour in the rise (see update()). While the pop runs the

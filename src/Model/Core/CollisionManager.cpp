@@ -398,6 +398,13 @@ bool CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
     Character& playerCharacter = static_cast<Character&>(*player);
     const CollisionType playerSide = (player == &a) ? sideA : sideB;
 
+    // Items are structurally immune to every damage path: a starred player's side hit, a
+    // bump, a stomp-side graze — none of them may dispatch an Item. Collection does not
+    // flow through this routing anyway: the onCollision hooks above already delivered the
+    // contact (Item::onCollision decides when a collect actually happens), so returning
+    // here keeps the pair resolution a no-op while items stay collectible.
+    if (other->hitbox.layer == CollisionLayer::Item) return false;
+
     if (other->hitbox.layer == CollisionLayer::Enemy) {
         Enemy& enemy = static_cast<Enemy&>(*other);
         // The Player layer is only ever carried by Player, so this cast is safe by the

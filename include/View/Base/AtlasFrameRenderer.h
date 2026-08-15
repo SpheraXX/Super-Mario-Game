@@ -26,6 +26,10 @@ protected:
         this->drawCharacterFrame(window, entity, frame);
     }
 
+    // The generic single-frame enemies die feet-first: a shell-killed HammerBro, Spiny,
+    // Lakitu, Bowser or PiranhaPlant inverts before its death pop.
+    bool flipWhenDying() const override { return true; }
+
 private:
     sf::IntRect frame;
 };

@@ -24,17 +24,22 @@ inline constexpr float SpriteScaleY = static_cast<float>(model::TileMap::TileHei
 //
 // `mirrorHorizontally` is decided by the caller (see SpriteEntityRenderer), since which
 // way a frame needs flipping depends on the spritesheet's own facing, not just the entity's.
+//
+// `flipVertically` inverts the frame on the vertical axis (a kicked enemy spinning upside
+// down). A negative scale draws around the opposite corner, so a flipped axis also moves
+// the origin to the far edge of the frame — the sprite then stays inside its box while
+// inverted rather than being displaced by its own height.
 inline void setupEntitySprite(sf::Sprite& sprite, const sf::IntRect& frame,
-                              const model::Vector2& entitySize, bool mirrorHorizontally) {
-    const float scaleX = entitySize.x / static_cast<float>(frame.size.x);
-    const float scaleY = entitySize.y / static_cast<float>(frame.size.y);
-    if (mirrorHorizontally) {
-        sprite.setScale({-scaleX, scaleY});
-        sprite.setOrigin({static_cast<float>(frame.size.x), 0.0f});
-    } else {
-        sprite.setScale({scaleX, scaleY});
-        sprite.setOrigin({0.0f, 0.0f});
-    }
+                              const model::Vector2& entitySize, bool mirrorHorizontally,
+                              bool flipVertically = false) {
+    const float baseScaleX = entitySize.x / static_cast<float>(frame.size.x);
+    const float baseScaleY = entitySize.y / static_cast<float>(frame.size.y);
+    const float scaleX = mirrorHorizontally ? -baseScaleX : baseScaleX;
+    const float scaleY = flipVertically ? -baseScaleY : baseScaleY;
+    const float originX = mirrorHorizontally ? static_cast<float>(frame.size.x) : 0.0f;
+    const float originY = flipVertically ? static_cast<float>(frame.size.y) : 0.0f;
+    sprite.setScale({scaleX, scaleY});
+    sprite.setOrigin({originX, originY});
 }
 
 }

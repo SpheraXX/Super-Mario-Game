@@ -17,6 +17,10 @@ public:
 protected:
     void renderTyped(sf::RenderTarget& window, const model::Goomba& goomba,
                      const RenderContext& ctx) const override;
+
+    // A shell-kicked Goomba pops upside-down; a stomped one is squished (not dying),
+    // so its flattened frame is never flipped.
+    bool flipWhenDying() const override { return true; }
 };
 
 }

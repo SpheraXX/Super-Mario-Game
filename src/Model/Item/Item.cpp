@@ -48,6 +48,13 @@ void Item::beginEmergence(Vector2 blockPosition, Vector2 blockSize) {
 
 void Item::onCollision(Entity& other, CollisionType side) {
     (void)side;
+    // While the item is still emerging through its block it is not collectible. The bump
+    // frame's pre-push overlap puts the player's head inside the block cell, which also
+    // contains the freshly spawned item, and the star's bigger box makes that window wider
+    // — collecting on the spot would make the item vanish before it ever rolls out (it
+    // reads as "the star killed the mushroom"). The item only becomes collectible once the
+    // rise has cleared the block face.
+    if (emergence) return;
     // The only interaction an item cares about is being picked up by the player.
     if (other.hitbox.layer == CollisionLayer::Player) {
         onCollect(other);

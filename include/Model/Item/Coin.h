@@ -35,9 +35,16 @@ private:
     // The height the coin popped from: it disappears when it falls back to it.
     float spawnY;
 
-    // Rise speed for a two-cell pop: the classic one-cell arc used 210, and a pop's
-    // height scales with the SQUARE of its speed, so doubling the arc needs ×sqrt(2).
-    static constexpr float PopSpeed = -296.98f;
+    // True once the pop velocity has been read from the world ('setWorld' may arrive
+    // after the constructor ran, so the seed is deferred to the first update).
+    bool popInitialized = false;
+
+    // Fallback pop speed for a two-cell arc when no world is attached: this is the land
+    // value. With a world, the pop is 1.5x that world's death bounce — see
+    // WorldTheme::getCoinPopSpeed — which rounds the land arc to -300 and makes the
+    // underwater pop -135. The arc's height scales with the SQUARE of the speed, so it
+    // is intentionally much higher than the classic one-cell 210.
+    static constexpr float PopSpeed = -300.0f;
 };
 
 }

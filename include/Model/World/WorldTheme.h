@@ -32,6 +32,11 @@ public:
     // Upward launch of a dying body (units/s). Overworld and Castle use the base -200;
     // Underwater's much smaller pop keeps the slow death fall from hovering.
     float getDeathBounceSpeed() const;
+    // Upward launch of a coin popped out of a bumped block (units/s). The coin always
+    // rises 1.5x as fast as the world's death bounce, so the ratio is structural: land
+    // and Castle pop exactly -300, underwater -135, and retuning a world's death bounce
+    // automatically retunes its coin pop.
+    float getCoinPopSpeed() const;
 
 private:
     WorldType type;

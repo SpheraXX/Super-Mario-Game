@@ -42,4 +42,8 @@ float WorldTheme::getDeathBounceSpeed() const {
     return deathBounceSpeed;
 }
 
+float WorldTheme::getCoinPopSpeed() const {
+    return deathBounceSpeed * 1.5f;
+}
+
 }

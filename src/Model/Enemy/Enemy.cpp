@@ -29,6 +29,20 @@ void Enemy::update(float deltaTime) {
         stompLockout -= deltaTime;
     }
 
+    if (isStomped) {
+        // A squished body is a corpse: it neither thinks (updateAI) nor moves. Skipping
+        // Character::update here is what makes the flattened sprite sit exactly where the
+        // enemy fell — gravity would otherwise keep pulling it (a squished Goomba is an
+        // isTrigger body, so the tile pass skips it, never grounds it, and it sinks into
+        // the floor while pretending to play the death bounce). Only the despawn countdown
+        // runs; die() then lets the level bounds remove the body.
+        despawnTimer -= deltaTime;
+        if (despawnTimer <= 0.0f) {
+            die();
+        }
+        return;
+    }
+
     updateAI(deltaTime);
 
     // Turn around before walking off a ledge: probe the cell just ahead of the feet. A
@@ -56,13 +70,6 @@ void Enemy::update(float deltaTime) {
 
     updateAttack(deltaTime);
     Character::update(deltaTime);
-
-    if (isStomped) {
-        despawnTimer -= deltaTime;
-        if (despawnTimer <= 0.0f) {
-            die();
-        }
-    }
 }
 
 void Enemy::stompedBy(Entity& player) {
@@ -86,6 +93,10 @@ bool Enemy::acceptsPlayerContact() const {
 void Enemy::onStomped(Entity& /* player */) {
     isStomped = true;
     despawnTimer = 1.0f; // Default 1 second before despawning after stomped
+    // The body freezes on the spot: no walk speed, no drift. Subclasses that shrink
+    // (Goomba) or change shape (Koopa's shell) still adjust velocity in their own
+    // onStomped, but every squished enemy stops moving here.
+    velocity = {0.0f, 0.0f};
     awardScore();
 }
 

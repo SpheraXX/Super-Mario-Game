@@ -126,6 +126,14 @@ void CollisionManager::processTileCollisions(Character& entity, float deltaTime)
     // frame (prevFootY). If the foot is already inside the tile — a block hit from the side
     // mid-jump — snapping up to the top would teleport the player onto the block; those
     // contacts are resolved by the horizontal checks and the entity pass instead.
+    //
+    // Crossing the top edge is not enough on its own: a body FALLING ALONG a tall solid
+    // column (a pipe shaft, a tall 'G' pillar) crosses the top edge of every shaft cell as
+    // its feet sink past them, and snap-landing on each one would glue the player to the
+    // wall at whatever height his feet happen to be ("standing on a wall"). A cell whose
+    // top is not exposed — static solid terrain directly above it, so the body could never
+    // have dropped onto it from above — is a side clip, not a landing: the horizontal
+    // checks below push the body off the face and the fall continues.
     if (vel.y >= 0.0f) {
         const std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
 
@@ -138,6 +146,22 @@ void CollisionManager::processTileCollisions(Character& entity, float deltaTime)
 
                 if (col < tileMap->getColumns() && isGroundTile(tileMap->getTile(row, col))) {
                     if (prevFootY > tileTop + LandingEpsilon) break;
+                    // The feet crossed this cell's top this frame; only snap when the top
+                    // is exposed (nothing solid directly above it in the static map). Grid
+                    // rows run bottom-first (row 0 is the deepest row — see tileOrigin), so
+                    // the cell one tile ABOVE here is row+1. The cell above is checked in
+                    // static terrain terms, so a block entity 'C' above ground does NOT
+                    // hide the ground's top — that is the standing surface under a block row.
+                    //
+                    // A covered probe is SKIPPED, not fatal: when the foot straddles a
+                    // wall's base column, the probe on the wall cell has a covered top
+                    // (the shaft above it) while the rest of the foot rests on open ground.
+                    // Bailing out of the loop on that first probe left the ground unevaluated
+                    // and the body sank through it — standing still against the wall, no
+                    // horizontal push ever fired. The uncovered probes still land the body.
+                    const bool topExposed = row + 1 >= TileMap::Rows ||
+                        !TileMap::isSolidTile(tileMap->getTile(row + 1, col));
+                    if (!topExposed) continue;
                     pos.y = tileTop - hb.height - hb.offset.y;
                     vel.y = 0.0f;
                     entity.isGrounded = true;

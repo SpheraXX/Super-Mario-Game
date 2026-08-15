@@ -40,16 +40,20 @@ public:
     bool empty() const { return children.empty(); }
 
     // ── UIElement overrides ──────────────────────────────────────────────────
+    void setPosition(float x, float y) override;
     void render(sf::RenderTarget& target) override;
     void update(float deltaTime) override;
     bool handleEvent(const sf::Event& event) override;
+    void onMouseLeave() override;
 
     // Re-runs the layout algorithm. Call after adding all children or changing
     // size, if you use an automatic layout mode.
     void relayout();
 
-private:
+protected:
     std::vector<std::unique_ptr<UIElement>> children;
+
+private:
     Layout  currentLayout;
     float   gap;           // pixels between items (Vertical mode)
 };

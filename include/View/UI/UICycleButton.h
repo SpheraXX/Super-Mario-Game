@@ -40,6 +40,7 @@ public:
 
     // ── IClickable overrides ─────────────────────────────────────────────────
     void onHover(bool hovered) override;
+    void onMouseLeave() override;
     void onClick() override;
 
 private:

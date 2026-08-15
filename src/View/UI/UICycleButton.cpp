@@ -82,6 +82,10 @@ bool UICycleButton::handleEvent(const sf::Event& event) {
     return false;
 }
 
+void UICycleButton::onMouseLeave() {
+    onHover(false);
+}
+
 void UICycleButton::render(sf::RenderTarget& target) {
     if (!visible || !fontPtr) return;
 

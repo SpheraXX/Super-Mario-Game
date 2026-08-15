@@ -13,6 +13,19 @@ void UIContainer::clear() {
     children.clear();
 }
 
+void UIContainer::setPosition(float x, float y) {
+    float dx = x - pos.x;
+    float dy = y - pos.y;
+    
+    UIElement::setPosition(x, y);
+    
+    for (auto& child : children) {
+        float cx = child->getPosition().x;
+        float cy = child->getPosition().y;
+        child->setPosition(cx + dx, cy + dy);
+    }
+}
+
 void UIContainer::relayout() {
     if (currentLayout == Layout::None) return;
 
@@ -48,6 +61,12 @@ bool UIContainer::handleEvent(const sf::Event& event) {
         }
     }
     return false;
+}
+
+void UIContainer::onMouseLeave() {
+    for (auto& child : children) {
+        child->onMouseLeave();
+    }
 }
 
 }  // namespace ui

@@ -49,6 +49,9 @@ public:
         return false;
     }
 
+    // Called when the mouse leaves the bounds of a parent clipping container
+    virtual void onMouseLeave() {}
+
     // ── Geometry ──────────────────────────────────────────────────────────────
     virtual void setPosition(float x, float y) { pos = {x, y}; }
     virtual void setSize(float w, float h)     { size = {w, h}; }

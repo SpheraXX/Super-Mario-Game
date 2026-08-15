@@ -3,6 +3,7 @@
 #include "Controller/StateManager.h"
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
+#include "Controller/IAudioManager.h"
 #include "View/UI/UISlider.h"
 #include "View/UI/UICycleButton.h"
 
@@ -120,17 +121,44 @@ void OptionsState::buildSoundTab(const sf::Font& font) {
     float cursorY = 80.f;
     auto master = std::make_unique<view::ui::UISlider>(
         font, "", 0, 100, 5, draft.masterVolume, sf::Vector2f(0,0), sf::Vector2f(150.f, 20.f));
-    master->setOnChange([this](int v) { draft.masterVolume = v; });
+    master->setOnChange([this](int v) { 
+        draft.masterVolume = v; 
+        if (context && context->audio) {
+            context->audio->setMasterVolume(static_cast<float>(v));
+            if (soundThrottleClock.getElapsedTime().asSeconds() > 0.15f) {
+                context->audio->playSound("02. Beep");
+                soundThrottleClock.restart();
+            }
+        }
+    });
     addRow(tabPanels[1], font, "Master Volume", std::move(master), cursorY);
 
     auto music = std::make_unique<view::ui::UISlider>(
         font, "", 0, 100, 5, draft.musicVolume, sf::Vector2f(0,0), sf::Vector2f(150.f, 20.f));
-    music->setOnChange([this](int v) { draft.musicVolume = v; });
+    music->setOnChange([this](int v) { 
+        draft.musicVolume = v; 
+        if (context && context->audio) {
+            context->audio->setMusicVolume(static_cast<float>(v));
+            if (soundThrottleClock.getElapsedTime().asSeconds() > 0.15f) {
+                context->audio->playSound("02. Beep");
+                soundThrottleClock.restart();
+            }
+        }
+    });
     addRow(tabPanels[1], font, "Music Volume", std::move(music), cursorY);
 
     auto sfx = std::make_unique<view::ui::UISlider>(
         font, "", 0, 100, 5, draft.sfxVolume, sf::Vector2f(0,0), sf::Vector2f(150.f, 20.f));
-    sfx->setOnChange([this](int v) { draft.sfxVolume = v; });
+    sfx->setOnChange([this](int v) { 
+        draft.sfxVolume = v;
+        if (context && context->audio) {
+            context->audio->setSFXVolume(static_cast<float>(v));
+            if (soundThrottleClock.getElapsedTime().asSeconds() > 0.15f) {
+                context->audio->playSound("02. Beep");
+                soundThrottleClock.restart();
+            }
+        }
+    });
     addRow(tabPanels[1], font, "SFX Volume", std::move(sfx), cursorY);
 }
 

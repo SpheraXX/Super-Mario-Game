@@ -6,6 +6,7 @@
 #include "Model/Core/GameManager.h"
 #include "View/AssetManager.h"
 #include "View/TextUtils.h"
+#include "Controller/IAudioManager.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -17,6 +18,10 @@
 namespace controller {
 
 void GameOverState::onEnter() {
+    if (context && context->audio) {
+        context->audio->playMusic("game_over");
+    }
+
     font = view::AssetManager::instance().getUiFont();
     fontLoaded = view::AssetManager::instance().isFontLoaded();
     if (fontLoaded) {

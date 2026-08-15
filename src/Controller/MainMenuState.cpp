@@ -9,6 +9,7 @@
 #include "Controller/StateManager.h"
 #include "Model/Core/GameManager.h"
 #include "View/AssetManager.h"
+#include "Controller/IAudioManager.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -42,6 +43,10 @@ void MainMenuState::onEnter() {
 
     fontLoaded = view::AssetManager::instance().isFontLoaded();
     if (!fontLoaded) return;
+
+    if (context && context->audio) {
+        context->audio->playMusic("menu");
+    }
 
     buildUI();
 }

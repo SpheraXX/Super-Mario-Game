@@ -7,6 +7,7 @@
 #include "View/UI/UILabel.h"
 #include "View/UI/UIButton.h"
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/System/Clock.hpp>
 #include <array>
 
 namespace controller {
@@ -41,6 +42,8 @@ private:
     int currentTab = 0;
 
     view::ui::UIContainer bottomBar;
+
+    sf::Clock soundThrottleClock;
 };
 
 } // namespace controller

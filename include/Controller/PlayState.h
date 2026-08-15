@@ -2,35 +2,34 @@
 #define CONTROLLER_PLAYSTATE_H
 
 #include "Controller/GameState.h"
-#include "Model/TileMap.h"
-#include "View/TileMapRenderer.h"
-
-#include <SFML/Graphics/Font.hpp>
+#include "Controller/LevelClearSequence.h"
+#include "Controller/LevelScene.h"
+#include "View/HudData.h"
+#include "View/HudRenderer.h"
 
 #include <memory>
 
 namespace controller {
 
-// Active gameplay screen. Phase 1 loads and renders the level tilemap as proof of life.
-//
-// SEAM (Issues 3/4/5): this state will own a `World` (entities + physics). Issue 4's
-// LevelLoader/EntityFactory will populate it in onEnter() for the current level; update()
-// will step physics and delegate input to the Player; when GameManager reports game over
-// the state transitions to GameOverState.
+// The play state: owns the LevelScene (the live level) and the scripted clear play,
+// and handles the state transitions around them — freeze behind the completion
+// overlay, replace with GameOver on run end — plus the HUD snapshot and debug keys.
 class PlayState : public GameState {
 public:
     void onEnter() override;
     void handleEvent(const sf::Event& event) override;
     void update(float deltaTime) override;
-    void render(sf::RenderWindow& window) override;
+    void render(sf::RenderTarget& window) override;
 
 private:
-    model::TileMap map;
-    std::unique_ptr<view::TileMapRenderer> renderer; // built in onEnter (may fail to load)
-    bool mapLoaded = false;
+    // Freeze the level and push the transparent completion overlay.
+    void finishClear();
 
-    sf::Font font;
-    bool fontLoaded = false;
+    std::unique_ptr<LevelScene> scene;  // the live level behind this playthrough
+    LevelClearSequence sequence;        // the flagpole clear cinematic
+    std::unique_ptr<view::HudRenderer> hudRenderer;
+    view::HudData hudData;
+    bool levelComplete = false;
 };
 
 }

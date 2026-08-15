@@ -3,11 +3,25 @@
 namespace model {
 
 Entity::Entity(Vector2 position, Vector2 size)
-    : position(position), size(size) {
+    : hitbox({0.0f, 0.0f}, size.x, size.y, false, CollisionLayer::Environment),
+      isActive(true),
+      isDormant(false),
+      position(position),
+      size(size) {
 }
 
 void Entity::update(float deltaTime) {
     (void)deltaTime;
+}
+
+void Entity::onCollision(Entity& other, CollisionType side) {
+    (void)other;
+    (void)side;
+}
+
+void Entity::onTileCollision(char tile, CollisionType side) {
+    (void)tile;
+    (void)side;
 }
 
 Vector2 Entity::getPosition() const {
@@ -20,6 +34,10 @@ Vector2 Entity::getSize() const {
 
 void Entity::setPosition(Vector2 newPosition) {
     position = newPosition;
+}
+
+void Entity::setSize(Vector2 newSize) {
+    size = newSize;
 }
 
 }

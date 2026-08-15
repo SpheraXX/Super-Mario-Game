@@ -68,3 +68,26 @@ CharacterPlan.md
 Task.md
 # Machine-specific CMake presets (local SFML path, etc.)
 CMakeUserPresets.json
+
+# Local build wrapper and launcher files created for this environment
+/build-wrapper/
+/sm.bat
+/run.ps1
+/compat/
+/build-support/
+/SFML-3.1.0/
+/CMakeLists.txt
+/CMakePresets.json
+/CMakeUserPresets.json
+/include/SFML/
+/lib/
+/bin/
+/Makefile
+/winlibs-x86_64-posix-seh-gcc-14.2.0-mingw-w64ucrt-12.0.0-r2/
+/include/libssh2.h
+/include/libssh2_publickey.h
+/include/libssh2_sftp.h
+/include/psa/
+/include/mbedtls/
+/log.txt
+/trace_log.txt

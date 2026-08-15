@@ -1,7 +1,7 @@
-#include "Model/TileMap.h"
-#include "Model/Mario.h"
-#include "Model/Luigi.h"
-#include "View/TileMapRenderer.h"
+#include "Model/Map/TileMap.h"
+#include "Model/Player/Mario.h"
+#include "Model/Player/Luigi.h"
+#include "View/Map/TileMapRenderer.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
@@ -18,14 +18,19 @@
 #include <cstdio>
 
 int main() {
-    try {
-        
+    freopen("log.txt", "w", stderr);
+
+    std :: cerr << "START" << std :: endl;
+
+    try {    
         controller::AppEngine engine;
         engine.run();
     } catch (const std::exception& exception) {
-        std::cerr << exception.what() << '\n';
+        std :: cerr << exception.what() << std :: endl;
         return 1;
     }
+
+    std :: cerr << "END" << std :: endl;
 
     return 0;
 }

@@ -14,11 +14,14 @@ public:
     void onEnter() override;
     void handleEvent(const sf::Event& event) override;
     void update(float deltaTime) override;
-    void render(sf::RenderWindow& window) override;
+    void render(sf::RenderTarget& window) override;
 
 private:
     sf::Font font;
     bool fontLoaded = false;
+    unsigned int titleSize = 28;
+    unsigned int scoreSize = 13;
+    unsigned int hintSize = 10;
 };
 
 }

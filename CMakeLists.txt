@@ -17,9 +17,17 @@ find_package(SFML 3.0 COMPONENTS Graphics Window System Audio REQUIRED)
 # Include directory path
 include_directories(include)
 
-# Collect all implementation source files
-file(GLOB_RECURSE SOURCES 
-    src/*.cpp
+# Collect all implementation source files.
+#
+# CONFIGURE_DEPENDS makes the build re-check this glob every time it runs. Without it the
+# file list is captured once, when CMake configures, and never revisited — so pulling a
+# teammate's branch that adds a .cpp leaves that file out of the build. It still compiles
+# (the headers are found), then fails at link with "undefined reference" to everything the
+# new file defines, which looks nothing like the missing-file problem it actually is.
+# The cost is a directory stat per build; the alternative is every teammate hitting that
+# error and having to know to re-run cmake.
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 )
 
 # Output directories configuration

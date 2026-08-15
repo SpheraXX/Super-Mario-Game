@@ -1,59 +1,50 @@
 #include "Controller/PlayState.h"
 
 #include "Controller/GameOverState.h"
+#include "Controller/LevelCompleteState.h"
 #include "Controller/MenuState.h"
 #include "Controller/StateManager.h"
-#include "Model/GameManager.h"
+#include "Model/Core/GameManager.h"
+#include "Model/Player/Player.h"
 
-#include <SFML/Graphics/Color.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
+#include <SFML/Window/Event.hpp>
+#include <SFML/Window/Keyboard.hpp>
 
-#include <exception>
 #include <iostream>
 #include <memory>
 #include <string>
 
 namespace controller {
 
-namespace {
-// Issue 4 will replace this with a real level-index -> file mapping. For Phase 1 every
-// level resolves to the single sample map so PlayState always has something to show.
-std::string mapPathForLevel(int level) {
-    (void)level;
-    return "assets/maps/plain.map";
-}
-}
-
 void PlayState::onEnter() {
-    const int level = model::GameManager::instance().getCurrentLevel();
-    try {
-        map.loadFromFile(mapPathForLevel(level));
-        renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png");
-        mapLoaded = true;
-    } catch (const std::exception& error) {
-        // Fail soft: keep running with a blank field rather than crashing the whole app.
-        std::cerr << "PlayState: failed to load level assets: " << error.what() << '\n';
-        mapLoaded = false;
+    scene = std::make_unique<LevelScene>();
+    if (!scene->loadLevel()) {
+        std::cerr << "PlayState: failed to load level assets\n";
     }
 
-    fontLoaded = font.openFromFile("assets/fonts/Tuffy.ttf");
+    // Build the screen-space HUD.
+    hudRenderer = std::make_unique<view::HudRenderer>();
+
+    levelComplete = false;
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
         switch (key->code) {
             case sf::Keyboard::Key::Escape:
-                // Abandon the run and return to the menu.
                 manager->replaceState(std::make_unique<MenuState>());
                 break;
             case sf::Keyboard::Key::G:
-                // TEMPORARY debug hook to exercise the game-over transition until real
-                // death logic (Issue 3/5) exists. Awards points, then ends the run.
-                model::GameManager::instance().addScore(500);
-                model::GameManager::instance().loseLife();
-                model::GameManager::instance().loseLife();
-                model::GameManager::instance().loseLife();
+                // Debug: kill the player through the normal death flow.
+                if (scene->player() && !scene->player()->isDying()) {
+                    scene->player()->die(true);
+                }
+                break;
+            case sf::Keyboard::Key::H:
+                // Debug: toggle the collision-box overlay.
+                scene->toggleHitboxes();
                 break;
             default:
                 break;
@@ -62,39 +53,63 @@ void PlayState::handleEvent(const sf::Event& event) {
 }
 
 void PlayState::update(float deltaTime) {
-    (void)deltaTime;
-    // SEAM: step the World/physics and update the Player here (Issues 3/5).
-
-    if (model::GameManager::instance().isGameOver()) {
-        manager->replaceState(std::make_unique<GameOverState>());
+    // Once the level is complete the game is frozen behind the completion overlay:
+    // no timer, no input, no physics.
+    if (levelComplete) {
+        return;
     }
+
+    // After the flagpole is touched the scripted clear play keeps updating the frozen
+    // tableau (pole slide, walk to the castle) until the overlay is pushed.
+    if (sequence.isActive()) {
+        sequence.update(deltaTime);
+        if (sequence.isFinished()) {
+            finishClear();
+        }
+        return;
+    }
+
+    const LevelScene::Event event = scene->update(deltaTime);
+    if (event == LevelScene::Event::ClearTriggered) {
+        // Freeze the world and start the scripted clear play; without a live player or
+        // pole there is nothing to animate, so jump straight to the overlay.
+        scene->setCinematicActive(true);
+        if (scene->player() && scene->flagPole()) {
+            sequence.begin(*scene);
+        } else {
+            finishClear();
+        }
+    } else if (event == LevelScene::Event::RunEnded) {
+        // The player's death fall is over: either the run is over or the whole level
+        // restarts from its first area (whatever area the body fell in).
+        if (model::GameManager::instance().isGameOver()) {
+            manager->replaceState(std::make_unique<GameOverState>());
+        } else {
+            scene->restartLevel();
+        }
+    }
+
+    // HUD snapshot for the next frame.
+    auto& game = model::GameManager::instance();
+    hudData.score = game.getScore();
+    hudData.coins = game.getCoins();
+    hudData.levelName = game.getLevelName();
+    hudData.time = scene->getRemainingTime();
 }
 
-void PlayState::render(sf::RenderWindow& window) {
-    const sf::Color skyBlue(92, 148, 252);
-    window.clear(skyBlue);
+void PlayState::finishClear() {
+    levelComplete = true;
+    scene->setCinematicActive(false);
+    manager->pushState(std::make_unique<LevelCompleteState>());
+}
 
-    if (mapLoaded && renderer) {
-        renderer->render(window, map);
-    }
-    // SEAM: draw World entities / Player / HUD here (Issues 2/3/5).
+void PlayState::render(sf::RenderTarget& window) {
+    // The scene draws the world (camera, tiles, entities, debug overlay) and restores
+    // the fixed view; the HUD is screen-space, on top of everything.
+    scene->render(window);
 
-    if (fontLoaded) {
-        const int level = model::GameManager::instance().getCurrentLevel();
-
-        sf::Text levelLabel(font, "LEVEL " + std::to_string(level), 22);
-        levelLabel.setFillColor(sf::Color::White);
-        levelLabel.setOutlineColor(sf::Color::Black);
-        levelLabel.setOutlineThickness(2.f);
-        levelLabel.setPosition({10.f, 8.f});
-        window.draw(levelLabel);
-
-        sf::Text hint(font, "ESC: Menu | G: Debug Game Over", 16);
-        hint.setFillColor(sf::Color::White);
-        hint.setOutlineColor(sf::Color::Black);
-        hint.setOutlineThickness(2.f);
-        hint.setPosition({10.f, window.getSize().y - 26.f});
-        window.draw(hint);
+    if (hudRenderer) {
+        hudRenderer->render(window, hudData);
     }
 }
 

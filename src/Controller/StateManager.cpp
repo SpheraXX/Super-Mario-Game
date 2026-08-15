@@ -1,6 +1,8 @@
 #include "Controller/StateManager.h"
 
-#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
+
+#include <iostream>
 
 #include <utility>
 
@@ -71,10 +73,12 @@ void StateManager::update(float deltaTime) {
     }
 }
 
-void StateManager::render(sf::RenderWindow& window) {
+void StateManager::render(sf::RenderTarget& window) {
     if (stack.empty()) {
         return;
     }
+
+    // std :: cerr << "Rendering state stack of size: " << stack.size() << std :: endl;
 
     // Find the lowest state that must be drawn: walk down while states are transparent,
     // then render from that state up so overlays composite over what is beneath them.
@@ -84,7 +88,9 @@ void StateManager::render(sf::RenderWindow& window) {
     }
 
     for (std::size_t index = bottom; index < stack.size(); ++index) {
+        // std :: cerr << "The type of the state at index " << index << " is: " << typeid(*stack[index]).name() << std :: endl;
         stack[index]->render(window);
+        // std :: cerr << "Rendered state at index: " << index << std :: endl;
     }
 }
 

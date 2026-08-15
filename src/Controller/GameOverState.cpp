@@ -1,12 +1,14 @@
 #include "Controller/GameOverState.h"
 
+#include "Controller/AppEngine.h"
 #include "Controller/MenuState.h"
 #include "Controller/StateManager.h"
-#include "Model/GameManager.h"
+#include "Model/Core/GameManager.h"
+#include "View/AssetManager.h"
+#include "View/TextUtils.h"
 
 #include <SFML/Graphics/Color.hpp>
-#include <SFML/Graphics/Rect.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
 
 #include <memory>
@@ -14,15 +16,14 @@
 
 namespace controller {
 
-namespace {
-void centerOrigin(sf::Text& text) {
-    const sf::FloatRect bounds = text.getLocalBounds();
-    text.setOrigin({bounds.position.x + bounds.size.x / 2.f, bounds.position.y + bounds.size.y / 2.f});
-}
-}
-
 void GameOverState::onEnter() {
-    fontLoaded = font.openFromFile("assets/fonts/Tuffy.ttf");
+    font = view::AssetManager::instance().getUiFont();
+    fontLoaded = view::AssetManager::instance().isFontLoaded();
+    if (fontLoaded) {
+        const float fitWidth = static_cast<float>(AppEngine::screenWidth()) * 0.94f;
+        titleSize = view::text::fitCharacterSize(font, "GAME OVER", fitWidth, 28);
+        hintSize = view::text::fitCharacterSize(font, "Press ENTER to return to Menu", fitWidth, 10);
+    }
 }
 
 void GameOverState::handleEvent(const sf::Event& event) {
@@ -38,33 +39,30 @@ void GameOverState::update(float deltaTime) {
     (void)deltaTime;
 }
 
-void GameOverState::render(sf::RenderWindow& window) {
+void GameOverState::render(sf::RenderTarget& window) {
     window.clear(sf::Color(60, 10, 10));
 
     if (!fontLoaded) {
         return;
     }
 
-    const sf::Vector2u windowSize = window.getSize();
+    const float centerX = static_cast<float>(AppEngine::screenWidth()) / 2.0f;
+    const float centerY = static_cast<float>(AppEngine::ScreenHeight);
     const int score = model::GameManager::instance().getScore();
 
-    sf::Text title(font, "GAME OVER", 56);
+    sf::Text title(font, "GAME OVER", titleSize);
     title.setFillColor(sf::Color(230, 60, 60));
-    centerOrigin(title);
-    title.setPosition({windowSize.x / 2.f, windowSize.y * 0.35f});
-    window.draw(title);
+    view::text::drawCentered(window, title, centerX, centerY * 0.35f);
 
-    sf::Text scoreText(font, "Final Score: " + std::to_string(score), 26);
+    const std::string scoreString = "Final Score: " + std::to_string(score);
+    const unsigned int fitted = view::text::fitCharacterSize(font, scoreString, static_cast<float>(AppEngine::screenWidth()) * 0.94f, scoreSize);
+    sf::Text scoreText(font, scoreString, fitted);
     scoreText.setFillColor(sf::Color::White);
-    centerOrigin(scoreText);
-    scoreText.setPosition({windowSize.x / 2.f, windowSize.y * 0.55f});
-    window.draw(scoreText);
+    view::text::drawCentered(window, scoreText, centerX, centerY * 0.55f);
 
-    sf::Text hint(font, "Press ENTER to return to Menu", 20);
+    sf::Text hint(font, "Press ENTER to return to Menu", hintSize);
     hint.setFillColor(sf::Color(200, 200, 200));
-    centerOrigin(hint);
-    hint.setPosition({windowSize.x / 2.f, windowSize.y * 0.68f});
-    window.draw(hint);
+    view::text::drawCentered(window, hint, centerX, centerY * 0.68f);
 }
 
 }

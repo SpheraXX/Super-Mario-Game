@@ -18,6 +18,8 @@ public:
     void onEmergenceComplete() override;
     void onTileCollision(char tile, CollisionType side) override;
     void onCollect(Entity& collector) override;
+    // A bump from below flips a mushroom resting on the block's top face.
+    void onBlockHitFromBelow() override;
 
 private:
     static constexpr float WalkSpeed = 30.0f;

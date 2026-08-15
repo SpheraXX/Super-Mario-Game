@@ -27,6 +27,12 @@ void Mushroom::onTileCollision(char /* tile */, CollisionType side) {
     }
 }
 
+void Mushroom::onBlockHitFromBelow() {
+    // Standing on a block that Mario bumps from below: turn around, like a wall turn.
+    setDirection(-getDirection());
+    velocity.x = WalkSpeed * getDirection();
+}
+
 void Mushroom::onCollect(Entity& collector) {
     // All power-up policy lives in Player::applyPowerUp (the size axis vs the ability
     // slot, plus the redundant-power-up points). The item just hands the collect over.

@@ -29,7 +29,10 @@ public:
 
 private:
     static constexpr float Height = Width;
-    static constexpr float TravelSpeed = 120.0f;
+    // 2.5x Mario's walk speed (WalkSpeed = 90 in Mario.h): the ball reads as "almost thrice"
+    // as fast as a walking Mario and still gets outrun by a running one (Run = 180). Keep
+    // the relation honest when walk speed is retuned.
+    static constexpr float TravelSpeed = 225.0f;
     static constexpr float BounceSpeed = 160.0f;
 
     float animationClock = 0.0f;

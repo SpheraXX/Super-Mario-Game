@@ -36,7 +36,6 @@
 #include "View/Enemy/GoombaRenderer.h"
 #include "View/Enemy/KoopaRenderer.h"
 #include "View/Level/FlagPoleRenderer.h"
-#include "View/Level/PipeRenderer.h"
 #include "View/Player/PlayerRenderer.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -69,7 +68,11 @@ LevelScene::LevelScene()
     entityRenderers->registerRenderer<model::CoinBlock, view::CoinBlockRenderer>();
     entityRenderers->registerRenderer<model::BrickBlock, view::BrickBlockRenderer>();
     entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
-    entityRenderers->registerRenderer<model::Pipe, view::PipeRenderer>();
+
+    // Pipes are NOT registered: they are terrain, drawn per cell by the tile renderer
+    // ('P'/'Q'/'p'/'q' cells). A warp pipe spawns a model::Pipe entity for the portal
+    // linkage, but rendering it on top with a different sprite set made warp pipes look
+    // unlike regular pipes — the entity is intentionally invisible.
 
     // Items are drawn from their own sprite sheet; the frame rects are named in
     // View/Item/ItemAtlas.h.

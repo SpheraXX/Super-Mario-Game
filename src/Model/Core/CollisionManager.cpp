@@ -4,6 +4,7 @@
 #include "Model/Character.h"
 #include "Model/Enemy/Enemy.h"
 #include "Model/Entity.h"
+#include "Model/Item/Item.h"
 #include "Model/Map/TileMap.h"
 #include "Model/Player/Player.h"
 
@@ -335,10 +336,11 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
             // solid one for the bump scan; the other is the player who bumped.
             Entity* const player = a->hitbox.layer == CollisionLayer::Player ? a : bestBlock;
             Entity* const block = (player == a) ? bestBlock : a;
-            // A real bump also knocks out whatever stands on the block's top face; the
-            // block reacts first, then the scan runs over the same active entity list.
+            // A real bump also reacts with whatever stands on the block's top face:
+            // enemies are flip-killed, resting mushrooms turn around. The block reacts
+            // first, then the scan runs over the same active entity list.
             if (resolveEntityInteraction(*a, *bestBlock, bestSide)) {
-                defeatEnemiesAbove(*block, *player, entities);
+                affectEntitiesAbove(*block, *player, entities);
             }
         }
     }
@@ -460,20 +462,22 @@ bool CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
     return false;
 }
 
-bool CollisionManager::defeatEnemiesAbove(const Entity& block, Entity& player,
-                                          const std::vector<Entity*>& entities) {
-    // A real bump knocks out every enemy standing on the block's top face: the classic
-    // headbutt flip. Only feet actually resting on the top within the standing epsilon
-    // qualify — an enemy brushing the block's side or falling past it is untouched. The
-    // Enemy layer is the type contract for the cast, as in resolveEntityInteraction.
+bool CollisionManager::affectEntitiesAbove(const Entity& block, Entity& player,
+                                           const std::vector<Entity*>& entities) {
+    // A real bump reacts with everything standing on the block's top face: enemies take
+    // the classic headbutt flip-kill, and a Mushroom resting there turns around. Only
+    // feet actually resting on the top within the standing epsilon qualify — an entity
+    // brushing the block's side or falling past it is untouched. The collision layers
+    // are the type contract for the casts, as in resolveEntityInteraction.
     const float topY = block.getPosition().y + block.hitbox.offset.y;
     const float blockLeft = block.getPosition().x + block.hitbox.offset.x;
     const float blockRight = blockLeft + block.hitbox.width;
-    bool defeatedAny = false;
+    bool reactedAny = false;
 
     for (Entity* entity : entities) {
         if (!entity || !entity->isActive || entity->isDying()) continue;
-        if (entity->hitbox.layer != CollisionLayer::Enemy) continue;
+        if (entity->hitbox.layer != CollisionLayer::Enemy
+            && entity->hitbox.layer != CollisionLayer::Item) continue;
 
         const float feetY = entity->getPosition().y + entity->hitbox.offset.y
                             + entity->hitbox.height;
@@ -483,12 +487,17 @@ bool CollisionManager::defeatEnemiesAbove(const Entity& block, Entity& player,
         const float myRight = myLeft + entity->hitbox.width;
         if (myRight <= blockLeft || myLeft >= blockRight) continue;
 
-        // The same one-shot flip-and-fall defeat a spinning shell deals out; no stomp
-        // lockout and no bounce — the bump already spent the player's upward motion.
-        static_cast<Enemy&>(*entity).onHit(player);
-        defeatedAny = true;
+        if (entity->hitbox.layer == CollisionLayer::Enemy) {
+            // The same one-shot flip-and-fall defeat a spinning shell deals out; no stomp
+            // lockout and no bounce — the bump already spent the player's upward motion.
+            static_cast<Enemy&>(*entity).onHit(player);
+            reactedAny = true;
+        } else {
+            static_cast<Item&>(*entity).onBlockHitFromBelow();
+            reactedAny = true;
+        }
     }
-    return defeatedAny;
+    return reactedAny;
 }
 
 void CollisionManager::pushOutOfBlock(Character& mover, const Entity& blocker, CollisionType moverSide) {

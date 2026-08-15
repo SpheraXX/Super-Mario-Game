@@ -29,11 +29,12 @@ private:
     void processTileCollisions(Character& entity, float deltaTime);
     void processEntityCollisions(std::vector<Entity*>& entities);
 
-    // Knock out every enemy standing on the bumped block's top face (the classic
-    // "headbutt kills what stands on the block"). Returns true when any enemy fell.
-    // Callers pass the entities list so the scan sees exactly the active set.
-    bool defeatEnemiesAbove(const Entity& block, Entity& player,
-                            const std::vector<Entity*>& entities);
+    // React to everything standing on the bumped block's top face: enemies take the
+    // classic "headbutt kills what stands on the block" flip-kill, while a Mushroom
+    // resting there turns around. Returns true when any entity reacted. Callers pass the
+    // entities list so the scan sees exactly the active set.
+    bool affectEntitiesAbove(const Entity& block, Entity& player,
+                             const std::vector<Entity*>& entities);
 
     // Push the mover out of a solid blocker along the collision axis. Works on any
     // character-vs-blocker pair: the responder (e.g. CoinBlock) reacts through its

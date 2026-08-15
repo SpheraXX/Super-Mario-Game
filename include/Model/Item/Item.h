@@ -33,6 +33,11 @@ public:
     // Apply the item's effect to the collector (the player). Subclasses override.
     virtual void onCollect(Entity& collector);
 
+    // The player bumped the block this item is resting on from below (see the collision
+    // pass's block-top scan). Subclasses that react to the shake — a Mushroom turns
+    // around — override; static items (flower, star) take the no-op.
+    virtual void onBlockHitFromBelow() {}
+
     // Items are passable: walking into one collects it instead of being blocked.
     bool isSolid() const override { return false; }
 

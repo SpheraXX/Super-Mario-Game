@@ -35,10 +35,12 @@ bool CoinBlock::isOpened() const {
     return !coinAvailable;
 }
 
-void CoinBlock::onBlockHit(const BlockHitEvent& event) {
+bool CoinBlock::onBlockHit(const BlockHitEvent& event) {
     // Dispatched when the player's top face bumps this block's bottom. A block is spent
-    // exactly once; afterwards it stays as a plain used block.
-    if (!coinAvailable) return;
+    // exactly once; afterwards it stays as a plain used block — the false return stops
+    // the bump from counting at all, so it acts like a G block (no bounce, and nothing
+    // standing on top reacts).
+    if (!coinAvailable) return false;
 
     coinAvailable = false;
     startBounce();
@@ -82,6 +84,7 @@ void CoinBlock::onBlockHit(const BlockHitEvent& event) {
         GameManager::instance().addScore(CoinScore);
         if (world) world->spawn(std::make_unique<Coin>(getPosition()));
     }
+    return true;
 }
 
 }

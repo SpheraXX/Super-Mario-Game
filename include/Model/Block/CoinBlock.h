@@ -17,8 +17,9 @@ public:
     // True while the coin is still inside (closed '?' sprite).
     bool isOpened() const;
 
-    // Bumped from below by the player: collects the reward exactly once.
-    void onBlockHit(const BlockHitEvent& event) override;
+    // Bumped from below by the player: collects the reward exactly once. A spent block
+    // returns false, so the bump counts for nothing (no bounce, no reaction on top).
+    bool onBlockHit(const BlockHitEvent& event) override;
 
 private:
     bool coinAvailable;

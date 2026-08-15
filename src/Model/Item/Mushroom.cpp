@@ -1,6 +1,8 @@
 #include "Model/Item/Mushroom.h"
 #include "Model/Player/Player.h"
 
+#include <cmath>
+
 namespace model {
 
 Mushroom::Mushroom(Vector2 position, int direction)
@@ -28,9 +30,13 @@ void Mushroom::onTileCollision(char /* tile */, CollisionType side) {
 }
 
 void Mushroom::onBlockHitFromBelow() {
-    // Standing on a block that Mario bumps from below: turn around, like a wall turn.
+    // Standing on a block that Mario bumps from below: turn around like a wall turn, and
+    // hop one tile. The impulse comes from the energy equation (sqrt(2*g*h)) against the
+    // effective gravity — getGravity() already folds in the world's scale — so the arc
+    // is exactly HopHeight high in every world (land -160, underwater -95).
     setDirection(-getDirection());
     velocity.x = WalkSpeed * getDirection();
+    velocity.y = -std::sqrt(2.0f * getGravity() * HopHeight);
 }
 
 void Mushroom::onCollect(Entity& collector) {

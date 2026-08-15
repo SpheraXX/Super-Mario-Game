@@ -294,10 +294,13 @@ void LevelScene::resetLevel() {
         }
     }
 
-    // Level completion zone, in the padded columns: flagpole, then the goal castle.
-    // (Guard inside build: with a failed load columns is 0 and there is nothing to
-    // spawn.)
-    completion.build(map, entities);
+    // Level completion zone, in the padded columns: flagpole, then the goal castle. It
+    // belongs to the FINAL area only — earlier areas are traversed by portal, not by
+    // walking to the edge, and must not show a goal of their own. (Guard inside build:
+    // with a failed load columns is 0 and there is nothing to spawn.)
+    if (currentArea == level.areaCount() - 1) {
+        completion.build(map, entities);
+    }
 
     // Every character obeys the current world's physics (gravity/fall/drag, swim), and
     // every entity gets this scene as its spawn channel (model::World) so emitters can

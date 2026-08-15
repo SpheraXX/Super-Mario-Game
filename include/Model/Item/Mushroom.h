@@ -23,6 +23,10 @@ public:
 
 private:
     static constexpr float WalkSpeed = 30.0f;
+    // Height of the hop when a bump from below flips the mushroom: one tile. The impulse
+    // is sized to the effective gravity (sqrt(2*g*h)) so the arc is exactly this high in
+    // every world.
+    static constexpr float HopHeight = 16.0f;
 };
 
 }

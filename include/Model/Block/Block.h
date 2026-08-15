@@ -18,7 +18,12 @@ public:
     // The player bumped this block from below (see BlockHitEvent). Only block
     // subclasses react (bounce / collect a coin); other solid objects like pipes
     // never receive this hook.
-    virtual void onBlockHit(const BlockHitEvent& event) { (void)event; }
+    //
+    // Returns whether the block actually reacted to the bump. The collision pass
+    // only counts the bump as dispatched (reacting with whatever stands on the
+    // block's top face) when this returns true — so a spent block behaves like a
+    // plain ground tile.
+    virtual bool onBlockHit(const BlockHitEvent& event) { (void)event; return false; }
 
     // Bump reaction: start a short render-side bounce (only bricks and unopened
     // CoinBlocks do this; see the subclasses' onBlockHit overrides).

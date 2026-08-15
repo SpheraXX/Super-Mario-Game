@@ -11,7 +11,8 @@ class BrickBlock : public Block {
 public:
     BrickBlock(Vector2 position, Vector2 size);
 
-    void onBlockHit(const BlockHitEvent& event) override;
+    // A brick always reacts to a bump (break or bounce), so it reports true.
+    bool onBlockHit(const BlockHitEvent& event) override;
 
 private:
     // Points for smashing a brick, matching the original.

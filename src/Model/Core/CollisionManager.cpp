@@ -453,8 +453,9 @@ bool CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         pushOutOfBlock(playerCharacter, *other, playerSide);
         if (playerSide == CollisionType::Top && upwardSpeed >= MinBumpSpeed) {
             if (auto* block = dynamic_cast<Block*>(other)) {
-                block->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
-                return true;
+                // The block reports whether it actually reacted: a spent ? block returns
+                // false, so its bump counts for nothing (no reaction on its top face).
+                return block->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
             }
         }
         return false;

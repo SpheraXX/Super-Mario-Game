@@ -12,7 +12,7 @@ BrickBlock::BrickBlock(Vector2 position, Vector2 size)
     hitbox = Hitbox({0.0f, 0.0f}, size.x, size.y, false, CollisionLayer::Environment);
 }
 
-void BrickBlock::onBlockHit(const BlockHitEvent& event) {
+bool BrickBlock::onBlockHit(const BlockHitEvent& event) {
     // The bumper decides whether it is big enough: canBreakBricks() is the Entity-level
     // capability (a big Player), so no type check is needed here. A smash destroys the
     // brick outright — the entity pass skips inactive entities (so it can be walked and
@@ -23,9 +23,10 @@ void BrickBlock::onBlockHit(const BlockHitEvent& event) {
         GameManager::instance().addScore(BreakScore);
         eraseFromMap();
         isActive = false;
-        return;
+        return true;
     }
     startBounce();
+    return true;
 }
 
 void BrickBlock::eraseFromMap() {

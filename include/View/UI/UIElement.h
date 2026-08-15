@@ -50,8 +50,8 @@ public:
     }
 
     // ── Geometry ──────────────────────────────────────────────────────────────
-    void        setPosition(float x, float y) { pos = {x, y}; }
-    void        setSize(float w, float h)     { size = {w, h}; }
+    virtual void setPosition(float x, float y) { pos = {x, y}; }
+    virtual void setSize(float w, float h)     { size = {w, h}; }
     sf::Vector2f getPosition() const          { return pos; }
     sf::Vector2f getSize()     const          { return size; }
 

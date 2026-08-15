@@ -2,6 +2,8 @@
 
 #include "Controller/MainMenuState.h"
 #include "Model/Map/TileMap.h"
+#include "Model/SettingsManager.h"
+#include "View/AssetManager.h"
 
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/VideoMode.hpp>
@@ -36,6 +38,8 @@ unsigned int AppEngine::screenWidth() {
 }
 
 AppEngine::AppEngine() {
+    model::SettingsManager::instance();
+
     applyDisplayMode();  // creates the window, the offscreen target and both views
 
     // Offscreen target could not be sized: nothing can be drawn, so fail loudly here

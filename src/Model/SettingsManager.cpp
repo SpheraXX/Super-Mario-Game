@@ -1,0 +1,128 @@
+#include "Model/SettingsManager.h"
+#include "ext/json.hpp"
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+
+using json = nlohmann::json;
+
+namespace model {
+
+SettingsManager& SettingsManager::instance() {
+    static SettingsManager singleton;
+    return singleton;
+}
+
+SettingsManager::SettingsManager() {
+    load();
+}
+
+void SettingsManager::apply(const Settings& next) {
+    current = next;
+    save();
+}
+
+void SettingsManager::resetToDefaults() {
+    current = Settings::defaults();
+    save();
+}
+
+namespace {
+std::string langToStr(Language l) {
+    return l == Language::Vietnamese ? "vi" : "en";
+}
+Language strToLang(const std::string& s) {
+    return s == "vi" ? Language::Vietnamese : Language::English;
+}
+
+std::string qualityToStr(GraphicsQuality q) {
+    switch (q) {
+        case GraphicsQuality::Medium: return "medium";
+        case GraphicsQuality::High:   return "high";
+        default:                      return "low";
+    }
+}
+GraphicsQuality strToQuality(const std::string& s) {
+    if (s == "medium") return GraphicsQuality::Medium;
+    if (s == "high")   return GraphicsQuality::High;
+    return GraphicsQuality::Low;
+}
+}
+
+void SettingsManager::load() {
+    current = Settings::defaults();
+
+    std::ifstream file(FilePath);
+    if (!file.is_open()) {
+        std::cerr << "[SettingsManager] settings.json not found, creating with defaults.\n";
+        save();
+        return;
+    }
+
+    try {
+        json j;
+        file >> j;
+
+        if (j.contains("graphics")) {
+            const auto& g = j["graphics"];
+            if (g.contains("fullscreen"))   current.fullscreen   = g["fullscreen"].get<bool>();
+            if (g.contains("logicalWidth")) current.logicalWidth = g["logicalWidth"].get<int>();
+            if (g.contains("quality"))      current.quality      = strToQuality(g["quality"].get<std::string>());
+        }
+
+        if (j.contains("sound")) {
+            const auto& s = j["sound"];
+            if (s.contains("masterVolume")) current.masterVolume = s["masterVolume"].get<int>();
+            if (s.contains("musicVolume"))  current.musicVolume  = s["musicVolume"].get<int>();
+            if (s.contains("sfxVolume"))    current.sfxVolume    = s["sfxVolume"].get<int>();
+        }
+
+        if (j.contains("language")) {
+            current.language = strToLang(j["language"].get<std::string>());
+        }
+
+        if (j.contains("controls")) {
+            const auto& c = j["controls"];
+            if (c.contains("moveLeft"))   current.keyMoveLeft  = c["moveLeft"].get<int>();
+            if (c.contains("moveRight"))  current.keyMoveRight = c["moveRight"].get<int>();
+            if (c.contains("jump"))       current.keyJump      = c["jump"].get<int>();
+            if (c.contains("run"))        current.keyRun       = c["run"].get<int>();
+            if (c.contains("pause"))      current.keyPause     = c["pause"].get<int>();
+            if (c.contains("slot"))       current.controlSlot  = c["slot"].get<int>();
+        }
+
+    } catch (const json::exception& e) {
+        std::cerr << "[SettingsManager] JSON parse error: " << e.what() << "\n";
+        current = Settings::defaults();
+        save();
+    }
+}
+
+void SettingsManager::save() const {
+    std::filesystem::create_directories(
+        std::filesystem::path(FilePath).parent_path());
+
+    json j;
+    j["graphics"]["fullscreen"]   = current.fullscreen;
+    j["graphics"]["logicalWidth"] = current.logicalWidth;
+    j["graphics"]["quality"]      = qualityToStr(current.quality);
+
+    j["sound"]["masterVolume"]    = current.masterVolume;
+    j["sound"]["musicVolume"]     = current.musicVolume;
+    j["sound"]["sfxVolume"]       = current.sfxVolume;
+
+    j["language"]                 = langToStr(current.language);
+
+    j["controls"]["moveLeft"]     = current.keyMoveLeft;
+    j["controls"]["moveRight"]    = current.keyMoveRight;
+    j["controls"]["jump"]         = current.keyJump;
+    j["controls"]["run"]          = current.keyRun;
+    j["controls"]["pause"]        = current.keyPause;
+    j["controls"]["slot"]         = current.controlSlot;
+
+    std::ofstream file(FilePath);
+    if (!file.is_open()) return;
+    file << j.dump(4);
+}
+
+}  // namespace model

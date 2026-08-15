@@ -11,18 +11,21 @@
 namespace view {
 
 namespace {
-// mario-luigi.png: the small poses share one row and are drawn facing right (hence the
-// `true` passed to the base renderer, which mirrors them when the player walks left). The
-// big row sits directly above the small one; Super and Fire share those big frames — Fire
-// is told apart by a colour tint (characterTint) rather than a separate sheet row.
-//
-// Luigi lives in the matching block directly above Mario's: big-Luigi just above big-Mario
-// (192 vs 240) and small-Luigi just above small-Mario (224 vs 272). Every pose sits in the
-// same column for both, so the only difference is which two rows the rect is taken from.
-constexpr int SmallMarioRow = 272;
-constexpr int BigMarioRow = 240;
-constexpr int SmallLuigiRow = 224;
-constexpr int BigLuigiRow = 192;
+// mario-luigi.png: a strict 16x16 grid; the actual spritesheet starts at x=80, so every
+// pose X below is written with that offset already applied. From the top, each band is
+// one form (sprites drawn facing right, hence the `true` passed to the base renderer,
+// which mirrors them when the player walks left):
+//   y  0-31  big Mario        y 48-79  big fire Mario
+//   y 32-47  Mario            y 80-95  fire Mario
+//   y 96-127 big Luigi        y128-143 Luigi            (unused: Luigi borrows Mario's art)
+//   y144-175 big star Mario   y176-191 star Mario
+// The bands below y192 are leftovers; nothing references them.
+constexpr int MarioRow = 32;
+constexpr int BigMarioRow = 0;
+constexpr int FireRow = 80;
+constexpr int BigFireRow = 48;
+constexpr int StarRow = 176;
+constexpr int BigStarRow = 144;
 
 // Source frame heights. A small pose is a 16x16 cell; a big pose is 16x32.
 constexpr int SmallFrameHeight = 16;
@@ -31,7 +34,8 @@ constexpr int BigFrameHeight = 32;
 // World height of the one-tile (Small) form — the threshold that decides which row to draw.
 constexpr float SmallDrawSize = 16.0f;
 
-// x offset of each pose within its row. Shared by both sizes and both characters.
+// x offset of each pose within its row. Shared by every band: the pose columns are valid
+// throughout all rows.
 constexpr int StandFrameX = 176;
 constexpr int JumpFrameX = 144;
 constexpr int DieFrameX = 161;
@@ -72,38 +76,32 @@ int frameXFor(const model::Player& player) {
     }
 }
 
-// Smooth blink for the invulnerability windows (post-damage and Star): the sprite's alpha
+// Smooth blink for the post-damage invulnerability window only: the sprite's alpha
 // breathes faint -> clear -> faint on a sine wave, so the player stays visible but clearly
 // flickering, never an on/off toggle. Driven by the countdown itself, so the pulsing stops
 // exactly when the window runs out — the blink can never outlast the invulnerability it
-// advertises. A dead player is always fully opaque.
+// advertises. Star no longer blinks alpha (it swaps sprite rows, see renderTyped), and a
+// dead player is always fully opaque.
 constexpr float MinBlinkAlpha = 100.0f;
 constexpr float MaxBlinkAlpha = 255.0f;
 constexpr float DamageBlinkDipsPerSecond = 4.0f;
-constexpr float StarBlinkDipsPerSecond = 8.0f;
 
 float blinkAlpha(const model::Player& player) {
     if (!player.isAlive()) return MaxBlinkAlpha;
+    if (player.getBlinkRemaining() <= 0.0f) return MaxBlinkAlpha;
 
-    float countdown;
-    float dipsPerSecond;
-    if (player.isStar()) {
-        countdown = player.getRemainingTime();
-        dipsPerSecond = StarBlinkDipsPerSecond;
-    } else if (player.getBlinkRemaining() > 0.0f) {
-        countdown = player.getBlinkRemaining();
-        dipsPerSecond = DamageBlinkDipsPerSecond;
-    } else {
-        return MaxBlinkAlpha;
-    }
-
-    const float wave = (std::sin(countdown * dipsPerSecond * 3.14159265f) + 1.0f) * 0.5f;
+    const float wave = (std::sin(player.getBlinkRemaining() * DamageBlinkDipsPerSecond * 3.14159265f) + 1.0f) * 0.5f;
     return MinBlinkAlpha + (MaxBlinkAlpha - MinBlinkAlpha) * wave;
 }
 
-// Fire Mario reuses the big frames with a warmer palette rather than its own sheet row.
-sf::Color fireTint() {
-    return sf::Color(255, 236, 214);
+// Star flicker rate: sprite swaps per second between the base form and the star row.
+// Square wave off the remaining time, so the alternation stops exactly when the star
+// expires.
+constexpr float StarSwapsPerSecond = 8.0f;
+
+bool starFrameActive(const model::Player& player) {
+    if (!player.isStar()) return false;
+    return static_cast<int>(player.getRemainingTime() * StarSwapsPerSecond) % 2 == 0;
 }
 }
 
@@ -112,36 +110,43 @@ PlayerRenderer::PlayerRenderer()
 }
 
 sf::Color PlayerRenderer::characterTint(const model::Player& player) const {
-    sf::Color color = player.isFire() ? fireTint() : sf::Color::White;
+    // Fire is drawn from its own sheet rows; the tint only ever carries the post-damage
+    // invulnerability blink (and nothing else — a dead player is opaque).
+    sf::Color color = sf::Color::White;
     color.a = static_cast<std::uint8_t>(std::lround(blinkAlpha(player)));
     return color;
 }
 
 void PlayerRenderer::renderTyped(sf::RenderTarget& window, const model::Player& player,
                                  const RenderContext& /* ctx */) const {
-    // Mario and Luigi lay out identically on the sheet, so one pair of rows serves both.
-    const int smallRow = player.isLuigi() ? SmallLuigiRow : SmallMarioRow;
-    const int bigRow = player.isLuigi() ? BigLuigiRow : BigMarioRow;
-
     // Death: both sizes show the small dead pose. There is no big dead frame — the big cell
     // above it is the sitting pose, and a dying Mario is not sitting. That sprite is one
     // tile tall, so it is drawn into a 32x32 box anchored at the bottom of the (still
-    // full-size) body rather than stretched over it.
+    // full-size) body rather than stretched over it. It always comes from the plain Mario
+    // row: a fire/star death is still the classic sprite.
     if (player.getAnimState() == model::AnimState::Die) {
         const float offsetY = player.getSize().y - SmallDrawSize;
         drawCharacterFrame(window, player,
-                           {{DieFrameX, smallRow}, {16, SmallFrameHeight}},
+                           {{DieFrameX, MarioRow}, {16, SmallFrameHeight}},
                            {player.getSize().x, SmallDrawSize}, {0.0f, offsetY});
         return;
     }
 
     // Player::syncPowerSize grows the box to 32x64 on power-up and shrinks it back on hit,
-    // so the size alone says which row to draw — no state-type checks here, and a Star
-    // automatically keeps whatever size it entered with. Drawing the small 16x16 frame over
-    // a grown box is exactly what stretched the sprite before the big row was wired up.
+    // so the size alone says which height band to draw — no state-type checks here, and a
+    // Star automatically keeps whatever size it entered with. Drawing the small 16x16 frame
+    // over a grown box is exactly what stretched the sprite before the big row was wired up.
     const bool big = player.getSize().y > SmallDrawSize;
+
+    // The band: Luigi borrows Mario's art, fire has its own rows, and a starred player
+    // alternates between its base band and the star band (fire + star alternates fire rows
+    // and star rows). The pose columns are the same in every band.
+    const int row = starFrameActive(player)
+        ? (big ? BigStarRow : StarRow)
+        : (player.isFire() ? (big ? BigFireRow : FireRow)
+                           : (big ? BigMarioRow : MarioRow));
     drawCharacterFrame(window, player,
-                       {{frameXFor(player), big ? bigRow : smallRow},
+                       {{frameXFor(player), row},
                         {16, big ? BigFrameHeight : SmallFrameHeight}});
 }
 

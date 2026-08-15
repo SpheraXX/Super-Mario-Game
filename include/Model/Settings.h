@@ -24,8 +24,29 @@ struct Settings {
     int keyJump       = -1;  
     int keyRun        = -1;  
     int keyPause      = -1;  
+    int keyDash       = -1;
+    int keyAttack     = -1;
+    int keyCrouch     = -1;
+    int keyInteract   = -1;
+    int keyInventory  = -1;
 
     int controlSlot   = 0;
+
+    bool operator==(const Settings& o) const {
+        return fullscreen == o.fullscreen && logicalWidth == o.logicalWidth &&
+               quality == o.quality && masterVolume == o.masterVolume &&
+               musicVolume == o.musicVolume && sfxVolume == o.sfxVolume &&
+               language == o.language && keyMoveLeft == o.keyMoveLeft &&
+               keyMoveRight == o.keyMoveRight && keyJump == o.keyJump &&
+               keyRun == o.keyRun && keyPause == o.keyPause &&
+               keyDash == o.keyDash && keyAttack == o.keyAttack &&
+               keyCrouch == o.keyCrouch && keyInteract == o.keyInteract &&
+               keyInventory == o.keyInventory &&
+               controlSlot == o.controlSlot;
+    }
+    bool operator!=(const Settings& o) const {
+        return !(*this == o);
+    }
 
     static Settings defaults();
 };

@@ -4,6 +4,7 @@
 #include "Controller/GameState.h"
 #include "Model/Settings.h"
 #include "View/UI/UIContainer.h"
+#include "View/UI/UIScrollView.h"
 #include "View/UI/UILabel.h"
 #include "View/UI/UIButton.h"
 #include <SFML/Graphics/RectangleShape.hpp>
@@ -26,6 +27,10 @@ private:
     void resetSettings();
     void updateUIFromDraft();
 
+    void updateKeyButtonsVisuals();
+    bool hasKeyConflicts() const;
+    void resetSingleKey(int index);
+
     void buildGraphicsTab(const sf::Font& font);
     void buildSoundTab(const sf::Font& font);
     void buildControlsTab(const sf::Font& font);
@@ -38,12 +43,23 @@ private:
     view::ui::UILabel     titleLabel;
     view::ui::UIContainer tabBar;
     
-    std::array<view::ui::UIContainer, 4> tabPanels;
+    std::array<view::ui::UIScrollView, 4> tabPanels;
     int currentTab = 0;
 
     view::ui::UIContainer bottomBar;
 
     sf::Clock soundThrottleClock;
+
+    std::array<view::ui::UIButton*, 10> keyButtons = {nullptr};
+    int waitingForKeyIndex = -1;
+    int pendingPreviousKey = -1;
+
+    struct UIContext {
+        view::ui::UIButton* applyBtn = nullptr;
+        view::ui::UIButton* doneBtn = nullptr;
+        bool forceApply = false;
+        bool forceDone = false;
+    } uiCtx;
 };
 
 } // namespace controller

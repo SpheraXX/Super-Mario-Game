@@ -5,6 +5,7 @@
 // stays decoupled from gameplay internals.
 #include "Controller/AppEngine.h"
 #include "Controller/PlayState.h"
+#include "Controller/OptionsState.h"
 #include "Controller/StateManager.h"
 #include "Model/Core/GameManager.h"
 #include "View/AssetManager.h"
@@ -81,8 +82,8 @@ void MainMenuState::buildUI() {
         manager->replaceState(std::make_unique<PlayState>());
     });
 
-    makeBtn("OPTIONS",    [this]() {
-        // TODO: push OptionsState when Phase 2 is ready.
+    makeBtn("OPTIONS", [this]() {
+        manager->pushState(std::make_unique<OptionsState>());
     });
 
     makeBtn("PROFILE",    [this]() {

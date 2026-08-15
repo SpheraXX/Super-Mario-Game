@@ -37,8 +37,16 @@ unsigned int AppEngine::screenWidth() {
     return logicalWidth;
 }
 
-AppEngine::AppEngine() {
-    model::SettingsManager::instance();
+AppEngine::AppEngine() 
+    : audioManager()
+    , gameContext{&audioManager}
+    , states(std::make_unique<MainMenuState>(), &gameContext) {
+    model::SettingsManager::instance().subscribe([this](const model::Settings& s) {
+        // AudioManager is subscribed directly, but we can do it here:
+        audioManager.setMasterVolume(static_cast<float>(s.masterVolume));
+        audioManager.setMusicVolume(static_cast<float>(s.musicVolume));
+        audioManager.setSFXVolume(static_cast<float>(s.sfxVolume));
+    });
 
     applyDisplayMode();  // creates the window, the offscreen target and both views
 

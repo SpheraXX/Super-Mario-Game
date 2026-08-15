@@ -12,11 +12,16 @@ class RenderTarget;
 
 namespace controller {
 
+struct GameContext;
+
 // Owns the stack of game states and drives the active one. Transition requests
 // (push/pop/replace/clear) are queued and applied only at the end of the frame via
 // applyPending(), so a state may safely mutate the stack from within its own update().
 class StateManager {
 public:
+    // Runs an initial state immediately, skipping the 'pending' queue mechanics.
+    StateManager(std::unique_ptr<GameState> initial, GameContext* ctx);
+
     void pushState(std::unique_ptr<GameState> state);
     void popState();
     void replaceState(std::unique_ptr<GameState> state);
@@ -43,6 +48,7 @@ private:
 
     std::vector<std::unique_ptr<GameState>> stack;
     std::vector<PendingChange> pending;
+    GameContext* context = nullptr;
 };
 
 }

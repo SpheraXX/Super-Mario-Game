@@ -9,7 +9,12 @@ class RenderTarget;
 
 namespace controller {
 
+class IAudioManager;
 class StateManager;
+
+struct GameContext {
+    IAudioManager* audio = nullptr;
+};
 
 // Abstract base of the State Pattern. Each concrete screen (menu, play, game over)
 // derives from this and is owned by the StateManager stack.
@@ -30,6 +35,8 @@ public:
     virtual bool isTransparent() const { return false; }
 
 protected:
+    GameContext* context = nullptr;
+
     // Back-pointer used to request transitions from inside a state. Assigned by the
     // StateManager the moment the state is pushed; never null while the state is live.
     StateManager* manager = nullptr;

@@ -2,6 +2,7 @@
 #define CONTROLLER_APPENGINE_H
 
 #include "Controller/StateManager.h"
+#include "Controller/AudioManager.h"
 #include "Model/Map/TileMap.h"
 
 #include <SFML/Graphics/RenderTexture.hpp>
@@ -78,6 +79,9 @@ private:
     static constexpr unsigned int WindowChrome = 64;
 
     sf::RenderWindow window;
+    
+    AudioManager audioManager;
+    GameContext gameContext;
     StateManager states;
 
     // Current selection. `fullscreen` overrides the index rather than being a fourth entry

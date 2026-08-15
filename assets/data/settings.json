@@ -1,0 +1,21 @@
+{
+    "controls": {
+        "jump": 25,
+        "moveLeft": 71,
+        "moveRight": 72,
+        "pause": 36,
+        "run": 23,
+        "slot": 0
+    },
+    "graphics": {
+        "fullscreen": false,
+        "logicalWidth": 512,
+        "quality": "low"
+    },
+    "language": "vi",
+    "sound": {
+        "masterVolume": 100,
+        "musicVolume": 100,
+        "sfxVolume": 100
+    }
+}

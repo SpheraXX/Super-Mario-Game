@@ -2,6 +2,8 @@
 #define MODEL_SETTINGSMANAGER_H
 
 #include "Model/Settings.h"
+#include <functional>
+#include <vector>
 
 namespace model {
 
@@ -18,11 +20,14 @@ public:
 
     static constexpr const char* FilePath = "assets/data/settings.json";
 
+    void subscribe(std::function<void(const Settings&)> callback);
+
 private:
     SettingsManager();
     void load();
     void save() const;
     Settings current;
+    std::vector<std::function<void(const Settings&)>> subscribers;
 };
 
 }  // namespace model

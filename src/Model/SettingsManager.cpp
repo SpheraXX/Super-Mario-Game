@@ -17,14 +17,26 @@ SettingsManager::SettingsManager() {
     load();
 }
 
-void SettingsManager::apply(const Settings& next) {
-    current = next;
+void SettingsManager::apply(const Settings& draft) {
+    current = draft;
     save();
+    for (auto& cb : subscribers) {
+        cb(current);
+    }
+}
+
+void SettingsManager::subscribe(std::function<void(const Settings&)> callback) {
+    subscribers.push_back(callback);
+    // Immediately call it with current settings so the subscriber initializes correctly
+    callback(current);
 }
 
 void SettingsManager::resetToDefaults() {
     current = Settings::defaults();
     save();
+    for (auto& cb : subscribers) {
+        cb(current);
+    }
 }
 
 namespace {

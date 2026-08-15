@@ -8,6 +8,8 @@
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 
+#include <cmath>
+
 namespace view {
 
 namespace {

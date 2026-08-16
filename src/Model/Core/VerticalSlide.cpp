@@ -5,10 +5,11 @@
 
 namespace model {
 
-void VerticalSlide::begin(float startY, float targetY, float speed) {
-    this->targetY = targetY;
+void VerticalSlide::begin(float start, float target, float speed, Axis axis) {
+    this->target = target;
     this->speed = std::fabs(speed);
-    direction = targetY >= startY ? 1.0f : -1.0f;
+    this->axis = axis;
+    direction = target >= start ? 1.0f : -1.0f;
     done = false;
 }
 
@@ -22,14 +23,16 @@ bool VerticalSlide::advance(Entity& entity, float deltaTime) {
     }
 
     const Vector2 position = entity.getPosition();
-    const float nextY = position.y + direction * speed * deltaTime;
-    const bool passedTarget = direction > 0.0f ? nextY >= targetY : nextY <= targetY;
+    const float current = axis == Axis::Vertical ? position.y : position.x;
+    const float next = current + direction * speed * deltaTime;
+    const bool passedTarget = direction > 0.0f ? next >= target : next <= target;
+    const float resolved = passedTarget ? target : next;
+    entity.setPosition(axis == Axis::Vertical ? Vector2{position.x, resolved}
+                                               : Vector2{resolved, position.y});
     if (passedTarget) {
-        entity.setPosition({position.x, targetY});
         done = true;
         return false;
     }
-    entity.setPosition({position.x, nextY});
     return true;
 }
 

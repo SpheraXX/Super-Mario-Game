@@ -15,7 +15,7 @@ class World;
 // A world object: anything placed in the level with a position, size and hitbox.
 // Static objects (pipes, the flagpole, blocks) are plain world objects; everything
 // that moves, takes damage or dies adds those capabilities in Character. Nothing in
-// this interface implies motion or input, so e.g. a FlagPole can never be asked for
+// this interface implies motion or input, so e.g. a LevelGoal can never be asked for
 // a velocity.
 //
 // Life state (isAlive/isDying) is the one exception, and it is deliberate: the
@@ -33,7 +33,7 @@ public:
 
     // Fired when an entity with a trigger hitbox overlaps the player (see the trigger
     // pass in CollisionManager). Default: nothing — trigger semantics live in the
-    // concrete type (e.g. FlagPole marks itself touched).
+    // concrete type (e.g. LevelGoal marks itself touched).
     virtual void onTriggerEnter(Entity& other) { (void)other; }
 
     virtual bool isSolid() const { return false; }
@@ -68,6 +68,12 @@ public:
     // Plant has to slide out from behind its pipe; drawn in the normal pass it would hang
     // visibly in front of the pipe at every retracted position.
     virtual bool drawsBehindTerrain() const { return false; }
+
+    // How far this entity moved THIS FRAME, for anything solid enough to carry a rider
+    // (a moving platform). {0,0} for everything else. The collision pass reads this after
+    // an entity's own update() has already run, so a mover reports the frame's motion
+    // without the rider ever needing to know how that motion was computed.
+    virtual Vector2 getCarryDelta() const { return {0.0f, 0.0f}; }
 
     // The world an entity lives in: its channel for spawning (projectiles, transformations)
     // and for asking about the player. Set when the level takes ownership of the entity.

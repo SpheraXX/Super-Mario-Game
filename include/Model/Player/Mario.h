@@ -16,13 +16,9 @@ public:
     float getStompBounceRatio() const override;
     float getStompBounceConstant() const override;
 
-    static constexpr float WalkSpeed = 90.0f;
-    // 400 (feat's value) was too hot on land for the fixed 20-column camera to keep the
-    // player visibly ahead. 360 is now the true top speed: the Overworld's horizontal drag
-    // used to bleed this down to ~350, but that drag was removed when the ground feel was
-    // retuned (see WorldSet and Player's accel constants), so what is written here is what
-    // the player actually reaches.
-    static constexpr float RunSpeed = 180.0f;
+    static constexpr float WalkSpeed = 180.0f;
+    // Test tuning: doubled from the normal 90/180 pair so map traversal is faster.
+    static constexpr float RunSpeed = 360.0f;
     // Safety ceiling only: with the hold window and accel below, the boost tops out near
     // 495px/s, so a full-length hold never reaches this cap.
     static constexpr float MaxJumpSpeed = 340.0f;

@@ -18,6 +18,12 @@
 
 namespace controller {
 
+namespace {
+// Level-clear rewards: a flat bonus for reaching the goal, plus time remaining.
+constexpr int GoalBonus = 5000;
+constexpr int TimeBonusPerSecond = 10;
+}
+
 void PlayState::onEnter() {
     scene = std::make_unique<LevelScene>();
     if (!scene->loadLevel()) {
@@ -59,26 +65,9 @@ void PlayState::update(float deltaTime) {
         return;
     }
 
-    // After the flagpole is touched the scripted clear play keeps updating the frozen
-    // tableau (pole slide, walk to the castle) until the overlay is pushed.
-    if (sequence.isActive()) {
-        sequence.update(deltaTime);
-        if (sequence.isFinished()) {
-            finishClear();
-        }
-        return;
-    }
-
     const LevelScene::Event event = scene->update(deltaTime);
     if (event == LevelScene::Event::ClearTriggered) {
-        // Freeze the world and start the scripted clear play; without a live player or
-        // pole there is nothing to animate, so jump straight to the overlay.
-        scene->setCinematicActive(true);
-        if (scene->player() && scene->flagPole()) {
-            sequence.begin(*scene);
-        } else {
-            finishClear();
-        }
+        finishClear();
     } else if (event == LevelScene::Event::RunEnded) {
         // The player's death fall is over: either the run is over or the whole level
         // restarts from its first area (whatever area the body fell in).
@@ -98,8 +87,15 @@ void PlayState::update(float deltaTime) {
 }
 
 void PlayState::finishClear() {
+    // Award the clear bonus (a flat reward for reaching the goal, plus time remaining)
+    // before the timer stops — there is no cinematic to run first any more, so this is
+    // the whole reaction to ClearTriggered.
+    scene->pauseTimer();
+    const int timeBonus = scene->getRemainingTime() * TimeBonusPerSecond;
+    model::GameManager::instance().addScore(GoalBonus + timeBonus);
+    model::GameManager::instance().setLevelClearBonus(GoalBonus + timeBonus);
+
     levelComplete = true;
-    scene->setCinematicActive(false);
     manager->pushState(std::make_unique<LevelCompleteState>());
 }
 

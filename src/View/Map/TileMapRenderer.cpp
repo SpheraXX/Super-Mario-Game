@@ -1,6 +1,7 @@
 #include "View/Map/TileMapRenderer.h"
 
 #include "Model/Map/TileMap.h"
+#include "View/Block/BlockAtlas.h"
 
 #include <SFML/Graphics/Sprite.hpp>
 
@@ -34,17 +35,21 @@ constexpr int KelpDX = 3 * Pitch;  // kelp follows the bush's three cells on the
 
 // Verified against the artwork: the four scenery quadrants have pixel-identical
 // silhouettes and differ only in palette, so one set of offsets serves every landscape.
+// The block origin is the shared atlas::brickOrigin (the brick IS each quadrant's origin;
+// see View/Block/BlockAtlas.h) so it can never drift out of step with BrickBlockRenderer.
 TileMapRenderer::WorldAtlas TileMapRenderer::atlasFor(model::WorldType worldType) {
+    const sf::Vector2i brick = atlas::brickOrigin(worldType);
     switch (worldType) {
-        case model::WorldType::Underground: return {147, 16, 164, 213};
-        case model::WorldType::Underwater:  return {147, 100, 164, 297};
-        case model::WorldType::Castle:      return {0, 100, 0, 297};
+        case model::WorldType::Underground: return {brick.x, brick.y, 164, 213};
+        case model::WorldType::Underwater:  return {brick.x, brick.y, 164, 297};
+        case model::WorldType::Castle:      return {brick.x, brick.y, 0, 297};
         case model::WorldType::Overworld:
-        default:                            return {0, 16, 0, 213};
+        default:                            return {brick.x, brick.y, 0, 213};
     }
 }
 
-TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldType worldType) {
+TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldType worldType)
+    : worldType(worldType) {
     loadTileset(tilesetPath);
     loadTileset(MarioAssetPath);
 
@@ -115,27 +120,48 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldTyp
     registerTile('p', MarioAssetPath, sf::IntRect({119, 213}, {Cell, Cell}), SceneryBackdrop);
     registerTile('q', MarioAssetPath, sf::IntRect({136, 213}, {Cell, Cell}), SceneryBackdrop);
 
-    // The goal castle is painted into the padded completion zone by the controller
-    // from its 21-tile sheet. The symbols (see TileMap::CastleSymbols) were chosen to
-    // not clash with the map's own symbols, and are mapped row-major over the castle's
-    // 5x5 silhouette: the upper two rows are the 3-wide tower (atlas x = 40..72), the
-    // lower three rows are the 5-wide base (atlas x = 24..88). The centre-bottom pair
-    // is the entrance. The two unpainted corner cells of the tower rows stay air.
-    {
-        static constexpr int SheetX[model::TileMap::CastleTiles] =
-            {40, 56, 72, 40, 56, 72,
-             24, 40, 56, 72, 88,
-             24, 40, 56, 72, 88,
-             24, 40, 56, 72, 88};
-        static constexpr int SheetY[model::TileMap::CastleTiles] =
-            {696, 696, 696, 712, 712, 712,
-             728, 728, 728, 728, 728,
-             744, 744, 744, 744, 744,
-             760, 760, 760, 760, 760};
-        for (std::size_t i = 0; i < model::TileMap::CastleTiles; ++i) {
-            registerTile(model::TileMap::CastleSymbols[i], MarioAssetPath,
-                         sf::IntRect({SheetX[i], SheetY[i]}, {Cell, Cell}));
-        }
+    // Horizontal pipe lower body (see TileMap::HorizontalPipeSymbol): unlike the standing
+    // pipe above, this is a single WYSIWYG 4x2 blit anchored at its top-left cell, not a
+    // per-cell tiling -- the art is a one-off end shape, not a repeatable column. Drawn in
+    // the terrain pass (not behindTerrain), like the standing pipe: it is solid geometry,
+    // not backdrop.
+    registerTile(model::TileMap::HorizontalPipeSymbol, MarioAssetPath,
+                 sf::IntRect({192, 656}, {4 * Cell, 2 * Cell}), SceneryBackdrop);
+
+    // The goal castle: two multi-cell images, not a 21-symbol grid of one-cell tiles. The
+    // artwork is laid out as exactly these two rects, and the castle is pure backdrop now
+    // that LevelGoal ('E') ends the level, so there was nothing the per-cell version bought
+    // that was worth most of the alphabet.
+    //
+    //   upper  tower, 3x2 cells, atlas (40,696)..(87,727)
+    //   lower  base,  5x3 cells, atlas (24,728)..(103,775)
+    //
+    // Keyed on SceneryBackdrop and drawn behind terrain, like the cloud and the tree: the
+    // tower rect spans the full 3 cells, so its two unpainted top corners are backdrop that
+    // has to be punched out rather than blitted as a blue block.
+    registerTile(model::TileMap::CastleUpperSymbol, MarioAssetPath,
+                 sf::IntRect({40, 696}, {3 * Cell, 2 * Cell}), SceneryBackdrop, true);
+    registerTile(model::TileMap::CastleLowerSymbol, MarioAssetPath,
+                 sf::IntRect({24, 728}, {5 * Cell, 3 * Cell}), SceneryBackdrop, true);
+
+    // Molten lava (see TileMap::LavaTopSymbol/LavaSymbol): the top cell is the wave-crest
+    // surface, keyed against the same SceneryBackdrop as everything else on this sheet —
+    // the solid red fill below the crest is real artwork, not backdrop, so it is left
+    // alone. The body cell is plain, edge-to-edge solid colour and needs no keying at all.
+    // Purely decorative terrain: never in isSolidTile, so it never blocks or supports
+    // anything, exactly like Cloud/SmallTree above.
+    registerTile(model::TileMap::LavaTopSymbol, MarioAssetPath,
+                 sf::IntRect({616, 728}, {Cell, Cell}), SceneryBackdrop);
+    registerTile(model::TileMap::LavaSymbol, MarioAssetPath,
+                 sf::IntRect({616, 744}, {Cell, Cell}));
+
+    // The underwater surface wave has no map symbol — see the pre-pass in render() — but
+    // still needs its backdrop keyed once here, on the same SceneryBackdrop as the lava
+    // crest (both tiles share it; the user-facing spec calls this out explicitly).
+    if (worldType == model::WorldType::Underwater) {
+        underwaterWaveTileset = &tilesetFor(MarioAssetPath);
+        underwaterWaveRect = sf::IntRect({616, 688}, {Cell, Cell});
+        tilesetFor(MarioAssetPath).applyColorKey(underwaterWaveRect, SceneryBackdrop);
     }
 
     // Every colour key above only edited the CPU-side image; push the result to the GPU
@@ -189,6 +215,20 @@ void TileMapRenderer::registerComposite(char symbol, const std::string& tilesetP
 
 void TileMapRenderer::render(sf::RenderTarget& window, const model::TileMap& map) const {
     const int rows = static_cast<int>(map.getRows());
+
+    // The underwater surface wave (see TileMapRenderer's ctor): painted across every
+    // column of the second-to-top row, but only where the author left that cell empty —
+    // a map that reserves the row for its own ceiling terrain is left alone.
+    if (underwaterWaveTileset && rows >= 2) {
+        const std::size_t waveRow = map.getRows() - 2;
+        for (std::size_t column = 0; column < map.getColumns(); ++column) {
+            if (map.getTile(waveRow, column) != '.') {
+                continue;
+            }
+            const model::Vector2 origin = model::TileMap::tileOrigin(waveRow, column);
+            underwaterWaveTileset->drawCell(window, underwaterWaveRect, {origin.x, origin.y});
+        }
+    }
 
     // Two passes: scenery first, then terrain. Bushes and hills are painted around their
     // marker rather than inside it, so drawing everything in one grid order would let a

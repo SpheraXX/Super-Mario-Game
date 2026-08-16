@@ -44,20 +44,62 @@ public:
     // brick, so it is resolved by the tile pass rather than spawned as a Block entity.
     static constexpr char StairSymbol = 's';
 
-    // The goal castle is painted into the map's completion zone from its dedicated
-    // 21-tile sheet. Each symbol must not collide with any symbol the map or the
-    // renderer already uses: 'G' (ground), 'O'/'T' (scenery), 'M'/'C'/'B'/'#' (spawns),
-    // the enemy digit markers 0-9 and the pipe cells 'P'/'Q'/'p'/'q' are all taken, so
-    // the castle uses the remaining letters of the alphabet (row-major over the 5x5
-    // silhouette).
+    // A coin the author placed in the world, collected by walking through it. Spawns as a
+    // MapCoin entity (see LevelScene::resetLevel), so it is never drawn as terrain and
+    // never blocks movement. '$' rather than a letter on purpose: lowercase 'o' would be
+    // far too easy to confuse with 'O' (the cloud) in a hand-written map.
+    static constexpr char CoinSymbol = '$';
+
+    // The end-of-level marker (see Model/Level/LevelGoal.h): touching it ends the run.
+    // Author-placed, one per map (or per area, for an early exit) — there is no automatic
+    // placement any more, so a map with none simply cannot be completed.
+    static constexpr char GoalSymbol = 'E';
+
+    // A moving platform (see Model/Level/Slider.h). A 2-cell run gives it its fixed shape
+    // (its art is a constant 32x8, unlike a pipe's author-chosen height); the motion itself
+    // — axis, travel distance, speed — comes from the map's '; slider=' header token, bound
+    // to the run's leftmost column exactly as '; pipe=' binds to a Pipe.
+    static constexpr char SliderSymbol = '=';
+
+    // Molten lava: purely decorative terrain (never solid — see isSolidTile), stacked by
+    // the author the same way Kelp is. LavaTopSymbol is the wave-crest surface; LavaSymbol
+    // is the plain fill beneath it, repeated for however many cells deep the pool is (a
+    // 3-cell-deep pool is one LavaTopSymbol over two LavaSymbol).
+    static constexpr char LavaTopSymbol = 'v';
+    static constexpr char LavaSymbol = 'x';
+
+    // The goal castle, as two multi-cell images rather than a grid of one-cell tiles.
+    // It used to cost 21 symbols — most of the alphabet — because it was painted cell by
+    // cell over a 5x5 silhouette. Nothing needed that granularity: the castle stopped
+    // being the level's ending when LevelGoal ('E') took that job, so it is now pure
+    // backdrop and can be drawn from the two rects the artwork is actually laid out as.
     //
-    // NOTE: the 9th entry is 'r', not 'Q'. 'Q' is the pipe mouth's right-hand cell, and
-    // both the castle painter and the tile renderer index THIS array, so a shared symbol
-    // would have made one of them draw the other's artwork.
-    static constexpr std::size_t CastleTiles = 21;
-    static constexpr char CastleSymbols[CastleTiles] =
-        {'A', 'D', 'F', 'H', 'I', 'J', 'L', 'N', 'r', 'R', 'S',
-         'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd'};
+    //   CastleUpperSymbol  tower, 3x2 cells (atlas 40,696 .. 87,727)
+    //   CastleLowerSymbol  base,  5x3 cells (atlas 24,728 .. 103,775)
+    //
+    // Both are anchored at their own TOP-LEFT cell, the same as the cloud and the tree.
+    // The tower is inset one cell from the base's left edge, so a whole castle is the
+    // upper marker one column right of the lower marker and two screen-rows above it.
+    //
+    // Decorative, never solid (see isSolidTile): a 2-symbol castle has no way to express
+    // per-cell collision, and the marker cell alone being solid would read as an
+    // invisible wall. Mario walks in front of it, exactly as he does past a hill.
+    static constexpr char CastleUpperSymbol = 'A';
+    static constexpr char CastleLowerSymbol = 'H';
+
+    // A horizontal pipe's lower body: one fixed 4x2-cell image (atlas 192,656 .. 255,687),
+    // anchored at its own top-left cell like the cloud/tree/castle above. The vertical
+    // riser some horizontal pipes wear is not part of this symbol at all -- it is built
+    // from the ordinary 'P'/'Q'/'p'/'q' tiles, stacked above the lower part's right two
+    // columns exactly like any other standing pipe, per the author's chosen height.
+    //
+    // Never solid via the tile pass: the artwork covers 7 cells the grid never actually
+    // stores a symbol in (only the anchor does), so per-cell collision could only ever
+    // block that one corner. Collision instead comes from a Pipe entity LevelScene always
+    // spawns to cover the whole 4x2 footprint -- see Pipe::Orientation::Horizontal. A
+    // '; pipe=' token binds a portal to it exactly as it binds one to a vertical pipe,
+    // by matching the anchor's column; no new token syntax is needed.
+    static constexpr char HorizontalPipeSymbol = 'F';
 
     static bool isCastleSymbol(char symbol);
 
@@ -74,11 +116,6 @@ public:
     // World-space top-left corner of a grid cell. Rows are stored top-down in the file,
     // so this is the one place that flip is written down.
     static Vector2 tileOrigin(std::size_t row, std::size_t column);
-
-    // Append empty columns for the procedural level-completion zone (flagpole +
-    // castle). Every new column mirrors the leftmost column's ground symbol ('G') so
-    // the floor strip carries across the bonus area; everything else pads as air.
-    void padRight(std::size_t extraColumns);
 
     // Rewrite one cell (used by the controller to paint the castle into the grid).
     void setTile(std::size_t row, std::size_t column, char symbol);

@@ -91,20 +91,6 @@ Vector2 TileMap::tileOrigin(std::size_t row, std::size_t column) {
             static_cast<float>(Rows - 1 - row) * TileHeight};
 }
 
-void TileMap::padRight(std::size_t extraColumns) {
-    if (extraColumns == 0 || columns == 0) {
-        return;
-    }
-
-    for (std::size_t row = 0; row < Rows; ++row) {
-        const char edge = tiles[row][0];
-        // Mirror only the ground symbol from the leftmost column; everything else
-        // becomes air so no spawn symbols or scenery leak into the bonus zone.
-        tiles[row].resize(columns + extraColumns, edge == 'G' ? 'G' : '.');
-    }
-    columns += extraColumns;
-}
-
 void TileMap::setTile(std::size_t row, std::size_t column, char symbol) {
     tiles.at(row).at(column) = symbol;
 }
@@ -138,9 +124,10 @@ bool TileMap::hasNextMap() const {
 }
 
 bool TileMap::isSolidTile(char symbol) {
-    // Static tile geometry: ground, the painted castle, and pipes. 'C', 'B', 'M', 'E', 'K'
-    // and '#' spawn as entities (blocks and characters) that manage their own collision,
-    // and scenery ('O', 'T') is decorative.
+    // Static tile geometry: ground and pipes. 'C', 'B', 'M', 'E' and '#' spawn as entities
+    // (blocks and characters) that manage their own collision, and scenery ('O', 'T') --
+    // including the castle, which is a backdrop now that 'E' ends the level -- is
+    // decorative.
     //
     // Pipes are terrain rather than entities. The entity pass only ever resolves the
     // PLAYER against solid entities (see CollisionManager::resolveEntityInteraction, which
@@ -150,8 +137,7 @@ bool TileMap::isSolidTile(char symbol) {
     // spawned for columns that carry a warp portal, since that needs the column linkage.
     // The stair block is terrain for the same reason: it is an unbreakable brick, so it
     // needs no entity of its own and every Character resolves against it in the tile pass.
-    return symbol == 'G' || symbol == StairSymbol
-        || isPipeSymbol(symbol) || isCastleSymbol(symbol);
+    return symbol == 'G' || symbol == StairSymbol || isPipeSymbol(symbol);
 }
 
 bool TileMap::isPipeSymbol(char symbol) {
@@ -160,12 +146,7 @@ bool TileMap::isPipeSymbol(char symbol) {
 }
 
 bool TileMap::isCastleSymbol(char symbol) {
-    for (const char candidate : CastleSymbols) {
-        if (candidate == symbol) {
-            return true;
-        }
-    }
-    return false;
+    return symbol == CastleUpperSymbol || symbol == CastleLowerSymbol;
 }
 
 void TileMap::parseHeader(const std::string& line) {

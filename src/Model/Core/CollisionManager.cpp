@@ -33,8 +33,7 @@ constexpr float StompBias = 0.75f;
 bool isGroundTile(char symbol) {
     return symbol == 'G' || symbol == model::TileMap::StairSymbol
         || symbol == 'C' || symbol == 'B' || symbol == '#'
-        || model::TileMap::isPipeSymbol(symbol)
-        || model::TileMap::isCastleSymbol(symbol);
+        || model::TileMap::isPipeSymbol(symbol);
 }
 
 // Minimum upward speed (world units/s) for a top-face block contact to count as a bump.
@@ -288,7 +287,7 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
             }
 
             // Trigger pass: trigger hitboxes never block or push; they only fire the
-            // onTriggerEnter hook when the other entity is the player (e.g. FlagPole).
+            // onTriggerEnter hook when the other entity is the player (e.g. LevelGoal).
             if (a->hitbox.isTrigger || b->hitbox.isTrigger) {
                 Entity* trigger = a->hitbox.isTrigger ? a : b;
                 Entity* other = (trigger == a) ? b : a;
@@ -459,6 +458,15 @@ bool CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         // blocker is actually a Block: a solid pipe never reacts to a bump.
         const float upwardSpeed = std::max(0.0f, -playerCharacter.getVelocity().y);
         pushOutOfBlock(playerCharacter, *other, playerSide);
+        // Riding a mover (Slider): pushOutOfBlock already re-snapped the vertical axis to
+        // the blocker's CURRENT (post-move) position, whichever way it moved this frame —
+        // so only the horizontal component still needs carrying across. A blocker that
+        // isn't moving (every ordinary Block/Pipe) reports {0,0} here and this is a no-op.
+        if (playerSide == CollisionType::Bottom) {
+            const Vector2 carry = other->getCarryDelta();
+            playerCharacter.setPosition(
+                {playerCharacter.getPosition().x + carry.x, playerCharacter.getPosition().y});
+        }
         if (playerSide == CollisionType::Top && upwardSpeed >= MinBumpSpeed) {
             if (auto* block = dynamic_cast<Block*>(other)) {
                 // The block reports whether it actually reacted: a spent ? block returns

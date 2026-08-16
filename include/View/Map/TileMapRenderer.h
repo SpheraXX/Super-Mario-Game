@@ -81,6 +81,14 @@ private:
 
     std::unordered_map<std::string, SpritePainter> tilesets;
     std::unordered_map<char, TileEntry> tileRects;
+
+    // Remembered for the underwater surface-wave pre-pass in render(): unlike every other
+    // tile, the wave has no map symbol an author places — it is painted automatically
+    // across the second-to-top row of an Underwater area, wherever that row is still empty
+    // (so it never overwrites terrain an author actually put there).
+    model::WorldType worldType;
+    const SpritePainter* underwaterWaveTileset = nullptr;
+    sf::IntRect underwaterWaveRect;
 };
 
 }

@@ -20,11 +20,19 @@ namespace {
 // side hit (and damage) frame-to-frame.
 constexpr float StompBias = 0.75f;
 
-// A tile the player can stand on. The static ground is 'G', and block cells ('C'/'B'/'#')
-// always hold a static solid entity, so landing on them is equivalent. Grounding on these
-// cells keeps isGrounded stable on top of blocks (gravity + animation never flap).
+// A tile the player can stand on. The static ground is 'G', the stair block is unbreakable
+// terrain, and block cells ('C'/'B'/'#') always hold a static solid entity, so landing on
+// any of them is equivalent. Grounding on these cells keeps isGrounded stable on top of
+// blocks (gravity + animation never flap).
+//
+// This list decides LANDING (the feet), and is deliberately a different set from
+// TileMap::isSolidTile, which decides what blocks movement at all. Anything walkable has to
+// appear in BOTH: a symbol that is solid but not ground stops the player sideways and
+// overhead yet never supports him, so he drops straight through the top of it — which is
+// exactly what the stair block did before it was added here.
 bool isGroundTile(char symbol) {
-    return symbol == 'G' || symbol == 'C' || symbol == 'B' || symbol == '#'
+    return symbol == 'G' || symbol == model::TileMap::StairSymbol
+        || symbol == 'C' || symbol == 'B' || symbol == '#'
         || model::TileMap::isPipeSymbol(symbol)
         || model::TileMap::isCastleSymbol(symbol);
 }

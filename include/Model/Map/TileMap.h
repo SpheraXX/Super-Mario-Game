@@ -26,8 +26,23 @@ public:
 
     // Background/decorative symbols: rendered like any other tile but passable
     // (excluded from tile collision).
+    //
+    // Bush and Hill are wider than the cell that carries them, and are the only tiles
+    // anchored anywhere other than their own top-left corner: the author marks ONE cell
+    // and the renderer paints the whole shape around it (see TileMapRenderer's
+    // SceneryPart offsets). A bush is 3 cells wide centred on its marker; a hill is a
+    // 5-3-1 pyramid whose marker is the middle of its BOTTOM row, so it is placed on the
+    // ground row and grows upward. Kelp is an ordinary one-cell tile — a tall strand is
+    // simply several Kelp cells stacked in the map file.
     static constexpr char CloudSymbol = 'O';
     static constexpr char SmallTreeSymbol = 'T';
+    static constexpr char BushSymbol = 'w';
+    static constexpr char HillSymbol = 'm';
+    static constexpr char KelpSymbol = 'k';
+
+    // Solid terrain that is not the ground strip: behaves exactly like an unbreakable
+    // brick, so it is resolved by the tile pass rather than spawned as a Block entity.
+    static constexpr char StairSymbol = 's';
 
     // The goal castle is painted into the map's completion zone from its dedicated
     // 21-tile sheet. Each symbol must not collide with any symbol the map or the

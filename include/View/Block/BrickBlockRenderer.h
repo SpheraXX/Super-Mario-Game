@@ -11,7 +11,10 @@ class BrickBlock;
 
 namespace view {
 
-// Draws a BrickBlock from the blocks tileset (the classic brick tile).
+// Draws a BrickBlock, themed by the landscape it stands in: the brick behaves identically
+// everywhere but is drawn from that landscape's quadrant of the shared sheet, so an
+// underground brick is teal and a castle brick is grey. The world comes from the frame's
+// RenderContext, so the block itself never needs to know where it is.
 class BrickBlockRenderer : public TypedEntityRenderer<model::BrickBlock> {
 public:
     BrickBlockRenderer();

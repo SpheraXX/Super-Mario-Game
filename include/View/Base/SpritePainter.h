@@ -42,10 +42,20 @@ public:
     bool isLoaded() const;
 
     // Masks every pixel of a rectangular source region whose color is within
-    // ColorKeyTolerance of `transparentColor` to fully transparent, then re-uploads the
-    // image. Pixels outside the region are untouched, so different tiles can key
-    // different backdrop colors.
+    // ColorKeyTolerance of `transparentColor` to fully transparent. Pixels outside the
+    // region are untouched, so different tiles can key different backdrop colors — which
+    // is load-bearing, not a convenience: on the shared sheet the underwater hill's BODY
+    // is painted the same (66,66,255) that is the kelp's backdrop, so keying that colour
+    // across the whole image would erase the hill.
+    //
+    // This only edits the CPU-side image; nothing reaches the GPU until commitColorKeys().
+    // Keying used to upload the whole image per call, which cost a full 2 MiB re-upload
+    // for each of the ~15 keyed rects every time a level or area was (re)built.
     void applyColorKey(const sf::IntRect& area, sf::Color transparentColor);
+
+    // Upload the accumulated colour-key edits. A no-op when nothing has changed, so it is
+    // safe to call after every batch of registrations.
+    void commitColorKeys();
 
     // Draws `frame` from the loaded sheet stretched by `scale`, snapped to integer
     // pixels. Does nothing while no image is loaded.
@@ -61,6 +71,7 @@ private:
     sf::Image image;
     sf::Texture texture;
     bool loaded = false;
+    bool colorKeyDirty = false;  // image has keyed edits not yet uploaded
 };
 
 }

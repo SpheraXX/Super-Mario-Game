@@ -60,7 +60,8 @@ void Enemy::update(float deltaTime) {
         bool walkable = false;
         if (col < mapPtr->getColumns() && row < TileMap::Rows) {
             const char ahead = mapPtr->getTile(row, col);
-            walkable = ahead == 'G' || ahead == 'C' || ahead == 'B' || ahead == '#';
+            walkable = ahead == 'G' || ahead == TileMap::StairSymbol
+                || ahead == 'C' || ahead == 'B' || ahead == '#';
         }
         if (!walkable) {
             setDirection(-getDirection());

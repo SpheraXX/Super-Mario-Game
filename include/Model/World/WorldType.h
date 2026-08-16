@@ -10,11 +10,13 @@ namespace model {
 // physics every character obeys while the level is live.
 enum class WorldType {
     Overworld,
+    Underground,
     Underwater,
     Castle
 };
 
 inline WorldType worldTypeFromString(const std::string& value) {
+    if (value == "underground") return WorldType::Underground;
     if (value == "underwater") return WorldType::Underwater;
     if (value == "castle") return WorldType::Castle;
     return WorldType::Overworld;

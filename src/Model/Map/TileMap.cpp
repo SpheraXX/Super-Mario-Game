@@ -148,7 +148,10 @@ bool TileMap::isSolidTile(char symbol) {
     // entity is invisible to enemies and they walk straight through it. As tiles they are
     // resolved by the tile pass, which runs for every Character. A Pipe entity is still
     // spawned for columns that carry a warp portal, since that needs the column linkage.
-    return symbol == 'G' || isPipeSymbol(symbol) || isCastleSymbol(symbol);
+    // The stair block is terrain for the same reason: it is an unbreakable brick, so it
+    // needs no entity of its own and every Character resolves against it in the tile pass.
+    return symbol == 'G' || symbol == StairSymbol
+        || isPipeSymbol(symbol) || isCastleSymbol(symbol);
 }
 
 bool TileMap::isPipeSymbol(char symbol) {

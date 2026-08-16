@@ -8,10 +8,11 @@
 namespace controller {
 namespace geometry {
 
-// Which symbols count as ground for the top-face scan (solid base only: ground,
-// castle, brick and the underwater blocks).
+// Which symbols count as ground for the top-face scan (solid base only: ground, the
+// stair block, castle, brick and the underwater blocks).
 inline bool isGroundSymbol(char symbol) {
-    return symbol == 'G' || symbol == 'C' || symbol == 'B' || symbol == '#';
+    return symbol == 'G' || symbol == model::TileMap::StairSymbol
+        || symbol == 'C' || symbol == 'B' || symbol == '#';
 }
 
 // Top face of the ground stack at the given column: scan up from the bottom row and

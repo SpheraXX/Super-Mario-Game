@@ -1,11 +1,12 @@
 #include "Controller/GameOverState.h"
 
 #include "Controller/AppEngine.h"
-#include "Controller/MenuState.h"
+#include "Controller/MainMenuState.h"
 #include "Controller/StateManager.h"
 #include "Model/Core/GameManager.h"
 #include "View/AssetManager.h"
 #include "View/TextUtils.h"
+#include "Controller/IAudioManager.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -17,6 +18,10 @@
 namespace controller {
 
 void GameOverState::onEnter() {
+    if (context && context->audio) {
+        context->audio->playMusic("game_over");
+    }
+
     font = view::AssetManager::instance().getUiFont();
     fontLoaded = view::AssetManager::instance().isFontLoaded();
     if (fontLoaded) {
@@ -28,9 +33,10 @@ void GameOverState::onEnter() {
 
 void GameOverState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
-        if (key->code == sf::Keyboard::Key::Enter) {
-            // MenuState::onEnter() resets progress, so return to the menu.
-            manager->replaceState(std::make_unique<MenuState>());
+        if (key->code == sf::Keyboard::Key::Enter ||
+            key->code == sf::Keyboard::Key::Escape) {
+            // Transition to the new MainMenuState (not the old MenuState).
+            manager->replaceState(std::make_unique<MainMenuState>());
         }
     }
 }

@@ -7,7 +7,6 @@
 #include <cmath>
 #include <string>
 
-#include <SFML/Window/Keyboard.hpp>
 
 namespace model {
 
@@ -74,31 +73,26 @@ void Player::update(float deltaTime) {
     }
 }
 
-void Player::handleInput(float deltaTime) {
+void Player::handleInput(float deltaTime, const InputSnapshot& input) {
     if (!alive || pipeSlide) return;
 
     // Movement tuning is polymorphic: each concrete character reports its own numbers.
     const float walkSpeed = getWalkSpeed();
     const float runSpeed = getRunSpeed();
 
-    // Sprint: hold Shift to move at run speed.
-    const bool sprinting =
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+    // Sprint: hold Shift or the mapped Run key to move at run speed.
+    const bool sprinting = input.run;
     const float targetSpeed = sprinting ? runSpeed : walkSpeed;
 
     // Horizontal inertia: accelerate toward the input target (friction when idle). The
     // velocity is never snapped, so movement feels weighty and the physics stays continuous.
-    bool movingLeft = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
-                      sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left);
-    bool movingRight = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) ||
-                       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right);
+    bool movingLeft = input.moveLeft;
+    bool movingRight = input.moveRight;
     inputMoving = movingLeft || movingRight;
     // Down enters vertical pipes, Right enters horizontal ones: both kept edge-free (held
     // state) so the play state can warp while the player is still in contact. Pipe entry
     // is a hold action in SMB, not a press.
-    inputDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) ||
-                sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down);
+    inputDown = input.crouch;
     inputRight = movingRight;
     if (movingLeft) {
         setDirection(-1);
@@ -123,10 +117,7 @@ void Player::handleInput(float deltaTime) {
         }
     }
 
-    const bool jumpPressed =
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
+    const bool jumpPressed = input.jump;
 
     // Press edge: remember the intent briefly (jump buffering).
     if (jumpPressed && !jumpHeld) {
@@ -168,7 +159,7 @@ void Player::handleInput(float deltaTime) {
 
     // Fireball: holding the key re-fires whenever the cooldown clears. Works in the air
     // too — only the Fire power may shoot, and a Star (or anything else) never inherits it.
-    const bool firePressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
+    const bool firePressed = input.fire;
     if (firePressed && power == PlayerPower::Fire && fireCooldown <= 0.0f && world) {
         fireCooldown = FireCooldownDuration;
         // Spawn just in front of the facing side, around mouth height, so the ball never

@@ -22,6 +22,7 @@ namespace model {
 class LevelGoal;
 class Player;
 class Portal;
+class IInputMapper;
 }
 
 namespace controller {
@@ -58,6 +59,9 @@ public:
     bool loadLevel();
 
     // Non-owning accessor the owner reads for input and the HUD.
+    void setInputMapper(model::IInputMapper* mapper);
+
+    // Non-owning accessors the owner reads for input, the clear play and the HUD.
     model::Player* player() const;
 
     // HUD time (whole seconds as shown) and the timer pause used on level clear.
@@ -134,6 +138,7 @@ private:
     // Spawned mid-update and spliced in once the loop is over (see spawn()).
     std::vector<std::unique_ptr<model::Entity>> pendingEntities;
     model::Player* playerPtr = nullptr;  // non-owning: spawned by resetLevel
+    model::IInputMapper* inputMapper = nullptr;
 
     // Take ownership immediately — safe only outside the update loop (level build time).
     model::Entity* addEntity(std::unique_ptr<model::Entity> entity);

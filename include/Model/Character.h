@@ -2,6 +2,7 @@
 #define MODEL_CHARACTER_H
 
 #include "Model/Entity.h"
+#include "Model/Input/InputSnapshot.h"
 
 namespace model {
 
@@ -31,7 +32,7 @@ public:
     // Input gathering is delegated polymorphically: only the player reacts. It runs
     // BEFORE update() so gravity & integration see the correct player-intended
     // velocity, not stale values.
-    virtual void handleInput(float deltaTime) { (void)deltaTime; }
+    virtual void handleInput(float deltaTime, const InputSnapshot& input) { (void)deltaTime; (void)input; }
 
     virtual void takeDamage(int amount);
 

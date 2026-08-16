@@ -1,0 +1,10 @@
+{
+    "menu": {
+        "file": "01. Ground Theme",
+        "loop": true
+    },
+    "game_over": {
+        "file": "09. Game Over Theme",
+        "loop": false
+    }
+}

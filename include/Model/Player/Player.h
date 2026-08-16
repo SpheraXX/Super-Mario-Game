@@ -3,6 +3,7 @@
 
 #include "Model/Character.h"
 #include "Model/Core/VerticalSlide.h"
+#include "Model/Input/InputSnapshot.h"
 
 #include <memory>
 
@@ -33,7 +34,7 @@ public:
 
     void update(float deltaTime) override;
 
-    void handleInput(float deltaTime) override;
+    void handleInput(float deltaTime, const InputSnapshot& input) override;
     void takeDamage(int amount) override;
 
     using Character::die;
@@ -148,7 +149,6 @@ protected:
     // inputDown, held while walking into a pipe's left face to enter it.
     bool inputRight = false;
 
-protected:
     static constexpr float DamageCooldownTime = 1.0f;
     // Height of the one-tile (Small) form, used by isBig(). Super/Fire are two tiles.
     static constexpr float SmallHeight = 16.0f;

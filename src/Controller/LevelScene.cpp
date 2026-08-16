@@ -40,6 +40,7 @@
 
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/View.hpp>
+#include <SFML/Window/Keyboard.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -131,6 +132,10 @@ bool LevelScene::loadLevel() {
     } else {
     }
     return true;
+}
+
+void LevelScene::setInputMapper(model::IInputMapper* mapper) {
+    inputMapper = mapper;
 }
 
 // Instantiate the given area: copy its grid into the working map, rebuild the themed
@@ -403,6 +408,7 @@ void LevelScene::resetLevel(bool keepPlayer) {
 
     // Everything ahead of the camera starts asleep; the player is always awake.
     armDormancy();
+
 }
 
 void LevelScene::spawn(std::unique_ptr<model::Entity> entity) {
@@ -500,7 +506,25 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         // entity->update() so gravity & integration see the correct player-intended
         // velocity, not stale values.
         if (auto* character = dynamic_cast<model::Character*>(e.get())) {
-            character->handleInput(deltaTime);
+            model::InputSnapshot snapshot;
+            if (character == playerPtr) {
+                if (inputMapper) {
+                    snapshot.moveLeft = inputMapper->isActionPressed(model::InputAction::MoveLeft);
+                    snapshot.moveRight = inputMapper->isActionPressed(model::InputAction::MoveRight);
+                    snapshot.jump = inputMapper->isActionPressed(model::InputAction::Jump);
+                    snapshot.run = inputMapper->isActionPressed(model::InputAction::Run);
+                    snapshot.fire = inputMapper->isActionPressed(model::InputAction::Attack);
+                    snapshot.crouch = inputMapper->isActionPressed(model::InputAction::Crouch);
+                } else {
+                    snapshot.moveLeft = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left);
+                    snapshot.moveRight = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right);
+                    snapshot.jump = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
+                    snapshot.run = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+                    snapshot.fire = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
+                    snapshot.crouch = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down);
+                }
+            }
+            character->handleInput(deltaTime, snapshot);
         }
 
         e->update(deltaTime);

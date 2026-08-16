@@ -3,6 +3,7 @@
 
 #include "Model/Character.h"
 #include "Model/Core/VerticalSlide.h"
+#include "Model/Input/InputSnapshot.h"
 
 #include <memory>
 
@@ -33,7 +34,7 @@ public:
 
     void update(float deltaTime) override;
 
-    void handleInput(float deltaTime) override;
+    void handleInput(float deltaTime, const InputSnapshot& input) override;
     void takeDamage(int amount) override;
 
     using Character::die;
@@ -141,7 +142,6 @@ protected:
     // Down enters it (play state reads this to teleport to the portal target).
     bool inputDown = false;
 
-protected:
     static constexpr float DamageCooldownTime = 1.0f;
     // Height of the one-tile (Small) form, used by isBig(). Super/Fire are two tiles.
     static constexpr float SmallHeight = 16.0f;

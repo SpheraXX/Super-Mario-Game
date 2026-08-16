@@ -4,9 +4,19 @@
 
 #include <iostream>
 
-#include <utility>
+#include <stdexcept>
 
 namespace controller {
+
+StateManager::StateManager(std::unique_ptr<GameState> initial, GameContext* ctx) : context(ctx) {
+    if (!initial) {
+        throw std::invalid_argument("StateManager must start with a valid state");
+    }
+    initial->manager = this;
+    initial->context = context;
+    initial->onEnter();
+    stack.push_back(std::move(initial));
+}
 
 void StateManager::pushState(std::unique_ptr<GameState> state) {
     pending.push_back({Action::Push, std::move(state)});
@@ -29,6 +39,7 @@ void StateManager::applyPending() {
         switch (change.action) {
             case Action::Push:
                 change.state->manager = this;
+                change.state->context = context;
                 stack.push_back(std::move(change.state));
                 stack.back()->onEnter();
                 break;
@@ -46,6 +57,7 @@ void StateManager::applyPending() {
                     stack.pop_back();
                 }
                 change.state->manager = this;
+                change.state->context = context;
                 stack.push_back(std::move(change.state));
                 stack.back()->onEnter();
                 break;

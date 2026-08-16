@@ -1,0 +1,120 @@
+#include "Controller/AudioManager.h"
+#include "ext/json.hpp"
+#include <iostream>
+#include <fstream>
+
+using json = nlohmann::json;
+
+namespace controller {
+
+AudioManager::AudioManager() {
+    initDatabase();
+}
+
+void AudioManager::initDatabase() {
+    std::ifstream f("assets/audio/audio_meta.json");
+    if (!f.is_open()) {
+        std::cerr << "Could not open audio_meta.json. Falling back to defaults." << std::endl;
+        musicDB["menu"] = {"01. Ground Theme", true};
+        musicDB["game_over"] = {"09. Game Over Theme", false};
+        return;
+    }
+
+    try {
+        json j;
+        f >> j;
+        for (auto& el : j.items()) {
+            MusicMetadata meta;
+            meta.filename = el.value()["file"];
+            meta.loop = el.value()["loop"];
+            musicDB[el.key()] = meta;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error parsing audio_meta.json: " << e.what() << std::endl;
+    }
+}
+
+void AudioManager::setMasterVolume(float volume) {
+    masterVol = volume;
+    applyMusicVolume();
+    applySFXVolume();
+}
+
+void AudioManager::setMusicVolume(float volume) {
+    musicVol = volume;
+    applyMusicVolume();
+}
+
+void AudioManager::setSFXVolume(float volume) {
+    sfxVol = volume;
+    applySFXVolume();
+}
+
+void AudioManager::applyMusicVolume() {
+    float finalMusicVol = (masterVol / 100.f) * (musicVol / 100.f) * 100.f;
+    currentMusic.setVolume(finalMusicVol);
+}
+
+void AudioManager::applySFXVolume() {
+    float finalSfxVol = (masterVol / 100.f) * (sfxVol / 100.f) * 100.f;
+    for (auto& sound : activeSounds) {
+        sound.setVolume(finalSfxVol);
+    }
+}
+
+void AudioManager::playMusic(const std::string& trackId) {
+    if (currentMusicName == trackId) return;
+    
+    auto it = musicDB.find(trackId);
+    if (it == musicDB.end()) {
+        std::cerr << "Music track ID not found in database: " << trackId << std::endl;
+        return;
+    }
+
+    std::string path = "assets/audio/music/" + it->second.filename + ".mp3";
+    if (currentMusic.openFromFile(path)) {
+        currentMusicName = trackId;
+        currentMusic.setLooping(it->second.loop);
+        applyMusicVolume();
+        currentMusic.play();
+    } else {
+        std::cerr << "Failed to load music: " << path << std::endl;
+    }
+}
+
+void AudioManager::stopMusic() {
+    currentMusic.stop();
+    currentMusicName = "";
+}
+
+void AudioManager::playSound(const std::string& name) {
+    // Assuming assets are in assets/audio/sfx/
+    std::string path = "assets/audio/sfx/" + name + ".mp3";
+    
+    auto it = soundBuffers.find(name);
+    if (it == soundBuffers.end()) {
+        sf::SoundBuffer buffer;
+        if (buffer.loadFromFile(path)) {
+            soundBuffers[name] = buffer;
+            it = soundBuffers.find(name);
+        } else {
+            std::cerr << "Failed to load SFX: " << path << std::endl;
+            return;
+        }
+    }
+    
+    activeSounds.emplace_back(it->second);
+    sf::Sound& sound = activeSounds.back();
+    float finalSfxVol = (masterVol / 100.f) * (sfxVol / 100.f) * 100.f;
+    sound.setVolume(finalSfxVol);
+    sound.play();
+}
+
+void AudioManager::update() {
+    // Remove stopped sounds from the list
+    activeSounds.remove_if([](const sf::Sound& s) {
+        return s.getStatus() == sf::Sound::Status::Stopped;
+    });
+}
+
+}

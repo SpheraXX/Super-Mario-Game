@@ -2,11 +2,14 @@
 #define CONTROLLER_APPENGINE_H
 
 #include "Controller/StateManager.h"
+#include "Controller/AudioManager.h"
+#include "Controller/InputMapper.h"
 #include "Model/Map/TileMap.h"
 
 #include <SFML/Graphics/RenderTexture.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/View.hpp>
+#include <SFML/System/Vector2.hpp>
 
 #include <cstddef>
 
@@ -53,6 +56,11 @@ public:
     static constexpr std::size_t SizeOptionCount =
         sizeof(SizeOptions) / sizeof(SizeOptions[0]);
 
+    // Convert a window-space point (raw SFML mouse position in physical pixels) to the
+    // logical coordinate frame that all game objects and UI elements use.
+    // Must be called after applyDisplayMode() sets up the current scale/offset.
+    static sf::Vector2f windowToLogical(sf::Vector2i windowPos);
+
 private:
     void processInput();
     void update(float deltaTime);
@@ -72,6 +80,10 @@ private:
     static constexpr unsigned int WindowChrome = 64;
 
     sf::RenderWindow window;
+    
+    AudioManager audioManager;
+    InputMapper inputMapper;
+    GameContext gameContext;
     StateManager states;
 
     // Current selection. `fullscreen` overrides the index rather than being a fourth entry
@@ -85,6 +97,13 @@ private:
     // Logical width of the current mode (ScreenHeight is fixed). Static so the HUD, the
     // menus and the level camera can reach it the same way they already reached
     // ScreenHeight, without threading an engine pointer through the state stack.
+    // Letterbox offset and integer scale for the current display mode.
+    // These mirror the values computed in applyDisplayMode() and are kept static
+    // so windowToLogical() can work without a reference to the AppEngine instance.
+    static float displayOffsetX;
+    static float displayOffsetY;
+    static unsigned int displayScale;
+
     static unsigned int logicalWidth;
 
     // Everything is drawn into this offscreen target at the logical resolution, then blitted

@@ -7,6 +7,10 @@ namespace sf {
 class RenderTarget;
 }
 
+namespace model {
+class IInputMapper;
+}
+
 namespace controller {
 
 class IAudioManager;
@@ -14,6 +18,7 @@ class StateManager;
 
 struct GameContext {
     IAudioManager* audio = nullptr;
+    model::IInputMapper* input = nullptr;
 };
 
 // Abstract base of the State Pattern. Each concrete screen (menu, play, game over)

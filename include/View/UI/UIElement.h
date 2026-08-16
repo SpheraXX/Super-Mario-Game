@@ -5,6 +5,8 @@
 #include <SFML/Window/Event.hpp>
 #include <SFML/System/Vector2.hpp>
 
+#include <functional>
+
 namespace view {
 namespace ui {
 
@@ -38,6 +40,12 @@ struct IClickable {
 class UIElement : public IDrawable {
 public:
     virtual ~UIElement() = default;
+
+    // ── Coordinate Bridge (DIP) ───────────────────────────────────────────────
+    // Injected once by AppEngine at startup. Converts window-pixel coordinates
+    // to logical game coordinates. UI widgets call this instead of importing
+    // AppEngine directly, keeping the View layer free of Controller dependencies.
+    static std::function<sf::Vector2f(const sf::Vector2i&)> transformCoordinate;
 
     // Called once per frame. Override to animate (e.g. button pulse, scroll).
     virtual void update(float deltaTime) { (void)deltaTime; }

@@ -5,6 +5,11 @@
 namespace view {
 namespace ui {
 
+// Default no-op transform: identity. AppEngine injects the real one at startup.
+std::function<sf::Vector2f(const sf::Vector2i&)> UIElement::transformCoordinate =
+    [](const sf::Vector2i& p) { return sf::Vector2f(static_cast<float>(p.x), static_cast<float>(p.y)); };
+
+
 UIContainer::UIContainer(Layout layout, float gap)
     : currentLayout(layout), gap(gap) {
 }

@@ -63,6 +63,10 @@ void Player::update(float deltaTime) {
     }
 }
 
+void Player::setInputMapper(IInputMapper* mapper) {
+    inputMapper = mapper;
+}
+
 void Player::handleInput(float deltaTime) {
     if (!alive) return;
 
@@ -70,17 +74,20 @@ void Player::handleInput(float deltaTime) {
     const float walkSpeed = getWalkSpeed();
     const float runSpeed = getRunSpeed();
 
-    // Sprint: hold Shift to move at run speed.
+    // Sprint: hold Shift or the mapped Run key to move at run speed.
     const bool sprinting =
+        (inputMapper && inputMapper->isActionPressed(model::InputAction::Run)) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
     const float targetSpeed = sprinting ? runSpeed : walkSpeed;
 
     // Horizontal inertia: accelerate toward the input target (friction when idle). The
     // velocity is never snapped, so movement feels weighty and the physics stays continuous.
-    bool movingLeft = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
+    bool movingLeft = (inputMapper && inputMapper->isActionPressed(model::InputAction::MoveLeft)) ||
+                      sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
                       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left);
-    bool movingRight = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) ||
+    bool movingRight = (inputMapper && inputMapper->isActionPressed(model::InputAction::MoveRight)) ||
+                       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) ||
                        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right);
     inputMoving = movingLeft || movingRight;
     // Down enters pipes: kept edge-free (held state) so the play state can warp while
@@ -111,6 +118,7 @@ void Player::handleInput(float deltaTime) {
     }
 
     const bool jumpPressed =
+        (inputMapper && inputMapper->isActionPressed(model::InputAction::Jump)) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
@@ -156,7 +164,8 @@ void Player::handleInput(float deltaTime) {
     // Fireball: holding the key re-fires whenever the cooldown clears. Works in the air
     // too — only the underlying Fire state may shoot, and a Star wrapped around Fire keeps
     // the ability (StarState forwards canShoot/shoot to its previous state).
-    const bool firePressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
+    const bool firePressed = (inputMapper && inputMapper->isActionPressed(model::InputAction::Run)) ||
+                             sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
     if (firePressed && state->canShoot() && world) {
         state->shoot();
         // Spawn just in front of the facing side, around mouth height, so the ball never

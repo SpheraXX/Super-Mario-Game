@@ -3,6 +3,7 @@
 
 #include "Controller/StateManager.h"
 #include "Controller/AudioManager.h"
+#include "Controller/InputMapper.h"
 #include "Model/Map/TileMap.h"
 
 #include <SFML/Graphics/RenderTexture.hpp>
@@ -81,6 +82,7 @@ private:
     sf::RenderWindow window;
     
     AudioManager audioManager;
+    InputMapper inputMapper;
     GameContext gameContext;
     StateManager states;
 

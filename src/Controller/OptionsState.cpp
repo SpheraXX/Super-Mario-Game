@@ -1,11 +1,13 @@
 #include "Controller/OptionsState.h"
 #include "Controller/AppEngine.h"
 #include "Controller/StateManager.h"
+#include "Controller/InputMapper.h"
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
 #include "Controller/IAudioManager.h"
 #include "View/UI/UISlider.h"
 #include "View/UI/UICycleButton.h"
+#include "View/UI/UITheme.h"
 
 namespace controller {
 
@@ -22,76 +24,17 @@ int model::Settings::* const KeyFieldMap[10] = {
     &model::Settings::keyInteract,
     &model::Settings::keyInventory
 };
-
-std::string keyToString(int keyVal) {
-    sf::Keyboard::Key key = static_cast<sf::Keyboard::Key>(keyVal);
-    switch (key) {
-        case sf::Keyboard::Key::A: return "A";
-        case sf::Keyboard::Key::B: return "B";
-        case sf::Keyboard::Key::C: return "C";
-        case sf::Keyboard::Key::D: return "D";
-        case sf::Keyboard::Key::E: return "E";
-        case sf::Keyboard::Key::F: return "F";
-        case sf::Keyboard::Key::G: return "G";
-        case sf::Keyboard::Key::H: return "H";
-        case sf::Keyboard::Key::I: return "I";
-        case sf::Keyboard::Key::J: return "J";
-        case sf::Keyboard::Key::K: return "K";
-        case sf::Keyboard::Key::L: return "L";
-        case sf::Keyboard::Key::M: return "M";
-        case sf::Keyboard::Key::N: return "N";
-        case sf::Keyboard::Key::O: return "O";
-        case sf::Keyboard::Key::P: return "P";
-        case sf::Keyboard::Key::Q: return "Q";
-        case sf::Keyboard::Key::R: return "R";
-        case sf::Keyboard::Key::S: return "S";
-        case sf::Keyboard::Key::T: return "T";
-        case sf::Keyboard::Key::U: return "U";
-        case sf::Keyboard::Key::V: return "V";
-        case sf::Keyboard::Key::W: return "W";
-        case sf::Keyboard::Key::X: return "X";
-        case sf::Keyboard::Key::Y: return "Y";
-        case sf::Keyboard::Key::Z: return "Z";
-        case sf::Keyboard::Key::Num0: return "0";
-        case sf::Keyboard::Key::Num1: return "1";
-        case sf::Keyboard::Key::Num2: return "2";
-        case sf::Keyboard::Key::Num3: return "3";
-        case sf::Keyboard::Key::Num4: return "4";
-        case sf::Keyboard::Key::Num5: return "5";
-        case sf::Keyboard::Key::Num6: return "6";
-        case sf::Keyboard::Key::Num7: return "7";
-        case sf::Keyboard::Key::Num8: return "8";
-        case sf::Keyboard::Key::Num9: return "9";
-        case sf::Keyboard::Key::Escape: return "Escape";
-        case sf::Keyboard::Key::LControl: return "LControl";
-        case sf::Keyboard::Key::LShift: return "LShift";
-        case sf::Keyboard::Key::LAlt: return "LAlt";
-        case sf::Keyboard::Key::RControl: return "RControl";
-        case sf::Keyboard::Key::RShift: return "RShift";
-        case sf::Keyboard::Key::RAlt: return "RAlt";
-        case sf::Keyboard::Key::Space: return "Space";
-        case sf::Keyboard::Key::Enter: return "Enter";
-        case sf::Keyboard::Key::Backspace: return "Backspace";
-        case sf::Keyboard::Key::Tab: return "Tab";
-        case sf::Keyboard::Key::Up: return "Up";
-        case sf::Keyboard::Key::Down: return "Down";
-        case sf::Keyboard::Key::Left: return "Left";
-        case sf::Keyboard::Key::Right: return "Right";
-        default: return "Key " + std::to_string(static_cast<int>(key));
-    }
 }
 
-auto addRow = [](view::ui::UIContainer& parent, const sf::Font& f, const std::string& label, std::unique_ptr<view::ui::UIElement> widget, float& cursorY) {
-    auto lbl = std::make_unique<view::ui::UILabel>(f, label, 8);
+void OptionsState::addRow(view::ui::UIContainer& parent, const sf::Font& font,
+                          const std::string& label, std::unique_ptr<view::ui::UIElement> widget,
+                          float& cursorY) {
+    auto lbl = std::make_unique<view::ui::UILabel>(font, label, 8);
     lbl->setPosition(20.f, cursorY + 4.f);
-
-    widget->setPosition(160.f, cursorY); 
-
+    widget->setPosition(160.f, cursorY);
     parent.add(std::move(lbl));
     parent.add(std::move(widget));
-    
     cursorY += 25.f;
-};
 }
 
 OptionsState::OptionsState() {
@@ -112,7 +55,7 @@ OptionsState::OptionsState() {
     tabBar.setPosition(10.f, 40.f);
 
     std::vector<std::string> tabNames = {"GRAPHICS", "SOUND", "CONTROLS", "LANGUAGE"};
-    float currentX = 10.f;
+    float currentX = 0.f; // Local to tabBar
     
     float screenW = static_cast<float>(AppEngine::screenWidth());
     float screenH = static_cast<float>(AppEngine::ScreenHeight);
@@ -121,7 +64,7 @@ OptionsState::OptionsState() {
     for (int i = 0; i < 4; ++i) {
         auto btn = std::make_unique<view::ui::UIButton>(
             font, tabNames[i], 8,
-            sf::Vector2f(currentX, 40.f), sf::Vector2f(80.f, 20.f)
+            sf::Vector2f(currentX, 0.f), sf::Vector2f(80.f, 20.f)
         );
         btn->setOnClick([this, i]() { switchTab(i); });
         tabBar.add(std::move(btn));
@@ -187,7 +130,7 @@ OptionsState::OptionsState() {
 }
 
 void OptionsState::buildGraphicsTab(const sf::Font& font) {
-    float cursorY = 80.f;
+    float cursorY = 10.f;
     auto fsBtn = std::make_unique<view::ui::UICycleButton>(
         font, "", std::vector<std::string>{"Off", "On"}, draft.fullscreen ? 1 : 0,
         sf::Vector2f(0.f,0.f), sf::Vector2f(100.f, 20.f));
@@ -214,11 +157,11 @@ void OptionsState::buildGraphicsTab(const sf::Font& font) {
         sf::Vector2f(0.f,0.f), sf::Vector2f(100.f, 20.f));
     qBtn->setOnChange([this](int idx) { draft.quality = static_cast<model::GraphicsQuality>(idx); });
     addRow(tabPanels[0], font, "Quality", std::move(qBtn), cursorY);
-    tabPanels[0].setContentHeight(cursorY - 70.f);
+    tabPanels[0].setContentHeight(cursorY);
 }
 
 void OptionsState::buildSoundTab(const sf::Font& font) {
-    float cursorY = 80.f;
+    float cursorY = 10.f;
     auto master = std::make_unique<view::ui::UISlider>(
         font, "", 0, 100, 5, draft.masterVolume, sf::Vector2f(0,0), sf::Vector2f(150.f, 20.f));
     master->setOnChange([this](int v) { 
@@ -260,11 +203,11 @@ void OptionsState::buildSoundTab(const sf::Font& font) {
         }
     });
     addRow(tabPanels[1], font, "SFX Volume", std::move(sfx), cursorY);
-    tabPanels[1].setContentHeight(cursorY - 70.f);
+    tabPanels[1].setContentHeight(cursorY);
 }
 
 void OptionsState::buildControlsTab(const sf::Font& font) {
-    float cursorY = 80.f;
+    float cursorY = 10.f;
     std::vector<std::string> labels = {"Move Left", "Move Right", "Jump", "Run", "Pause", "Dash", "Attack", "Crouch", "Interact", "Inventory"};
 
     for (int i = 0; i < 10; ++i) {
@@ -297,7 +240,7 @@ void OptionsState::buildControlsTab(const sf::Font& font) {
         addRow(tabPanels[2], font, labels[i], std::move(rowContainer), cursorY);
     }
     updateKeyButtonsVisuals();
-    tabPanels[2].setContentHeight(cursorY - 70.f);
+    tabPanels[2].setContentHeight(cursorY);
 }
 
 void OptionsState::updateKeyButtonsVisuals() {
@@ -309,16 +252,12 @@ void OptionsState::updateKeyButtonsVisuals() {
         
         if (i == waitingForKeyIndex) {
             keyButtons[i]->setLabel("Press Key...");
-            keyButtons[i]->setColors(sf::Color(150, 150, 50), sf::Color(180, 180, 80), sf::Color::White); // Yellow
+            keyButtons[i]->setColors(view::ui::theme::ColorWarningNormal, view::ui::theme::ColorWarningHovered, view::ui::theme::ColorText);
             continue;
         }
         
         int key = currentKeys[i];
-        if (key == -1) {
-            keyButtons[i]->setLabel("< NOT BOUND >");
-        } else {
-            keyButtons[i]->setLabel(keyToString(key));
-        }
+        keyButtons[i]->setLabel(InputMapper::getKeyName(key));
         
         bool conflict = false;
         if (key != -1) {
@@ -331,9 +270,9 @@ void OptionsState::updateKeyButtonsVisuals() {
         }
         
         if (conflict) {
-            keyButtons[i]->setColors(sf::Color(150, 50, 50), sf::Color(180, 80, 80), sf::Color::White); // Red
+            keyButtons[i]->setColors(view::ui::theme::ColorErrorNormal, view::ui::theme::ColorErrorHovered, view::ui::theme::ColorText);
         } else {
-            keyButtons[i]->setColors(sf::Color(60, 60, 80), sf::Color(100, 100, 140), sf::Color::White); // Normal
+            keyButtons[i]->setColors(view::ui::theme::ColorNormal, view::ui::theme::ColorHovered, view::ui::theme::ColorText);
         }
     }
 }
@@ -357,17 +296,13 @@ void OptionsState::resetSingleKey(int index) {
 }
 
 void OptionsState::buildLanguageTab(const sf::Font& font) {
-    float cursorY = 80.f;
+    float cursorY = 10.f;
     std::vector<std::string> opts = {"English", "Vietnamese"};
     auto lang = std::make_unique<view::ui::UICycleButton>(
         font, "", opts, static_cast<int>(draft.language), sf::Vector2f(0,0), sf::Vector2f(120.f, 20.f));
     lang->setOnChange([this](int idx) { draft.language = static_cast<model::Language>(idx); });
     addRow(tabPanels[3], font, "Language", std::move(lang), cursorY);
-    tabPanels[3].setContentHeight(cursorY - 70.f);
-}
-
-void OptionsState::updateUIFromDraft() {
-    // Implemented via recreating tabs in resetSettings
+    tabPanels[3].setContentHeight(cursorY);
 }
 
 void OptionsState::switchTab(int index) {
@@ -398,13 +333,13 @@ void OptionsState::update(float dt) {
     if (uiCtx.applyBtn) {
         if (draft != model::SettingsManager::instance().get()) {
             if (!uiCtx.forceApply) uiCtx.applyBtn->setLabel("APPLY");
-            uiCtx.applyBtn->setColors(sf::Color(50, 150, 200), sf::Color(80, 180, 230), sf::Color::White); // Light Blue
+            uiCtx.applyBtn->setColors(view::ui::theme::ColorSuccessNormal, view::ui::theme::ColorSuccessHovered, view::ui::theme::ColorText);
         } else {
             uiCtx.forceApply = false;
             uiCtx.forceDone = false;
             uiCtx.applyBtn->setLabel("APPLY");
             if (uiCtx.doneBtn) uiCtx.doneBtn->setLabel("DONE");
-            uiCtx.applyBtn->setColors(sf::Color(60, 60, 80), sf::Color(100, 100, 140), sf::Color::White); // Normal
+            uiCtx.applyBtn->setColors(view::ui::theme::ColorNormal, view::ui::theme::ColorHovered, view::ui::theme::ColorText);
         }
     }
 
@@ -423,14 +358,18 @@ void OptionsState::render(sf::RenderTarget& target) {
 
 void OptionsState::handleEvent(const sf::Event& event) {
     if (waitingForKeyIndex != -1) {
+        bool inputReceived = false;
         int keyCode = -1;
+
         if (const auto* keyEv = event.getIf<sf::Event::KeyPressed>()) {
             keyCode = (keyEv->code == sf::Keyboard::Key::Escape) ? -1 : static_cast<int>(keyEv->code);
+            inputReceived = true;
         } else if (const auto* btnEv = event.getIf<sf::Event::MouseButtonPressed>()) {
             keyCode = static_cast<int>(btnEv->button) + 100;
+            inputReceived = true;
         }
 
-        if (keyCode != -1 || (event.getIf<sf::Event::KeyPressed>() && event.getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Escape)) {
+        if (inputReceived) {
             draft.*(KeyFieldMap[waitingForKeyIndex]) = keyCode;
             waitingForKeyIndex = -1;
             updateKeyButtonsVisuals();

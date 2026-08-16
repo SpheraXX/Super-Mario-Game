@@ -7,6 +7,8 @@
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 
+#include "View/UI/UITheme.h"
+
 #include <functional>
 #include <string>
 
@@ -59,9 +61,9 @@ private:
     std::string     labelStr;
     unsigned int    charSize  = 8u;
 
-    sf::Color colorNormal     = sf::Color(60,  60,  80);
-    sf::Color colorHovered    = sf::Color(100, 100, 140);
-    sf::Color colorText       = sf::Color::White;
+    sf::Color colorNormal     = theme::ColorNormal;
+    sf::Color colorHovered    = theme::ColorHovered;
+    sf::Color colorText       = theme::ColorText;
 
     bool isHovered = false;
 

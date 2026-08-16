@@ -25,7 +25,6 @@ private:
     void switchTab(int index);
     void applySettings();
     void resetSettings();
-    void updateUIFromDraft();
 
     void updateKeyButtonsVisuals();
     bool hasKeyConflicts() const;
@@ -35,6 +34,12 @@ private:
     void buildSoundTab(const sf::Font& font);
     void buildControlsTab(const sf::Font& font);
     void buildLanguageTab(const sf::Font& font);
+
+    // Layout helper: adds a labelled row (Label on the left, widget on the right)
+    // to a scroll-panel and advances the cursor for the next row.
+    void addRow(view::ui::UIContainer& parent, const sf::Font& font,
+                const std::string& label, std::unique_ptr<view::ui::UIElement> widget,
+                float& cursorY);
 
     model::Settings draft;
 

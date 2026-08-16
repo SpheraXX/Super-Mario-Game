@@ -3,6 +3,7 @@
 
 #include "Model/Character.h"
 #include "Model/Player/PlayerState.h"
+#include "Model/Input/IInputMapper.h"
 
 #include <memory>
 
@@ -12,6 +13,8 @@ class Player : public Character {
 public:
     Player(Vector2 position, Vector2 size);
     ~Player() override;
+
+    void setInputMapper(IInputMapper* mapper);
 
     void update(float deltaTime) override;
 
@@ -92,6 +95,8 @@ protected:
     // Down input intent from the last handleInput(): standing on a pipe and holding
     // Down enters it (play state reads this to teleport to the portal target).
     bool inputDown = false;
+
+    IInputMapper* inputMapper = nullptr;
 
 protected:
     static constexpr float DamageCooldownTime = 1.0f;

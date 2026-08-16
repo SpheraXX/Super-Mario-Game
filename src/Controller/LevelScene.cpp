@@ -130,6 +130,13 @@ bool LevelScene::loadLevel() {
     return true;
 }
 
+void LevelScene::setInputMapper(model::IInputMapper* mapper) {
+    inputMapper = mapper;
+    if (playerPtr) {
+        playerPtr->setInputMapper(inputMapper);
+    }
+}
+
 // Instantiate the given area: copy its grid into the working map, rebuild the themed
 // renderer, append the completion zone on the FINAL area only, then spawn the area.
 void LevelScene::loadArea(std::size_t areaIndex) {
@@ -318,6 +325,10 @@ void LevelScene::resetLevel() {
 
     // Everything ahead of the camera starts asleep; the player is always awake.
     armDormancy();
+
+    if (playerPtr) {
+        playerPtr->setInputMapper(inputMapper);
+    }
 }
 
 void LevelScene::spawn(std::unique_ptr<model::Entity> entity) {

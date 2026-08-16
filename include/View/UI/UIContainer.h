@@ -28,9 +28,16 @@ public:
 
     // Takes ownership of the child element. Returns a raw pointer for immediate
     // post-add setup (e.g. setting colors after emplacing a button).
+    // Note: The child's initial position is treated as relative to this container's
+    // current position.
     template<typename T>
     T* add(std::unique_ptr<T> child) {
         T* raw = child.get();
+        
+        // Shift the child by the container's absolute position so that the initial
+        // coordinates provided by the user act as local/relative coordinates.
+        raw->setPosition(raw->getPosition().x + pos.x, raw->getPosition().y + pos.y);
+        
         children.push_back(std::move(child));
         if (currentLayout != Layout::None) relayout();
         return raw;

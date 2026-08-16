@@ -1,7 +1,5 @@
 #include "View/UI/UIButton.h"
 
-#include "Controller/AppEngine.h"
-
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Window/Mouse.hpp>
@@ -64,11 +62,7 @@ void UIButton::onMouseLeave() {
 
 void UIButton::update(float deltaTime) {
     (void)deltaTime;
-    // No scale animation: scaling the background causes sub-pixel text jitter at
-    // 60 Hz (lerp + floor snaps to different pixels each frame). Color-only hover
-    // feedback is stable and jitter-free. Scale effect can be re-added later.
-    background.setPosition(pos);
-    background.setSize(size);
+    // No scale animation currently.
 }
 
 bool UIButton::handleEvent(const sf::Event& event) {
@@ -82,7 +76,7 @@ bool UIButton::handleEvent(const sf::Event& event) {
 
     if (const auto* moved = event.getIf<sf::Event::MouseMoved>()) {
         // Transform from window pixels to logical game coordinates before hit-test.
-        const sf::Vector2f lp = controller::AppEngine::windowToLogical(moved->position);
+        const sf::Vector2f lp = transformCoordinate(moved->position);
         bool inside = contains(lp.x, lp.y);
         onHover(inside);
         return inside; // Fix Bug: Event Penetration (Consume if inside)
@@ -90,7 +84,7 @@ bool UIButton::handleEvent(const sf::Event& event) {
 
     if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (pressed->button == sf::Mouse::Button::Left) {
-            const sf::Vector2f lp = controller::AppEngine::windowToLogical(pressed->position);
+            const sf::Vector2f lp = transformCoordinate(pressed->position);
             if (contains(lp.x, lp.y)) {
                 onClick();
                 return true;

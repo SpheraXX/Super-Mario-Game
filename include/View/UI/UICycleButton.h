@@ -5,6 +5,9 @@
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
+
+#include "View/UI/UITheme.h"
+
 #include <functional>
 #include <string>
 #include <vector>
@@ -54,9 +57,9 @@ private:
     sf::RectangleShape        background;
     bool                      isHovered    = false;
 
-    sf::Color colorNormal  = sf::Color(40, 40, 70);
-    sf::Color colorHovered = sf::Color(70, 70, 110);
-    sf::Color colorText    = sf::Color::White;
+    sf::Color colorNormal  = theme::CycleNormal;
+    sf::Color colorHovered = theme::CycleHovered;
+    sf::Color colorText    = theme::ColorText;
 
     static constexpr unsigned int LabelSize  = 6u;
     static constexpr unsigned int ValueSize  = 6u;

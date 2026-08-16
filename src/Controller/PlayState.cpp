@@ -20,6 +20,9 @@ namespace controller {
 
 void PlayState::onEnter() {
     scene = std::make_unique<LevelScene>();
+    if (context && context->input) {
+        scene->setInputMapper(context->input);
+    }
     if (!scene->loadLevel()) {
         std::cerr << "PlayState: failed to load level assets\n";
     }

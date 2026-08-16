@@ -4,6 +4,7 @@
 #include "Model/Map/TileMap.h"
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
+#include "View/UI/UIElement.h"
 
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/VideoMode.hpp>
@@ -39,7 +40,8 @@ unsigned int AppEngine::screenWidth() {
 
 AppEngine::AppEngine() 
     : audioManager()
-    , gameContext{&audioManager}
+    , inputMapper()
+    , gameContext{&audioManager, &inputMapper}
     , states(std::make_unique<MainMenuState>(), &gameContext) {
     model::SettingsManager::instance().subscribe([this](const model::Settings& s) {
         // AudioManager is subscribed directly, but we can do it here:
@@ -58,6 +60,11 @@ AppEngine::AppEngine()
 
     states.pushState(std::make_unique<MainMenuState>());
     states.applyPending(); // make the initial state live before the loop starts
+
+    // Inject coordinate transform into UI layer once — keeps View independent of Controller.
+    view::ui::UIElement::transformCoordinate = [](const sf::Vector2i& p) {
+        return AppEngine::windowToLogical(p);
+    };
 }
 
 void AppEngine::applyDisplayMode() {

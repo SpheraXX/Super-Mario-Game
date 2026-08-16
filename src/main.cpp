@@ -1,21 +1,36 @@
-#include <SFML/Graphics.hpp>
+#include "Model/Map/TileMap.h"
+#include "Model/Player/Mario.h"
+#include "Model/Player/Luigi.h"
+#include "View/Map/TileMapRenderer.h"
 
-int main()
-{
-    sf::RenderWindow window(sf::VideoMode({800u, 600u}), "Super Mario");
-    window.setFramerateLimit(60);
+#include <SFML/Graphics/Color.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/Text.hpp>
+#include <SFML/Graphics/Font.hpp>
+#include <SFML/Window/Event.hpp>
+#include <SFML/Window/VideoMode.hpp>
+#include <SFML/Window/Keyboard.hpp>
+#include "Controller/AppEngine.h"
 
-    while (window.isOpen())
-    {
-        while (const std::optional event = window.pollEvent())
-        {
-            if (event->is<sf::Event::Closed>())
-                window.close();
-        }
+#include <exception>
+#include <iostream>
+#include <memory>
+#include <cstdio>
 
-        window.clear(sf::Color(92, 148, 252));
-        window.display();
+int main() {
+    freopen("log.txt", "w", stderr);
+
+    std :: cerr << "START" << std :: endl;
+
+    try {    
+        controller::AppEngine engine;
+        engine.run();
+    } catch (const std::exception& exception) {
+        std :: cerr << exception.what() << std :: endl;
+        return 1;
     }
+
+    std :: cerr << "END" << std :: endl;
 
     return 0;
 }

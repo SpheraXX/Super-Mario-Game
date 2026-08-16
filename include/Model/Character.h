@@ -2,6 +2,7 @@
 #define MODEL_CHARACTER_H
 
 #include "Model/Entity.h"
+#include "Model/Input/InputSnapshot.h"
 
 namespace model {
 
@@ -31,7 +32,7 @@ public:
     // Input gathering is delegated polymorphically: only the player reacts. It runs
     // BEFORE update() so gravity & integration see the correct player-intended
     // velocity, not stale values.
-    virtual void handleInput(float deltaTime) { (void)deltaTime; }
+    virtual void handleInput(float deltaTime, const InputSnapshot& input) { (void)deltaTime; (void)input; }
 
     virtual void takeDamage(int amount);
 
@@ -114,7 +115,8 @@ protected:
     // like the tuned default.
     static constexpr float DefaultGravity = 800.0f;
     static constexpr float DefaultMaxFallSpeed = 450.0f;
-    // Small upward pop applied when a death animation starts (e.g. from enemy contact).
+    // Fallback upward pop applied when a death animation starts (e.g. from enemy contact).
+    // Worlds override the value through getDeathBounceSpeed(); see Character::beginDying.
     static constexpr float DeathBounceSpeed = -200.0f;
 };
 

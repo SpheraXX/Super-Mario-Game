@@ -12,13 +12,10 @@ Starman::Starman(Vector2 position)
 }
 
 void Starman::onCollect(Entity& collector) {
+    // All power-up policy lives in Player::applyPowerUp (the size axis vs the ability
+    // slot, plus the redundant-power-up points). The item just hands the collect over.
     if (auto* player = dynamic_cast<Player*>(&collector)) {
-        // Already star: an extra one is worth points, matching the other power-ups.
-        if (player->isStar()) {
-            player->addScore(1000);
-        } else {
-            player->becomeStar();
-        }
+        player->applyPowerUp(PlayerPowerUp::Star);
     }
     isActive = false;
 }

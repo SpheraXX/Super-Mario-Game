@@ -84,7 +84,10 @@ void Character::beginDying(bool bounce) {
     animState = AnimState::Die;
     velocity.x = 0.0f;
     if (bounce) {
-        velocity.y = DeathBounceSpeed;
+        // Death pops are world-tuned (see WorldTheme::getDeathBounceSpeed): the hard
+        // land/Castle pop and the small underwater one. A character with no world (e.g.
+        // a unit-test body) falls back to the base constant.
+        velocity.y = worldPtr ? worldPtr->getDeathBounceSpeed() : DeathBounceSpeed;
     }
 }
 

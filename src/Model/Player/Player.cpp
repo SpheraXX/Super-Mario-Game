@@ -7,14 +7,11 @@
 #include <cmath>
 #include <string>
 
-#include <SFML/Window/Keyboard.hpp>
 
 namespace model {
 
 Player::Player(Vector2 position, Vector2 size)
-    : Character(position, size),
-      state(std::make_unique<SmallState>()),
-      damageCooldown(0.0f) {
+    : Character(position, size), damageCooldown(0.0f) {
     // The collision layer drives the (type-check-free) routing in CollisionManager:
     // exactly one entity per pair must be the player for the pair to resolve.
     hitbox.layer = CollisionLayer::Player;
@@ -23,6 +20,13 @@ Player::Player(Vector2 position, Vector2 size)
 Player::~Player() = default;
 
 void Player::update(float deltaTime) {
+    // Pipe entry owns the body: no physics, no timers — the scene freezes the world and
+    // drives the slide itself. (The gate is belt-and-braces; the frozen scene never
+    // reaches this update while a slide runs.)
+    if (pipeSlide) {
+        return;
+    }
+
     // A player-initiated ascent only owns the rising half of the jump: once the apex is
     // passed the flag is cleared, so a stomp bounce (which happens while falling) can
     // never be boosted by a held jump key.
@@ -41,7 +45,19 @@ void Player::update(float deltaTime) {
     }
     jumpBufferTime = std::max(0.0f, jumpBufferTime - deltaTime);
 
-    state->update(*this, deltaTime);
+    // Power-up timers: the fireball refire gate, and the star countdown that drops the
+    // invincibility (and nothing else) when it hits zero — the star never restores a
+    // fire it replaced, the axes are independent.
+    if (fireCooldown > 0.0f) {
+        fireCooldown = std::max(0.0f, fireCooldown - deltaTime);
+    }
+    if (power == PlayerPower::Star) {
+        starDuration = std::max(0.0f, starDuration - deltaTime);
+        if (starDuration <= 0.0f) {
+            power = PlayerPower::None;
+        }
+    }
+
     Character::update(deltaTime);
     syncAnimation();
 
@@ -55,45 +71,27 @@ void Player::update(float deltaTime) {
         damageCooldown -= deltaTime;
         if (damageCooldown < 0.0f) damageCooldown = 0.0f;
     }
-
-    if (auto newState = state->checkExpiration()) {
-        state->onExit(*this);
-        state = std::move(newState);
-        state->onEnter(*this);
-    }
 }
 
-void Player::setInputMapper(IInputMapper* mapper) {
-    inputMapper = mapper;
-}
-
-void Player::handleInput(float deltaTime) {
-    if (!alive) return;
+void Player::handleInput(float deltaTime, const InputSnapshot& input) {
+    if (!alive || pipeSlide) return;
 
     // Movement tuning is polymorphic: each concrete character reports its own numbers.
     const float walkSpeed = getWalkSpeed();
     const float runSpeed = getRunSpeed();
 
     // Sprint: hold Shift or the mapped Run key to move at run speed.
-    const bool sprinting =
-        (inputMapper && inputMapper->isActionPressed(model::InputAction::Run)) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+    const bool sprinting = input.run;
     const float targetSpeed = sprinting ? runSpeed : walkSpeed;
 
     // Horizontal inertia: accelerate toward the input target (friction when idle). The
     // velocity is never snapped, so movement feels weighty and the physics stays continuous.
-    bool movingLeft = (inputMapper && inputMapper->isActionPressed(model::InputAction::MoveLeft)) ||
-                      sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) ||
-                      sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left);
-    bool movingRight = (inputMapper && inputMapper->isActionPressed(model::InputAction::MoveRight)) ||
-                       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) ||
-                       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right);
+    bool movingLeft = input.moveLeft;
+    bool movingRight = input.moveRight;
     inputMoving = movingLeft || movingRight;
     // Down enters pipes: kept edge-free (held state) so the play state can warp while
     // the player stands on the cap. Pipe entry is a hold action in SMB, not a press.
-    inputDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) ||
-                sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down);
+    inputDown = input.crouch;
     if (movingLeft) {
         setDirection(-1);
     } else if (movingRight) {
@@ -117,11 +115,7 @@ void Player::handleInput(float deltaTime) {
         }
     }
 
-    const bool jumpPressed =
-        (inputMapper && inputMapper->isActionPressed(model::InputAction::Jump)) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) ||
-        sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
+    const bool jumpPressed = input.jump;
 
     // Press edge: remember the intent briefly (jump buffering).
     if (jumpPressed && !jumpHeld) {
@@ -162,12 +156,10 @@ void Player::handleInput(float deltaTime) {
     }
 
     // Fireball: holding the key re-fires whenever the cooldown clears. Works in the air
-    // too — only the underlying Fire state may shoot, and a Star wrapped around Fire keeps
-    // the ability (StarState forwards canShoot/shoot to its previous state).
-    const bool firePressed = (inputMapper && inputMapper->isActionPressed(model::InputAction::Run)) ||
-                             sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
-    if (firePressed && state->canShoot() && world) {
-        state->shoot();
+    // too — only the Fire power may shoot, and a Star (or anything else) never inherits it.
+    const bool firePressed = input.fire;
+    if (firePressed && power == PlayerPower::Fire && fireCooldown <= 0.0f && world) {
+        fireCooldown = FireCooldownDuration;
         // Spawn just in front of the facing side, around mouth height, so the ball never
         // overlaps the player (and never spawns inside the ground).
         const Vector2 pos = getPosition();
@@ -179,44 +171,100 @@ void Player::handleInput(float deltaTime) {
     jumpHeld = jumpPressed;
 }
 
+void Player::applyPowerUp(PlayerPowerUp type) {
+    switch (type) {
+        // Mushroom touches ONLY the size axis: it grows a small player no matter what
+        // power she carries (small fire, small star...), and is pure points once big.
+        case PlayerPowerUp::Mushroom:
+            if (!big) {
+                big = true;
+                syncPowerSize();
+            } else {
+                addScore(1000);
+            }
+            break;
+
+        // Fire Flower fills the ability slot only: it overrides a Star (dropping the
+        // invincibility) and never changes size.
+        case PlayerPowerUp::FireFlower:
+            if (power == PlayerPower::Fire) {
+                addScore(1000);
+            } else {
+                power = PlayerPower::Fire;
+                starDuration = 0.0f;
+            }
+            break;
+
+        // Star fills the ability slot only: it overrides Fire (dropping the fireball for
+        // good — expiry does not bring it back) and never changes size.
+        case PlayerPowerUp::Star:
+            if (power == PlayerPower::Star) {
+                addScore(1000);
+            } else {
+                power = PlayerPower::Star;
+                starDuration = StarDuration;
+            }
+            break;
+    }
+}
+
 void Player::takeDamage(int amount) {
     if (!alive || isDying() || damageCooldown > 0.0f) return;
 
-    PlayerState* newState = state->takeDamage(*this);
-    if (newState == nullptr) {
-        // Small Mario with no power-up left to lose: full death.
-        die(true);
-    } else if (newState != state.get()) {
-        // Downgrade (e.g. Super -> Small): keep playing with brief invulnerability.
-        state->onExit(*this);
-        state.reset(newState);
-        state->onEnter(*this);
-        // Bring the BODY down with the state. Powering up goes through setState(), which
-        // syncs the size itself, but this path swaps the state directly and so has to do
-        // it too — without this a damaged Super Mario keeps the two-tile box: he still
-        // draws as big (the renderer picks the frame off the size), still collides as big,
-        // and still breaks bricks, while the state underneath says Small.
+    // Star is full invincibility: no downgrade, no blink window.
+    if (power == PlayerPower::Star) return;
+
+    // Damage ladder (SMB-style, one tier per hit):
+    //   Fire  -> hit -> Fire gone, keeps size
+    //   Big   -> hit -> shrink to Small
+    //   Small -> hit -> death
+    if (power == PlayerPower::Fire) {
+        power = PlayerPower::None;
+        damageCooldown = DamageCooldownTime;
+        return;
+    }
+    if (big) {
+        big = false;
         syncPowerSize();
         damageCooldown = DamageCooldownTime;
+        return;
     }
+    die(true);
 }
 
 void Player::die(bool bounce) {
     if (!alive || isDying()) return;
+    pipeSlide.reset();  // a death mid-slide (debug key) drops the animation state
     model::GameManager::instance().loseLife();
     beginDying(bounce);
 }
 
-void Player::setState(std::unique_ptr<PlayerState> newState) {
-    if (!newState) return;
-    state->onExit(*this);
-    state = std::move(newState);
-    state->onEnter(*this);
-    syncPowerSize();
+bool Player::isPipeSliding() const {
+    return pipeSlide != nullptr;
+}
+
+void Player::beginPipeSlide(float targetY) {
+    pipeSlide = std::make_unique<VerticalSlide>();
+    pipeSlide->begin(getPosition().y, targetY, VerticalSlide::RiseSpeed);
+}
+
+bool Player::advancePipeSlide(float deltaTime) {
+    if (!pipeSlide) {
+        return false;
+    }
+    return pipeSlide->advance(*this, deltaTime);
+}
+
+void Player::endPipeSlide() {
+    pipeSlide.reset();
+}
+
+bool Player::drawsBehindTerrain() const {
+    return isPipeSliding();
 }
 
 void Player::syncPowerSize() {
-    const float targetHeight = (state->isSuper() || state->isFire()) ? BigHeight : SmallHeight;
+    const float targetHeight = big ? BigHeight : SmallHeight;
     if (getSize().y == targetHeight) return;
 
     // Anchor the feet: keep the bottom edge fixed while the box grows upward (or shrinks
@@ -238,11 +286,11 @@ void Player::syncPowerSize() {
 }
 
 bool Player::isFire() const {
-    return state->isFire();
+    return power == PlayerPower::Fire;
 }
 
 bool Player::isStar() const {
-    return state->isStar();
+    return power == PlayerPower::Star;
 }
 
 bool Player::isBig() const {
@@ -253,6 +301,10 @@ bool Player::isBig() const {
 
 bool Player::canBreakBricks() const {
     return isBig();
+}
+
+float Player::getRemainingTime() const {
+    return isStar() ? starDuration : -1.0f;
 }
 
 float Player::getWalkCycleDistance() const {
@@ -267,34 +319,12 @@ bool Player::isLuigi() const {
     return false;
 }
 
-PlayerState& Player::getState() {
-    return *state;
+float Player::getStompBounceRatio() const {
+    return StompBounceRatio;
 }
 
-const char* Player::getStateName() const {
-    return state->getStateName();
-}
-
-float Player::getRemainingTime() const {
-    return state->getRemainingTime();
-}
-
-void Player::becomeSuper() {
-    if (state->isSuper() || state->isFire() || state->isStar()) return;
-    setState(std::make_unique<SuperState>());
-}
-
-void Player::becomeFire() {
-    if (state->isFire() || state->isStar()) return;
-    setState(std::make_unique<FireState>());
-}
-
-void Player::becomeStar() {
-    if (state->isStar()) return;
-    state->onExit(*this);
-    auto prevState = std::move(state);
-    state = std::make_unique<StarState>(std::move(prevState));
-    state->onEnter(*this);
+float Player::getStompBounceConstant() const {
+    return StompBounceConstant;
 }
 
 void Player::addScore(int points) {

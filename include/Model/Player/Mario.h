@@ -13,6 +13,8 @@ public:
     float getRunSpeed() const override;
     float getMaxJumpSpeed() const override;
     float getJumpAccel() const override;
+    float getStompBounceRatio() const override;
+    float getStompBounceConstant() const override;
 
     static constexpr float WalkSpeed = 90.0f;
     // 400 (feat's value) was too hot on land for the fixed 20-column camera to keep the
@@ -31,6 +33,11 @@ public:
     // at the top of that arc is below the bump-speed gate in CollisionManager, so it
     // cannot open a block 5 tiles above the feet. Tap jumps rise much less.
     static constexpr float JumpAccel = 1550.0f;
+
+    // Stomp-bounce rebound (see Player::getStompBounceRatio): Mario keeps the stock feel —
+    // 0.85 of the fall speed minus 30 — so a normal ~350px/s drop relaunches him at ~267px/s.
+    static constexpr float StompBounceRatio = 0.85f;
+    static constexpr float StompBounceConstant = 30.0f;
 };
 
 }

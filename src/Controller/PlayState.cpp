@@ -85,11 +85,12 @@ void PlayState::update(float deltaTime) {
             finishClear();
         }
     } else if (event == LevelScene::Event::RunEnded) {
-        // The player's death fall is over: either the run is over or the level restarts.
+        // The player's death fall is over: either the run is over or the whole level
+        // restarts from its first area (whatever area the body fell in).
         if (model::GameManager::instance().isGameOver()) {
             manager->replaceState(std::make_unique<GameOverState>());
         } else {
-            scene->resetLevel();
+            scene->restartLevel();
         }
     }
 

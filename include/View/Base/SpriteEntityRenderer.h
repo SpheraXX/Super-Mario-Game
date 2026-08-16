@@ -55,7 +55,8 @@ protected:
         sprite.setTextureRect(frame);
         sprite.setColor(characterTint(entity));
         setupEntitySprite(sprite, frame, entity.getSize(),
-                          sourceFacesRight != entity.isFacingRight());
+                          sourceFacesRight != entity.isFacingRight(),
+                          flipWhenDying() && entity.isDying());
         sprite.setPosition({std::round(entity.getPosition().x),
                             std::round(entity.getPosition().y)});
         window.draw(sprite);
@@ -73,7 +74,8 @@ protected:
         sf::Sprite sprite(texture);
         sprite.setTextureRect(frame);
         sprite.setColor(characterTint(entity));
-        setupEntitySprite(sprite, frame, drawSize, sourceFacesRight != entity.isFacingRight());
+        setupEntitySprite(sprite, frame, drawSize, sourceFacesRight != entity.isFacingRight(),
+                          flipWhenDying() && entity.isDying());
         sprite.setPosition({std::round(entity.getPosition().x + drawOffset.x),
                             std::round(entity.getPosition().y + drawOffset.y)});
         window.draw(sprite);
@@ -85,6 +87,13 @@ protected:
     virtual sf::Color characterTint(const T& /* entity */) const {
         return sf::Color::White;
     }
+
+    // Whether a DYING body is drawn upside-down. Kicked enemies (shell hits, block-bump
+    // kills) show the classic flip as they pop: the sprite inverts first, then the death
+    // bounce launches it. Squished bodies are not dying, so they can never reach this
+    // flip — they always show their flattened frame. The player keeps the default false
+    // for the classic upright death; only enemy renderers opt in.
+    virtual bool flipWhenDying() const { return false; }
 
     sf::Texture texture;
 

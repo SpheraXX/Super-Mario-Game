@@ -8,7 +8,9 @@ enum class InputAction {
     MoveRight,
     Jump,
     Run,
-    Pause
+    Pause,
+    Attack,
+    Crouch
 };
 
 class IInputMapper {

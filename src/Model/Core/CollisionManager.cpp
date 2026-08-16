@@ -4,7 +4,9 @@
 #include "Model/Character.h"
 #include "Model/Enemy/Enemy.h"
 #include "Model/Entity.h"
+#include "Model/Item/Item.h"
 #include "Model/Map/TileMap.h"
+#include "Model/Player/Player.h"
 
 #include <algorithm>
 #include <cmath>
@@ -89,6 +91,11 @@ void CollisionManager::update(std::vector<Entity*>& entities, float deltaTime) {
         auto* character = dynamic_cast<Character*>(entity);
         if (!character || character->isDying()) continue;
         character->isGrounded = false;
+        // Trigger bodies (a popped coin, decorative floats) take no part in collision at
+        // all: the tile pass must not resolve them either, or a coin falling back onto
+        // its block would be snapped onto the block's top and stuck there instead of
+        // returning to its spawn height and disappearing.
+        if (character->hitbox.isTrigger) continue;
         processTileCollisions(*character, deltaTime);
     }
 
@@ -120,6 +127,14 @@ void CollisionManager::processTileCollisions(Character& entity, float deltaTime)
     // frame (prevFootY). If the foot is already inside the tile — a block hit from the side
     // mid-jump — snapping up to the top would teleport the player onto the block; those
     // contacts are resolved by the horizontal checks and the entity pass instead.
+    //
+    // Crossing the top edge is not enough on its own: a body FALLING ALONG a tall solid
+    // column (a pipe shaft, a tall 'G' pillar) crosses the top edge of every shaft cell as
+    // its feet sink past them, and snap-landing on each one would glue the player to the
+    // wall at whatever height his feet happen to be ("standing on a wall"). A cell whose
+    // top is not exposed — static solid terrain directly above it, so the body could never
+    // have dropped onto it from above — is a side clip, not a landing: the horizontal
+    // checks below push the body off the face and the fall continues.
     if (vel.y >= 0.0f) {
         const std::size_t row = TileMap::Rows - 1 - static_cast<std::size_t>(footY / TileMap::TileHeight);
 
@@ -132,6 +147,22 @@ void CollisionManager::processTileCollisions(Character& entity, float deltaTime)
 
                 if (col < tileMap->getColumns() && isGroundTile(tileMap->getTile(row, col))) {
                     if (prevFootY > tileTop + LandingEpsilon) break;
+                    // The feet crossed this cell's top this frame; only snap when the top
+                    // is exposed (nothing solid directly above it in the static map). Grid
+                    // rows run bottom-first (row 0 is the deepest row — see tileOrigin), so
+                    // the cell one tile ABOVE here is row+1. The cell above is checked in
+                    // static terrain terms, so a block entity 'C' above ground does NOT
+                    // hide the ground's top — that is the standing surface under a block row.
+                    //
+                    // A covered probe is SKIPPED, not fatal: when the foot straddles a
+                    // wall's base column, the probe on the wall cell has a covered top
+                    // (the shaft above it) while the rest of the foot rests on open ground.
+                    // Bailing out of the loop on that first probe left the ground unevaluated
+                    // and the body sank through it — standing still against the wall, no
+                    // horizontal push ever fired. The uncovered probes still land the body.
+                    const bool topExposed = row + 1 >= TileMap::Rows ||
+                        !TileMap::isSolidTile(tileMap->getTile(row + 1, col));
+                    if (!topExposed) continue;
                     pos.y = tileTop - hb.height - hb.offset.y;
                     vel.y = 0.0f;
                     entity.isGrounded = true;
@@ -301,7 +332,16 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
         // Resolve the single best player-vs-block contact. Neighbouring blocks that only
         // overlapped because of the pre-push positions are intentionally skipped.
         if (bestBlock) {
-            resolveEntityInteraction(*a, *bestBlock, bestSide);
+            // The pair is unordered — either end of it can be the block — so pick the
+            // solid one for the bump scan; the other is the player who bumped.
+            Entity* const player = a->hitbox.layer == CollisionLayer::Player ? a : bestBlock;
+            Entity* const block = (player == a) ? bestBlock : a;
+            // A real bump also reacts with whatever stands on the block's top face:
+            // enemies are flip-killed, resting mushrooms turn around. The block reacts
+            // first, then the scan runs over the same active entity list.
+            if (resolveEntityInteraction(*a, *bestBlock, bestSide)) {
+                affectEntitiesAbove(*block, *player, entities);
+            }
         }
     }
 }
@@ -331,7 +371,7 @@ CollisionType CollisionManager::calculateSide(const Entity& a, const Entity& b) 
     }
 }
 
-void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionType sideA) {
+bool CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionType sideA) {
     // Notify both entities of the collision: each one reacts through its own hooks
     // (e.g. CoinBlock collects its coin when bumped from below).
     a.onCollision(b, sideA);
@@ -353,32 +393,57 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
     // by Player (a Character) and the Enemy layer only by Enemy subclasses.
     const bool aIsPlayer = a.hitbox.layer == CollisionLayer::Player;
     const bool bIsPlayer = b.hitbox.layer == CollisionLayer::Player;
-    if (aIsPlayer == bIsPlayer) return;
+    if (aIsPlayer == bIsPlayer) return false;
 
     Entity* player = aIsPlayer ? &a : &b;
     Entity* other = aIsPlayer ? &b : &a;
     Character& playerCharacter = static_cast<Character&>(*player);
     const CollisionType playerSide = (player == &a) ? sideA : sideB;
 
+    // Items are structurally immune to every damage path: a starred player's side hit, a
+    // bump, a stomp-side graze — none of them may dispatch an Item. Collection does not
+    // flow through this routing anyway: the onCollision hooks above already delivered the
+    // contact (Item::onCollision decides when a collect actually happens), so returning
+    // here keeps the pair resolution a no-op while items stay collectible.
+    if (other->hitbox.layer == CollisionLayer::Item) return false;
+
     if (other->hitbox.layer == CollisionLayer::Enemy) {
         Enemy& enemy = static_cast<Enemy&>(*other);
+        // The Player layer is only ever carried by Player, so this cast is safe by the
+        // same layer contract as the Character cast above.
+        Player& hero = static_cast<Player&>(playerCharacter);
+        // Star power overrides every stomp rule: contact defeats any enemy — no stomp
+        // requirement, so Spiny's spikes and Bowser fall to it too. The stomp lockout is
+        // skipped on purpose: a star hit is a defeat, not a pass-through-while-dying case.
+        if (hero.isStar()) {
+            enemy.onHit(*player);
+            return false;
+        }
         // Just stomped, or already squished: the player is falling on past it (or standing
         // in the shell it left behind), so the pair does not interact at all. Holding the
         // lockout open for as long as they remain overlapped is what stops it expiring
         // while he is still inside the enemy — see Enemy::acceptsPlayerContact.
         if (!enemy.acceptsPlayerContact()) {
             enemy.holdStompLockout();
-            return;
+            return false;
         }
-        if (playerSide == CollisionType::Bottom) {
-            // Player landed on top of the enemy: squash it. His velocity is deliberately
-            // left alone — no bounce. He keeps the momentum he arrived with and drops on
-            // through, rather than being launched back up the way the original does it.
+        if (playerSide == CollisionType::Bottom && enemy.isStompable()) {
+            // Player landed on top of a stompable enemy: squash it and bounce. The bounce
+            // is a rebound off the impact speed — a per-character fraction of the speed he
+            // fell at minus a friction-like constant (see Player::getStompBounceRatio) —
+            // not a fixed kick: a hard fall throws him right back up, a slow drop is merely
+            // absorbed. Horizontal momentum is kept.
             enemy.stompedBy(*player);
+            const float fallSpeed = std::max(0.0f, playerCharacter.getVelocity().y);
+            const float bounceUp = std::max(0.0f,
+                hero.getStompBounceRatio() * fallSpeed - hero.getStompBounceConstant());
+            playerCharacter.setVelocity({playerCharacter.getVelocity().x, -bounceUp});
         } else {
-            // Player hit the enemy from the side or from below: take damage.
+            // Player hit the enemy from the side or from below — or landed on something
+            // that cannot be stomped at all (Spiny's spikes, Bowser): take damage.
             playerCharacter.takeDamage(enemy.getDamageValue());
         }
+        return false;
     } else if (other->isSolid()) {
         // Solid blocks stop the player (push-out). A bump from below also dispatches the
         // block-hit event — but only when the head is moving into the block fast enough
@@ -388,10 +453,52 @@ void CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         pushOutOfBlock(playerCharacter, *other, playerSide);
         if (playerSide == CollisionType::Top && upwardSpeed >= MinBumpSpeed) {
             if (auto* block = dynamic_cast<Block*>(other)) {
-                block->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
+                // The block reports whether it actually reacted: a spent ? block returns
+                // false, so its bump counts for nothing (no reaction on its top face).
+                return block->onBlockHit(BlockHitEvent{*player, playerSide, upwardSpeed});
             }
         }
+        return false;
     }
+    return false;
+}
+
+bool CollisionManager::affectEntitiesAbove(const Entity& block, Entity& player,
+                                           const std::vector<Entity*>& entities) {
+    // A real bump reacts with everything standing on the block's top face: enemies take
+    // the classic headbutt flip-kill, and a Mushroom resting there turns around. Only
+    // feet actually resting on the top within the standing epsilon qualify — an entity
+    // brushing the block's side or falling past it is untouched. The collision layers
+    // are the type contract for the casts, as in resolveEntityInteraction.
+    const float topY = block.getPosition().y + block.hitbox.offset.y;
+    const float blockLeft = block.getPosition().x + block.hitbox.offset.x;
+    const float blockRight = blockLeft + block.hitbox.width;
+    bool reactedAny = false;
+
+    for (Entity* entity : entities) {
+        if (!entity || !entity->isActive || entity->isDying()) continue;
+        if (entity->hitbox.layer != CollisionLayer::Enemy
+            && entity->hitbox.layer != CollisionLayer::Item) continue;
+
+        const float feetY = entity->getPosition().y + entity->hitbox.offset.y
+                            + entity->hitbox.height;
+        if (std::fabs(feetY - topY) > TopRestEpsilon) continue;
+
+        const float myLeft = entity->getPosition().x + entity->hitbox.offset.x;
+        const float myRight = myLeft + entity->hitbox.width;
+        if (myRight <= blockLeft || myLeft >= blockRight) continue;
+
+        if (entity->hitbox.layer == CollisionLayer::Enemy) {
+            // The same one-shot flip-and-fall defeat a spinning shell deals out; no stomp
+            // lockout and no bounce — the bump already spent the player's upward motion.
+            static_cast<Enemy&>(*entity).onHit(player);
+            reactedAny = true;
+        } else {
+            static_cast<Item&>(*entity).onBlockHitFromBelow();
+            reactedAny = true;
+        }
+    }
+    return reactedAny;
 }
 
 void CollisionManager::pushOutOfBlock(Character& mover, const Entity& blocker, CollisionType moverSide) {

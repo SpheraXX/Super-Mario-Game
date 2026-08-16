@@ -3,13 +3,15 @@
 namespace model {
 
 WorldTheme::WorldTheme(WorldType type, sf::Color backgroundColor, std::string tilesetPath,
-             float gravityScale, float maxFallScale, float horizontalDrag)
+             float gravityScale, float maxFallScale, float horizontalDrag,
+             float deathBounceSpeed)
     : type(type),
       backgroundColor(backgroundColor),
       tilesetPath(std::move(tilesetPath)),
       gravityScale(gravityScale),
       maxFallScale(maxFallScale),
-      horizontalDrag(horizontalDrag) {
+      horizontalDrag(horizontalDrag),
+      deathBounceSpeed(deathBounceSpeed) {
 }
 
 WorldType WorldTheme::getType() const {
@@ -34,6 +36,14 @@ float WorldTheme::getMaxFallScale() const {
 
 float WorldTheme::getHorizontalDrag() const {
     return horizontalDrag;
+}
+
+float WorldTheme::getDeathBounceSpeed() const {
+    return deathBounceSpeed;
+}
+
+float WorldTheme::getCoinPopSpeed() const {
+    return deathBounceSpeed * 1.5f;
 }
 
 }

@@ -1,6 +1,7 @@
 #ifndef MODEL_WORLD_H
 #define MODEL_WORLD_H
 
+#include <cstddef>
 #include <memory>
 
 namespace model {
@@ -25,6 +26,11 @@ public:
 
     // The player, or nullptr between deaths. Non-owning; never outlives the world.
     virtual const Entity* getPlayer() const = 0;
+
+    // A destructible block has been destroyed: the level erases its cell from the static
+    // map, so tile collision (landing on the block's spot) and any tile rendering forget
+    // it as well as the entity pass already does.
+    virtual void removeTile(std::size_t row, std::size_t column) = 0;
 };
 
 }

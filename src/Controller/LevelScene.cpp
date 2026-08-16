@@ -36,11 +36,11 @@
 #include "View/Enemy/GoombaRenderer.h"
 #include "View/Enemy/KoopaRenderer.h"
 #include "View/Level/FlagPoleRenderer.h"
-#include "View/Level/PipeRenderer.h"
 #include "View/Player/PlayerRenderer.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/View.hpp>
+#include <SFML/Window/Keyboard.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -69,7 +69,11 @@ LevelScene::LevelScene()
     entityRenderers->registerRenderer<model::CoinBlock, view::CoinBlockRenderer>();
     entityRenderers->registerRenderer<model::BrickBlock, view::BrickBlockRenderer>();
     entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
-    entityRenderers->registerRenderer<model::Pipe, view::PipeRenderer>();
+
+    // Pipes are NOT registered: they are terrain, drawn per cell by the tile renderer
+    // ('P'/'Q'/'p'/'q' cells). A warp pipe spawns a model::Pipe entity for the portal
+    // linkage, but rendering it on top with a different sprite set made warp pipes look
+    // unlike regular pipes — the entity is intentionally invisible.
 
     // Items are drawn from their own sprite sheet; the frame rects are named in
     // View/Item/ItemAtlas.h.
@@ -132,14 +136,11 @@ bool LevelScene::loadLevel() {
 
 void LevelScene::setInputMapper(model::IInputMapper* mapper) {
     inputMapper = mapper;
-    if (playerPtr) {
-        playerPtr->setInputMapper(inputMapper);
-    }
 }
 
 // Instantiate the given area: copy its grid into the working map, rebuild the themed
 // renderer, append the completion zone on the FINAL area only, then spawn the area.
-void LevelScene::loadArea(std::size_t areaIndex) {
+void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer) {
     currentArea = areaIndex;
     portals.clear();  // every visit to an area reactivates all its pipes
     worldType = level.areaWorld(areaIndex);
@@ -149,7 +150,7 @@ void LevelScene::loadArea(std::size_t areaIndex) {
     }
     renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png", worldType);
     mapLoaded = true;
-    resetLevel();
+    resetLevel(keepPlayer);
 }
 
 void LevelScene::teleportToPortal(const model::Portal& portal) {
@@ -159,8 +160,9 @@ void LevelScene::teleportToPortal(const model::Portal& portal) {
 
     // Rebuild the destination area and its entities, then place Mario either on the
     // cap of the destination pipe (if the arrival column has one) or on the ground.
-    // The camera, HUD and timer all keep their state.
-    loadArea(portal.destinationArea);
+    // The camera, HUD and timer all keep their state; the player is kept so that
+    // his size and power-ups survive the area change.
+    loadArea(portal.destinationArea, /* keepPlayer */ true);
     portals.markInert(portal.destinationColumn);  // one-way: no re-entry here
     if (!playerPtr) {
         return;
@@ -174,22 +176,105 @@ void LevelScene::teleportToPortal(const model::Portal& portal) {
     playerPtr->setVelocity({0.0f, 0.0f});
 }
 
+void LevelScene::beginPipeTransition(const model::Portal& portal) {
+    if (!playerPtr) {
+        return;
+    }
+    pendingPortal = portal;
+    timer.pause();
+    timerPausedByPipe = true;
+    // Sink the whole body below the pipe's mouth: findEntryPortal proved the feet rest on
+    // the cap, so one body height down hides the player fully behind the pipe shaft.
+    const float capTop = playerPtr->getPosition().y + playerPtr->getSize().y;
+    playerPtr->beginPipeSlide(capTop + playerPtr->getSize().y);
+    pipePhase = PipePhase::SlideIn;
+}
+
+void LevelScene::advancePipeTransition(float deltaTime) {
+    if (!playerPtr) {
+        return;
+    }
+
+    // A death mid-slide (debug key) aborts the travel and resumes the world.
+    if (!playerPtr->isAlive() || playerPtr->isDying()) {
+        playerPtr->endPipeSlide();
+        if (timerPausedByPipe) {
+            timer.resume();
+            timerPausedByPipe = false;
+        }
+        pipePhase = PipePhase::None;
+        return;
+    }
+
+    if (pipePhase == PipePhase::SlideIn) {
+        if (playerPtr->advancePipeSlide(deltaTime)) {
+            return;  // still sinking
+        }
+        // Fully inside the source pipe: travel, then set up the slide-out. The body is
+        // placed one height below the destination cap (hidden inside the pipe) and rises
+        // to rest on it; the snap is invisible because it draws behind the terrain.
+        teleportToPortal(pendingPortal);
+        if (!playerPtr) {
+            return;
+        }
+        const float sink = playerPtr->getSize().y;
+        playerPtr->setPosition(
+            {playerPtr->getPosition().x, playerPtr->getPosition().y + sink});
+        playerPtr->beginPipeSlide(playerPtr->getPosition().y - sink);
+        pipePhase = PipePhase::SlideOut;
+        return;
+    }
+
+    // SlideOut: the rise ends with Mario resting on the destination cap.
+    if (playerPtr->advancePipeSlide(deltaTime)) {
+        return;  // still rising
+    }
+    playerPtr->endPipeSlide();
+    if (timerPausedByPipe) {
+        timer.resume();
+        timerPausedByPipe = false;
+    }
+    pipePhase = PipePhase::None;
+}
+
 // (Re)build the entity list from scratch: the map file drives what spawns where.
-// 'M' = Mario, 'E' = Goomba, 'K' = Koopa, 'C' = CoinBlock, '#'/'B' = BrickBlock.
-// Every entity spawns exactly at its cell (row 0 is the bottom row), so the map
-// encodes both position and height precisely — no support scan, no surprises.
-// Called on enter and after every death (the whole level restarts).
-void LevelScene::resetLevel() {
+// 'M' = Mario, 'C' = CoinBlock, '#'/'B' = BrickBlock. Enemy markers are the digits 0-9
+// (EnemyFactory ids), placed in the cell directly above the ground: every enemy's feet
+// rest on that marker cell's bottom edge, so a body taller than one tile is dropped by
+// its overhang (see the digit loop below). Digits are stripped to empty tiles at load,
+// so a marker never doubles as terrain. Called on enter and after every death (the
+// whole level restarts). With keepPlayer=true the current player survives the rebuild,
+// so his size and power-ups carry over when a warp pipe changes area.
+void LevelScene::restartLevel() {
+    // A death always restarts the whole run from the first area, whatever area the body
+    // fell in; loadArea(0) rebuilds area 0 with a fresh Mario (keepPlayer=false default).
+    loadArea(0);
+}
+
+void LevelScene::resetLevel(bool keepPlayer) {
     const std::size_t tileWidth = model::TileMap::TileWidth;
     const std::size_t tileHeight = model::TileMap::TileHeight;
     const std::size_t rows = map.getRows();
     const std::size_t columns = map.getColumns();
 
+    // An area change keeps Mario: release his unique_ptr from the list before the clear
+    // destroys it, and re-add it below (the teleport re-sets his position afterwards).
+    std::unique_ptr<model::Entity> keptPlayer;
+    if (keepPlayer && playerPtr) {
+        for (auto& entity : entities) {
+            if (entity.get() == playerPtr) {
+                keptPlayer = std::move(entity);
+                break;
+            }
+        }
+    }
+
     entities.clear();
-    playerPtr = nullptr;
+    if (!keptPlayer) {
+        playerPtr = nullptr;  // full restart: a fresh Mario spawns below
+    }
     completion.clear();
 
-    bool marioSpawned = false;
     for (std::size_t row = 0; row < rows; ++row) {
         for (std::size_t column = 0; column < columns; ++column) {
             const char symbol = map.getTile(row, column);
@@ -200,25 +285,12 @@ void LevelScene::resetLevel() {
 
             switch (symbol) {
                 case 'M':
-                    if (!marioSpawned) {
+                    if (!playerPtr) {
                         auto mario = std::make_unique<model::Mario>(position);
                         playerPtr = mario.get();
                         entities.push_back(std::move(mario));
-                        marioSpawned = true;
                     }
                     break;
-                case 'E': {
-                    auto goomba = std::make_unique<model::Goomba>(position);
-                    goomba->setMap(&map);  // for ledge detection
-                    entities.push_back(std::move(goomba));
-                    break;
-                }
-                case 'K': {
-                    auto koopa = std::make_unique<model::Koopa>(position);
-                    koopa->setMap(&map);  // for ledge detection
-                    entities.push_back(std::move(koopa));
-                    break;
-                }
                 case 'C':
                     entities.push_back(std::make_unique<model::CoinBlock>(position, size));
                     break;
@@ -288,7 +360,7 @@ void LevelScene::resetLevel() {
     }
 
     // Fallback: if the map has no 'M', keep the game playable with a fixed spawn.
-    if (!marioSpawned) {
+    if (!playerPtr) {
         const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
         auto mario = std::make_unique<model::Mario>(
             model::Vector2{static_cast<float>(2 * tileWidth), groundY});
@@ -296,9 +368,17 @@ void LevelScene::resetLevel() {
         entities.push_back(std::move(mario));
     }
 
+    // An area change keeps Mario: put him back ahead of pipes and enemies (matching the
+    // original spawn order) and refresh the pointer that owns the kept entity.
+    if (keptPlayer) {
+        playerPtr = static_cast<model::Player*>(keptPlayer.get());
+        entities.push_back(std::move(keptPlayer));
+    }
+
     // Enemies placed as digit markers (EnemyFactory ids). These are stripped to empty
     // tiles at load, so they never double as terrain; the factory is the only place an
-    // enemy is constructed for a level.
+    // enemy is constructed for a level. (The old letter markers 'E'/'K' were retired —
+    // the debug maps now use the same digits as the feat maps.)
     for (const model::SpawnPoint& spawn : map.getSpawnPoints()) {
         const model::Vector2 origin = model::TileMap::tileOrigin(spawn.row, spawn.column);
         if (auto enemy = model::EnemyFactory::create(spawn.id, origin)) {
@@ -307,10 +387,13 @@ void LevelScene::resetLevel() {
         }
     }
 
-    // Level completion zone, in the padded columns: flagpole, then the goal castle.
-    // (Guard inside build: with a failed load columns is 0 and there is nothing to
-    // spawn.)
-    completion.build(map, entities);
+    // Level completion zone, in the padded columns: flagpole, then the goal castle. It
+    // belongs to the FINAL area only — earlier areas are traversed by portal, not by
+    // walking to the edge, and must not show a goal of their own. (Guard inside build:
+    // with a failed load columns is 0 and there is nothing to spawn.)
+    if (currentArea == level.areaCount() - 1) {
+        completion.build(map, entities);
+    }
 
     // Every character obeys the current world's physics (gravity/fall/drag, swim), and
     // every entity gets this scene as its spawn channel (model::World) so emitters can
@@ -326,9 +409,6 @@ void LevelScene::resetLevel() {
     // Everything ahead of the camera starts asleep; the player is always awake.
     armDormancy();
 
-    if (playerPtr) {
-        playerPtr->setInputMapper(inputMapper);
-    }
 }
 
 void LevelScene::spawn(std::unique_ptr<model::Entity> entity) {
@@ -345,6 +425,12 @@ void LevelScene::spawn(std::unique_ptr<model::Entity> entity) {
 
 const model::Entity* LevelScene::getPlayer() const {
     return playerPtr;
+}
+
+void LevelScene::removeTile(std::size_t row, std::size_t column) {
+    // A destroyed block's cell becomes air: the entity pass already forgets the inactive
+    // entity, and air keeps the tile pass from grounding bodies on the block's old spot.
+    map.setTile(row, column, '.');
 }
 
 model::Entity* LevelScene::addEntity(std::unique_ptr<model::Entity> entity) {
@@ -394,6 +480,13 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         return Event::None;
     }
 
+    // Pipe travel freezes the world the same way: the transition drives the player
+    // directly (slide in, teleport, slide out) and everything else stands still.
+    if (pipePhase != PipePhase::None) {
+        advancePipeTransition(deltaTime);
+        return Event::None;
+    }
+
     // SMB timer: one tick per second. Running out of time is a death.
     if (playerPtr && !playerPtr->isDying()) {
         timer.update(deltaTime);
@@ -413,7 +506,25 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         // entity->update() so gravity & integration see the correct player-intended
         // velocity, not stale values.
         if (auto* character = dynamic_cast<model::Character*>(e.get())) {
-            character->handleInput(deltaTime);
+            model::InputSnapshot snapshot;
+            if (character == playerPtr) {
+                if (inputMapper) {
+                    snapshot.moveLeft = inputMapper->isActionPressed(model::InputAction::MoveLeft);
+                    snapshot.moveRight = inputMapper->isActionPressed(model::InputAction::MoveRight);
+                    snapshot.jump = inputMapper->isActionPressed(model::InputAction::Jump);
+                    snapshot.run = inputMapper->isActionPressed(model::InputAction::Run);
+                    snapshot.fire = inputMapper->isActionPressed(model::InputAction::Attack);
+                    snapshot.crouch = inputMapper->isActionPressed(model::InputAction::Crouch);
+                } else {
+                    snapshot.moveLeft = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left);
+                    snapshot.moveRight = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right);
+                    snapshot.jump = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
+                    snapshot.run = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+                    snapshot.fire = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::X);
+                    snapshot.crouch = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down);
+                }
+            }
+            character->handleInput(deltaTime, snapshot);
         }
 
         e->update(deltaTime);
@@ -509,11 +620,11 @@ LevelScene::Event LevelScene::update(float deltaTime) {
     }
 
     // Pipe entry: holding Down while standing on a pipe's cap and a portal is bound to
-    // that pipe's column teleports the player to the portal's area.
+    // that pipe's column starts the slide-in/out travel to the portal's area.
     if (playerPtr) {
         if (const model::Portal* portal =
                 portals.findEntryPortal(*playerPtr, level, currentArea, entities)) {
-            teleportToPortal(*portal);
+            beginPipeTransition(*portal);
         }
     }
 

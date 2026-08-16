@@ -9,7 +9,6 @@
 #include <SFML/Graphics/Sprite.hpp>
 
 #include <cmath>
-#include <cstdint>
 
 namespace view {
 
@@ -23,17 +22,11 @@ constexpr int UsedBlockAtlasColGold = 9;
 constexpr int UsedBlockAtlasColTeal = 8;
 constexpr int GoldAtlasRow = 7;
 constexpr int TealAtlasRow = 8;
-
-// Coin sprite in super_mario_asset.png (16x16 source tile, gold circle with outline).
-constexpr int CoinAtlasX = 96;
-constexpr int CoinAtlasY = 532;
 }
 
 CoinBlockRenderer::CoinBlockRenderer()
-    : textureLoaded(texture.loadFromFile("assets/blocks.png")),
-      coinTextureLoaded(coinTexture.loadFromFile("assets/super_mario_asset.png")) {
+    : textureLoaded(texture.loadFromFile("assets/blocks.png")) {
     texture.setSmooth(false);
-    coinTexture.setSmooth(false);
 }
 
 void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
@@ -55,24 +48,6 @@ void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
     sprite.setPosition({std::round(coinBlock.getPosition().x),
                         std::round(coinBlock.getPosition().y - coinBlock.getBounceOffsetY())});
     window.draw(sprite);
-
-    // The collected coin rises ~1.5 tiles out of the block and fades away as the pop
-    // animation finishes. The model owns the timer; the renderer only draws it.
-    if (coinTextureLoaded && coinBlock.isCoinPopping()) {
-        const float progress = coinBlock.getCoinPopProgress();
-        const float rise = progress * 24.0f;  // world units (one tile = 16)
-        sf::Sprite coin(coinTexture);
-        coin.setTextureRect({{CoinAtlasX, CoinAtlasY}, {16, 16}});
-        coin.setScale({SpriteScaleX, SpriteScaleY});
-        coin.setOrigin({0.0f, 0.0f});
-        coin.setPosition({std::round(coinBlock.getPosition().x),
-                          std::round(coinBlock.getPosition().y - rise)});
-        if (progress > 0.75f) {  // fade out over the last quarter
-            const float fade = (1.0f - progress) / 0.25f;
-            coin.setColor(sf::Color(255, 255, 255, static_cast<std::uint8_t>(fade * 255.0f)));
-        }
-        window.draw(coin);
-    }
 }
 
 }

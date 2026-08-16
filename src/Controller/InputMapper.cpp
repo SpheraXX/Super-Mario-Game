@@ -19,6 +19,8 @@ void InputMapper::onSettingsChanged(const model::Settings& s) {
     bindings[model::InputAction::Jump]      = static_cast<sf::Keyboard::Key>(s.keyJump);
     bindings[model::InputAction::Run]       = static_cast<sf::Keyboard::Key>(s.keyRun);
     bindings[model::InputAction::Pause]     = static_cast<sf::Keyboard::Key>(s.keyPause);
+    bindings[model::InputAction::Attack]    = static_cast<sf::Keyboard::Key>(s.keyAttack);
+    bindings[model::InputAction::Crouch]    = static_cast<sf::Keyboard::Key>(s.keyCrouch);
 }
 
 bool InputMapper::isActionPressed(model::InputAction action) const {

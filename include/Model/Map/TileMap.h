@@ -31,9 +31,10 @@ public:
 
     // The goal castle is painted into the map's completion zone from its dedicated
     // 21-tile sheet. Each symbol must not collide with any symbol the map or the
-    // renderer already uses: 'G' (ground), 'O'/'T' (scenery), 'M'/'E'/'K'/'C'/'B'/'#'
-    // (spawns) and 'P'/'Q'/'p'/'q' (pipes) are all taken, so the castle uses the
-    // remaining letters of the alphabet (row-major over the 5x5 silhouette).
+    // renderer already uses: 'G' (ground), 'O'/'T' (scenery), 'M'/'C'/'B'/'#' (spawns),
+    // the enemy digit markers 0-9 and the pipe cells 'P'/'Q'/'p'/'q' are all taken, so
+    // the castle uses the remaining letters of the alphabet (row-major over the 5x5
+    // silhouette).
     //
     // NOTE: the 9th entry is 'r', not 'Q'. 'Q' is the pipe mouth's right-hand cell, and
     // both the castle painter and the tile renderer index THIS array, so a shared symbol

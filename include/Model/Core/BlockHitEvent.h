@@ -8,10 +8,10 @@ namespace model {
 class Entity;
 
 // Dispatched by the collision system when the player bumps a solid block from below.
-// Blocks react through Entity::onBlockHit(const BlockHitEvent&) — the event carries the
-// colliding player, the side of the player that made contact, and the head's upward
-// speed at impact, so the block never needs to know which concrete player type (or how
-// fast it was moving) it is dealing with.
+// Blocks react through Block::onBlockHit(const BlockHitEvent&), which returns whether the
+// block actually reacted — the event carries the colliding player, the side of the player
+// that made contact, and the head's upward speed at impact, so the block never needs to
+// know which concrete player type (or how fast it was moving) it is dealing with.
 struct BlockHitEvent {
     Entity& player;
     CollisionType side;

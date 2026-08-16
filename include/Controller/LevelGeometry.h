@@ -8,10 +8,12 @@
 namespace controller {
 namespace geometry {
 
-// Which symbols count as ground for the top-face scan (solid base only: ground, the
-// stair block, castle, brick and the underwater blocks).
+// Which symbols count as ground for the top-face scan: standable terrain
+// (TileMap::isStandableTerrain — ground, stair, chain, firebar mount) plus the landable
+// block entities. No pipes: this scan is for finding the floor of a column, and a pipe
+// mouth is where a warp puts you rather than part of the base.
 inline bool isGroundSymbol(char symbol) {
-    return symbol == 'G' || symbol == model::TileMap::StairSymbol
+    return model::TileMap::isStandableTerrain(symbol)
         || symbol == 'C' || symbol == 'B' || symbol == '#';
 }
 

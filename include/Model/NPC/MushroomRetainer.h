@@ -12,8 +12,11 @@ public:
     void interact(Player& player) override;
 
 private:
-    static constexpr float DefaultWidth = 8.0f;
-    static constexpr float DefaultHeight = 8.0f;
+    // Matches the artwork exactly (view::atlas::MushroomRetainer is 16x24). The frame is
+    // stretched onto this box, so a box of a different shape shows up as a squashed Toad
+    // rather than as anything to do with collision.
+    static constexpr float DefaultWidth = 16.0f;
+    static constexpr float DefaultHeight = 24.0f;
 };
 
 }

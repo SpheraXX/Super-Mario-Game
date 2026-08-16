@@ -53,15 +53,22 @@ const model::Portal* PortalSystem::findEntryPortal(
         const float buffer = 2.0f;
 
         if (pipe->getOrientation() == model::Pipe::Orientation::Horizontal) {
-            // The mouth faces left, so entry needs the player's right edge resting on
-            // that face while holding Right — the horizontal mirror of "feet on the cap,
-            // holding Down" below — plus a real vertical overlap with the pipe's height.
-            if (!player.getInputRight()) continue;
-            const float onFace = std::abs((pPos.x + pSize.x) - pipe->getPosition().x);
-            const bool overlapsFace =
-                pPos.y >= pipe->getPosition().y + buffer &&
-                pPos.y + pSize.y <= pipe->getPosition().y + pipe->getSize().y - buffer;
-            if (onFace < 4.0f && overlapsFace) {
+            // Touching it is the whole check — no held direction, no alignment window.
+            // A horizontal mouth cannot afford the margins the cap below can: its 4x2
+            // slab is only two tiles tall and its bottom edge normally sits flush on the
+            // floor, so any "fit inside the mouth" test excludes super Mario outright
+            // (32px of player in 32px of pipe, minus buffers) and clips small Mario by
+            // the buffer as well. Since the pipe is solid, collision resolution has
+            // already parked the player exactly against a face by the time this runs; an
+            // overlap of the slightly inflated box is what "walked into it" means.
+            const model::Vector2& qPos = pipe->getPosition();
+            const model::Vector2& qSize = pipe->getSize();
+            const bool touching =
+                pPos.x + pSize.x >= qPos.x - buffer &&
+                pPos.x <= qPos.x + qSize.x + buffer &&
+                pPos.y + pSize.y >= qPos.y - buffer &&
+                pPos.y <= qPos.y + qSize.y + buffer;
+            if (touching) {
                 return portal;
             }
             continue;

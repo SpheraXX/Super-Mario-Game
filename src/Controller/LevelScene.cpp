@@ -8,6 +8,7 @@
 #include "Model/Core/GameManager.h"
 #include "Model/Core/VerticalSlide.h"
 #include "Model/Enemy/Bowser.h"
+#include "Model/Enemy/CheepCheep.h"
 #include "Model/Enemy/EnemyFactory.h"
 #include "Model/Enemy/HammerBro.h"
 #include "Model/Enemy/Lakitu.h"
@@ -24,9 +25,13 @@
 #include "Model/Projectile/SpinyEgg.h"
 #include "Model/Enemy/Goomba.h"
 #include "Model/Enemy/Koopa.h"
+#include "Model/Level/ChainTrigger.h"
+#include "Model/Level/FirebarBall.h"
+#include "Model/Level/LavaBubble.h"
 #include "Model/Level/LevelGoal.h"
 #include "Model/Level/Pipe.h"
 #include "Model/Level/Slider.h"
+#include "Model/NPC/MushroomRetainer.h"
 #include "Model/Player/Luigi.h"
 #include "Model/Player/Mario.h"
 #include "Model/Player/Player.h"
@@ -36,6 +41,10 @@
 #include "View/Block/BrickShardRenderer.h"
 #include "View/Block/CoinBlockRenderer.h"
 #include "View/Base/AtlasFrameRenderer.h"
+#include "View/Base/MiscFrameRenderer.h"
+#include "View/Enemy/HammerRenderer.h"
+#include "View/Level/ChainTriggerRenderer.h"
+#include "View/Level/FirebarBallRenderer.h"
 #include "View/Enemy/FireballRenderer.h"
 #include "View/Item/ItemFrameRenderer.h"
 #include "View/Item/MapCoinRenderer.h"
@@ -111,8 +120,9 @@ LevelScene::LevelScene()
                                       view::AtlasFrameRenderer<model::Bowser>>(view::atlas::Bowser);
     entityRenderers->registerRenderer<model::PiranhaPlant,
                                       view::AtlasFrameRenderer<model::PiranhaPlant>>(view::atlas::PiranhaPlant);
-    entityRenderers->registerRenderer<model::Hammer,
-                                      view::AtlasFrameRenderer<model::Hammer>>(view::atlas::Hammer);
+    // The hammer spins through four poses off misc.png, so it needs a renderer of its own
+    // rather than the fixed-frame template the rest of this block uses.
+    entityRenderers->registerRenderer<model::Hammer, view::HammerRenderer>();
     entityRenderers->registerRenderer<model::SpinyEgg,
                                       view::AtlasFrameRenderer<model::SpinyEgg>>(view::atlas::SpinyEgg);
     entityRenderers->registerRenderer<model::Fireball,
@@ -120,6 +130,21 @@ LevelScene::LevelScene()
     // Mario's fireball is its own animated ball (4 rolling frames), unlike Bowser's flat
     // breath above, so it needs its own renderer.
     entityRenderers->registerRenderer<model::MarioFireball, view::FireballRenderer>();
+
+    // Castle furniture and the water level's fish, all off misc.png (see MiscAtlas.h).
+    // The firebar's flame picks its pose from its own sweep angle, so it needs a renderer;
+    // the rest are single-frame and share the misc-sheet template.
+    entityRenderers->registerRenderer<model::FirebarBall, view::FirebarBallRenderer>();
+    entityRenderers->registerRenderer<model::LavaBubble,
+                                      view::MiscFrameRenderer<model::LavaBubble>>(
+        view::atlas::LavaBubble);
+    entityRenderers->registerRenderer<model::CheepCheep,
+                                      view::MiscFrameRenderer<model::CheepCheep>>(
+        view::atlas::CheepCheep[0]);
+    entityRenderers->registerRenderer<model::MushroomRetainer,
+                                      view::MiscFrameRenderer<model::MushroomRetainer>>(
+        view::atlas::MushroomRetainer);
+    entityRenderers->registerRenderer<model::ChainTrigger, view::ChainTriggerRenderer>();
 }
 
 bool LevelScene::loadLevel() {
@@ -342,6 +367,36 @@ void LevelScene::resetLevel(bool keepPlayer) {
                         position, pipeSize, column, model::Pipe::Orientation::Horizontal));
                     break;
                 }
+                case model::TileMap::FirebarSymbol: {
+                    // The marker cell is both the mount (solid terrain, drawn by the tile
+                    // renderer) and the pivot, so the bar turns about the cell's CENTRE.
+                    // The bar is a line of independent flames rather than one entity —
+                    // see Model/Level/FirebarBall.h for why a rotating arm cannot be one.
+                    constexpr int Links = 4;
+                    constexpr float LinkStep = 8.0f;
+                    constexpr float SpinSpeed = 2.0f;  // radians/second
+                    const model::Vector2 pivot{position.x + size.x * 0.5f,
+                                               position.y + size.y * 0.5f};
+                    for (int link = 1; link <= Links; ++link) {
+                        entities.push_back(std::make_unique<model::FirebarBall>(
+                            pivot, LinkStep * static_cast<float>(link), SpinSpeed, 0.0f));
+                    }
+                    break;
+                }
+                case model::TileMap::LavaBubbleSymbol: {
+                    constexpr float RiseHeight = 5.0f * 16.0f;  // five tiles out of the pool
+                    constexpr float LeapSeconds = 1.6f;
+                    constexpr float RestSeconds = 1.0f;
+                    entities.push_back(std::make_unique<model::LavaBubble>(
+                        position, RiseHeight, LeapSeconds, RestSeconds));
+                    break;
+                }
+                case model::TileMap::ChainTriggerSymbol:
+                    entities.push_back(std::make_unique<model::ChainTrigger>(position, size));
+                    break;
+                case model::TileMap::RetainerSymbol:
+                    entities.push_back(std::make_unique<model::MushroomRetainer>(position));
+                    break;
                 case model::TileMap::GoalSymbol: {
                     // A trigger several cells tall so a jumping player cannot skip over
                     // it; the marked cell is the BOTTOM of the column, matching where
@@ -507,6 +562,18 @@ void LevelScene::removeTile(std::size_t row, std::size_t column) {
     map.setTile(row, column, '.');
 }
 
+void LevelScene::removeTilesOfType(char symbol) {
+    // Sweeps the working grid, not the level's pristine copy, so a death restart rebuilds
+    // the area with its bridge intact — the same way a smashed brick comes back.
+    for (std::size_t row = 0; row < map.getRows(); ++row) {
+        for (std::size_t column = 0; column < map.getColumns(); ++column) {
+            if (map.getTile(row, column) == symbol) {
+                map.setTile(row, column, '.');
+            }
+        }
+    }
+}
+
 model::Entity* LevelScene::addEntity(std::unique_ptr<model::Entity> entity) {
     if (!entity) return nullptr;
     model::Entity* raw = entity.get();
@@ -670,8 +737,8 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         return Event::RunEnded;
     }
 
-    // Pipe entry: holding Down while standing on a pipe's cap and a portal is bound to
-    // that pipe's column starts the slide-in/out travel to the portal's area.
+    // Pipe entry: holding Down on a vertical pipe's cap, or merely touching a horizontal
+    // one, starts the slide-in/out travel to the portal bound to that pipe's column.
     if (playerPtr) {
         if (const model::Portal* portal =
                 portals.findEntryPortal(*playerPtr, level, currentArea, entities)) {

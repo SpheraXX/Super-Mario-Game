@@ -60,7 +60,9 @@ void Enemy::update(float deltaTime) {
         bool walkable = false;
         if (col < mapPtr->getColumns() && row < TileMap::Rows) {
             const char ahead = mapPtr->getTile(row, col);
-            walkable = ahead == 'G' || ahead == TileMap::StairSymbol
+            // Same standable set the player's feet use, so an enemy will walk out onto a
+            // castle bridge instead of treating its first cell as a ledge and turning back.
+            walkable = TileMap::isStandableTerrain(ahead)
                 || ahead == 'C' || ahead == 'B' || ahead == '#';
         }
         if (!walkable) {

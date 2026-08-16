@@ -128,6 +128,21 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldTyp
     registerTile(model::TileMap::HorizontalPipeSymbol, MarioAssetPath,
                  sf::IntRect({192, 656}, {4 * Cell, 2 * Cell}), SceneryBackdrop);
 
+    // The castle bridge deck. Keyed on BLACK, not on SceneryBackdrop like its neighbours:
+    // this cell is cut from a castle scene, whose sky is black, so black is what has to
+    // drop out for the chain links to read as links rather than as a solid plank. Keying
+    // is per-rect (see SpritePainter::applyColorKey), so this cannot disturb the tiles
+    // around it that legitimately paint in black.
+    registerTile(model::TileMap::ChainSymbol, MarioAssetPath,
+                 sf::IntRect({548, 476}, {Cell, Cell}), sf::Color::Black);
+
+    // The block a firebar turns on. Solid artwork edge to edge, like the other blocks, so
+    // it needs no colour key. It is a tile rather than part of the firebar entity because
+    // the block is what the player stands on and the bar is what burns him — two different
+    // jobs that happen to share a cell.
+    registerTile(model::TileMap::FirebarSymbol, MarioAssetPath,
+                 sf::IntRect({580, 476}, {Cell, Cell}));
+
     // The goal castle: two multi-cell images, not a 21-symbol grid of one-cell tiles. The
     // artwork is laid out as exactly these two rects, and the castle is pure backdrop now
     // that LevelGoal ('E') ends the level, so there was nothing the per-cell version bought

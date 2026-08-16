@@ -31,7 +31,11 @@ constexpr float StompBias = 0.75f;
 // overhead yet never supports him, so he drops straight through the top of it — which is
 // exactly what the stair block did before it was added here.
 bool isGroundTile(char symbol) {
-    return symbol == 'G' || symbol == model::TileMap::StairSymbol
+    // Standable terrain (ground, stair, chain, firebar mount) plus the block ENTITIES,
+    // which are landable but are not terrain, plus pipe tops. Keeping the terrain half in
+    // TileMap::isStandableTerrain is what stops this list drifting out of step with
+    // isSolidTile again.
+    return model::TileMap::isStandableTerrain(symbol)
         || symbol == 'C' || symbol == 'B' || symbol == '#'
         || model::TileMap::isPipeSymbol(symbol);
 }

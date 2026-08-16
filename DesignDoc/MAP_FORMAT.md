@@ -98,6 +98,8 @@ The default map the game boots is `assets/maps/test_castle.map`
 |---|---|---|
 | `G` | Ground / solid block | The workhorse. Two rows of it form the standard ground strip. A gap = write `.` |
 | `s` | Stair block | Unbreakable brick. Used for the staircases before a flagpole |
+| `c` | Chain / castle bridge deck | Solid like any other terrain, which is the point — enemies stand on it. Erased wholesale by an `X` trigger, dropping the bridge and everything on it |
+| `r` | Firebar mount | Solid block; also spawns the bar (§3.2) |
 | `P` | Pipe mouth, **left** cell | |
 | `Q` | Pipe mouth, **right** cell | |
 | `p` | Pipe shaft, **left** cell | Repeat downward for height |
@@ -116,6 +118,10 @@ not stop movement — including the castle, which is scenery (§3.4, §5).
 | `$` | Free-standing coin | `MapCoin`. Collected by walking through it — never solid, never drawn as terrain. (`$` not `o`, so it can't be confused with `O` the cloud) |
 | `E` | Level goal | End-of-level trigger. **Author-placed, and there is no automatic placement** — a map with no `E` cannot be completed. The hitbox is **4 tiles tall** growing upward from the marked cell, so a jumping player can't skip it. Trigger only; it never blocks |
 | `=` | Slider (moving platform) | Written as a **2-cell horizontal run** (`==`). Its art is a fixed 32x8. Motion comes from a matching `; slider=` token — see §7. **Without a matching token it silently does not spawn** |
+| `r` | Firebar | The cell is **both** the solid mount block **and** the pivot. Spawns a line of 4 rotating 8x8 flames sweeping out to 32px (2 tiles). Contact damage; cannot be killed or stomped |
+| `b` | Lava bubble | One big fireball leaping ~5 tiles straight up out of the marked cell and dropping back, forever. Put it on the cell **resting on the lava crest row**. Contact damage |
+| `X` | Chain trigger (the axe) | Touch it and **every `c` cell in the area is erased at once**. Fires once. A trigger — it never blocks. Not a level goal: a castle still needs its own `E` |
+| `R` | Mushroom Retainer (Toad) | 16x24 backdrop NPC. Never solid |
 
 ### 3.3 Enemies — the digits `0`–`9`
 
@@ -131,7 +137,7 @@ ground** — you can safely put one in mid-air over a gap and it will fall.
 | `3` | Hammer Bro | |
 | `4` | Lakitu | |
 | `5` | Spiny | |
-| `6` | Cheep Cheep | **Not implemented** — logs a warning and skips the spawn |
+| `6` | Cheep Cheep | Swims straight along its row, ignoring terrain (it crosses rock and pipe, as the original does). Stompable |
 | `7` | Bowser | **2 tiles tall**, foot-aligned (see below) |
 | `8` | Piranha Plant | Special anchor: the marker goes in the **empty cell directly above the pipe's top-left cell**, and the plant is placed one cell lower. It cannot go *on* the mouth — the loader would strip that cell to air and punch a hole in the pipe. Still flagged as deferred in the factory header; use with care |
 | `9` | — | Unassigned: logs `unknown enemy id` and skips |
@@ -343,7 +349,15 @@ about 212 tiles long, so a faithful transcription is ~200+ characters per line.
    a castle with no `E` next to it is a level you cannot finish.
 9. **`C` and `#` are not registered in the tile renderer** — they draw as entities. Don't go
    looking for their rects in `TileMapRenderer`.
-10. **Legacy dead symbol `K`.** The debug maps once used letters for enemies (`E` Goomba,
+10. **`X` erases `c` for the whole AREA, not a radius.** One axe cuts every chain cell in
+    the area it lives in. That is what you want for a bridge; it is not a general-purpose
+    "remove nearby tiles" switch.
+11. **A firebar's `r` cell is solid.** It is the mount as well as the pivot, so the bar
+    always sweeps out of a block the player can stand on — you never place the block
+    separately, and a bar cannot pivot in mid-air.
+12. **The cut is per-run, not permanent.** `removeTilesOfType` edits the WORKING grid, so
+    dying and restarting brings the bridge back, exactly as a smashed brick comes back.
+13. **Legacy dead symbol `K`.** The debug maps once used letters for enemies (`E` Goomba,
     `K` Koopa) before the digit format won. `E` has since been reassigned to the level goal.
     A stray `K` still sits at column 38 of the walk line in
     [test_overworld.map](../assets/maps/test_overworld.map),
@@ -361,9 +375,10 @@ TERRAIN (solid)          ENTITIES                 ENEMIES (digits)
   s  stair block           C  ? block               1  Koopa Troopa
   P Q  pipe mouth L/R      # B  brick               2  Koopa Paratroopa
   p q  pipe shaft L/R      $  coin                  3  Hammer Bro
-                           E  level goal            4  Lakitu
-                           == slider (2 cells)      5  Spiny
-SCENERY (decorative)                                6  Cheep Cheep (NOT IMPL)
+  c  chain / bridge deck   E  level goal            4  Lakitu
+  r  firebar mount+pivot   == slider (2 cells)      5  Spiny
+                           r  firebar (4 flames)    6  Cheep Cheep
+SCENERY (decorative)       b  lava bubble
   O  cloud        3x2 TL                            7  Bowser (2 tiles tall)
   T  tree         1x2 TL                            8  Piranha Plant (above pipe)
   A  castle tower 3x2 TL                            9  unused
@@ -371,8 +386,9 @@ SCENERY (decorative)                                6  Cheep Cheep (NOT IMPL)
   w  bush         3x1 CENTRE
   m  hill         5-3-1 pyramid, marker = bottom centre
   k  kelp         underwater only     EMPTY:  .  air
-  v  lava crest
-  x  lava body           HEADERS
+  v  lava crest          X  chain trigger (axe): erases every 'c' in its area
+  x  lava body           R  Mushroom Retainer (Toad), 16x24
+                         HEADERS
                            ; name=   ; next=   ; area
                            ; world=overworld|underground|underwater|castle
                            ; pipe=col:N,enter:down,to:AREA:COL

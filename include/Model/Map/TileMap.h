@@ -61,6 +61,28 @@ public:
     // to the run's leftmost column exactly as '; pipe=' binds to a Pipe.
     static constexpr char SliderSymbol = '=';
 
+    // Castle furniture.
+    //
+    // ChainSymbol is the bridge deck Bowser stands on: ordinary SOLID terrain, so that
+    // enemies collide with it too (the entity pass only resolves the PLAYER against solid
+    // entities, so a bridge built out of entities would drop every enemy straight through
+    // it). ChainTriggerSymbol is the axe at the far end — touching it erases every
+    // ChainSymbol cell in the area at once, which is what drops the bridge and everything
+    // riding it. See Model/Level/ChainTrigger.h.
+    static constexpr char ChainSymbol = 'c';
+    static constexpr char ChainTriggerSymbol = 'X';
+
+    // Hazards that are spawned as entities from their marker cell and sweep through
+    // terrain, so neither is solid and both are stripped to air at load like an enemy
+    // digit. FirebarSymbol anchors a rotating LINE of flames (see FirebarBall.h);
+    // LavaBubbleSymbol anchors one big fireball leaping in place (see LavaBubble.h).
+    static constexpr char FirebarSymbol = 'r';
+    static constexpr char LavaBubbleSymbol = 'b';
+
+    // A Mushroom Retainer (Toad) standing where the author put him. Scenery with dialogue
+    // rather than an obstacle: he is 16x24 and never blocks.
+    static constexpr char RetainerSymbol = 'R';
+
     // Molten lava: purely decorative terrain (never solid — see isSolidTile), stacked by
     // the author the same way Kelp is. LavaTopSymbol is the wave-crest surface; LavaSymbol
     // is the plain fill beneath it, repeated for however many cells deep the pool is (a
@@ -129,6 +151,20 @@ public:
     WorldType getWorldType() const;
     const std::string& getNextMapPath() const;
     bool hasNextMap() const;
+
+    // Terrain a body can STAND ON: the ground strip, the stair block, the castle bridge
+    // deck and a firebar's mount block.
+    //
+    // This exists because "solid" and "standable" are decided in four different places
+    // that must agree, and did not: isSolidTile below (what blocks movement),
+    // CollisionManager's isGroundTile (what the feet land on), geometry::isGroundSymbol
+    // (where a warp drops you) and Enemy's ledge probe (what an enemy will walk onto).
+    // A symbol added to the first but not the second is solid overhead and sideways yet
+    // supports nothing, so bodies drop straight through the top of it — the bug the chain
+    // shipped with, and the same one the stair block had before it. The three walkability
+    // call sites now share this list and add only their own extras (the block ENTITIES
+    // 'C'/'B'/'#', and pipes for the ones that want them), so new terrain is one edit.
+    static bool isStandableTerrain(char symbol);
 
     static bool isSolidTile(char symbol);
     // True for the four pipe cells ('P'/'Q' mouth, 'p'/'q' shaft). Pipes are solid terrain

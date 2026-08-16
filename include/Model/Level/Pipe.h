@@ -15,10 +15,10 @@ namespace model {
 // A Vertical pipe is entered by standing on its cap and holding Down; the entity exists
 // only when a '; pipe=' token binds one, since the standing pipe is already solid terrain
 // (TileMap::isSolidTile) regardless. A Horizontal pipe (TileMap::HorizontalPipeSymbol) is
-// entered by walking into its left face and holding Right instead, and its entity is
-// always spawned — its 4x2 footprint has no per-cell terrain equivalent, so the entity is
-// its only source of collision, portal-bound or not. See PortalSystem::findEntryPortal for
-// the two entry checks.
+// entered by simply touching it — its mouth is too short to spare the alignment margins a
+// cap can, so there is no held direction to press — and its entity is always spawned: the
+// 4x2 footprint has no per-cell terrain equivalent, so the entity is its only source of
+// collision, portal-bound or not. See PortalSystem::findEntryPortal for the two checks.
 class Pipe : public Entity {
 public:
     enum class Orientation { Vertical, Horizontal };

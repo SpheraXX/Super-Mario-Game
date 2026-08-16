@@ -2,7 +2,7 @@
 
 namespace model {
 
-const char* GameManager::DefaultMapPath = "assets/maps/lv2_1.map";
+const char* GameManager::DefaultMapPath = "assets/maps/lv1_4.map";
 
 GameManager& GameManager::instance() {
     static GameManager singleton;

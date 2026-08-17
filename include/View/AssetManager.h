@@ -2,10 +2,13 @@
 #define VIEW_ASSETMANAGER_H
 
 #include <SFML/Graphics/Font.hpp>
+#include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/Texture.hpp>
 
+#include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace view {
 
@@ -32,19 +35,29 @@ public:
     const sf::Font& getUiFont() const;
     bool isFontLoaded() const;
 
+    // ── Images (Raw pixel data) ──────────────────────────────────────────────
+    // Returns a const reference to the cached raw image for 'filePath'.
+    // Use this when you need pixel-level manipulation (e.g. SpritePainter)
+    // rather than direct rendering.
+    const sf::Image& getImage(const std::string& filePath);
+
     // ── Textures ──────────────────────────────────────────────────────────────
     // Returns a const reference to the cached texture for 'filePath'.
-    // Loads from disk on the first call for that path (Lazy Loading).
+    // If 'colorKey' is provided, the image is loaded, masked with that color,
+    // and then uploaded to VRAM.
+    // Loads from disk on the first call for that path/color combo (Lazy Loading).
     // Returns a 1×1 transparent fallback texture on load failure so callers
     // never receive a dangling reference.
-    //
-    // Usage:  const sf::Texture& tex = AssetManager::instance().getTexture("assets/ui/button.png");
-    const sf::Texture& getTexture(const std::string& filePath);
+    const sf::Texture& getTexture(const std::string& filePath, std::optional<sf::Color> colorKey = std::nullopt);
 
     // Removes all cached textures whose keys are NOT in 'keepList'.
     // Call this when transitioning between worlds to free VRAM for the next set.
     // Always keeps the UI/font atlas alive; it is never included in eviction.
     void clearUnused(const std::vector<std::string>& keepList);
+
+    // Reloads all currently cached images and textures from disk.
+    // Essential for recovering from Graphics Context Loss (e.g., toggling Fullscreen).
+    void reloadAll();
 
 private:
     AssetManager();
@@ -52,9 +65,18 @@ private:
     sf::Font uiFont;
     bool uiFontLoaded;
 
-    std::unordered_map<std::string, sf::Texture> textures;
+    // Cache structure for textures to support color keying and reloading
+    struct TextureData {
+        sf::Texture texture;
+        std::string filePath;
+        std::optional<sf::Color> colorKey;
+    };
 
-    // A 1×1 transparent texture returned whenever a file cannot be loaded.
+    std::unordered_map<std::string, sf::Image> images;
+    std::unordered_map<std::string, TextureData> textures;
+
+    // A 1×1 transparent texture/image returned whenever a file cannot be loaded.
+    sf::Image fallbackImage;
     sf::Texture fallbackTexture;
 };
 

@@ -8,11 +8,12 @@
 #include "View/UI/UISlider.h"
 #include "View/UI/UICycleButton.h"
 #include "View/UI/UITheme.h"
+#include "Controller/ConfirmState.h"
 
 namespace controller {
 
 namespace {
-int model::Settings::* const KeyFieldMap[10] = {
+int model::Settings::* const KeyFieldMap[12] = {
     &model::Settings::keyMoveLeft,
     &model::Settings::keyMoveRight,
     &model::Settings::keyJump,
@@ -22,7 +23,9 @@ int model::Settings::* const KeyFieldMap[10] = {
     &model::Settings::keyAttack,
     &model::Settings::keyCrouch,
     &model::Settings::keyInteract,
-    &model::Settings::keyInventory
+    &model::Settings::keyInventory,
+    &model::Settings::keyCycleDisplay,
+    &model::Settings::keyBack
 };
 }
 
@@ -90,35 +93,44 @@ OptionsState::OptionsState() {
         font, "APPLY", 8, sf::Vector2f(screenW - 280.f, btnY), sf::Vector2f(80.f, 20.f));
     uiCtx.applyBtn = btnApply.get();
     btnApply->setOnClick([this]() { 
-        if (hasKeyConflicts() && !uiCtx.forceApply) {
-            uiCtx.forceApply = true;
-            uiCtx.applyBtn->setLabel("SURE?");
+        if (hasKeyConflicts()) {
+            manager->pushState(std::make_unique<ConfirmState>(
+                "Key conflicts detected!\nForce apply anyway?",
+                [this]() {
+                    applySettings();
+                    manager->popState(); // Pop ConfirmState
+                },
+                [this]() {
+                    manager->popState(); // Pop ConfirmState
+                }
+            ));
             return;
         }
         applySettings(); 
-        uiCtx.forceApply = false;
-        uiCtx.forceDone = false;
-        uiCtx.applyBtn->setLabel("APPLY");
-        if (uiCtx.doneBtn) uiCtx.doneBtn->setLabel("DONE");
     });
     
     auto btnReset = std::make_unique<view::ui::UIButton>(
         font, "RESET", 8, sf::Vector2f(screenW - 190.f, btnY), sf::Vector2f(80.f, 20.f));
+    uiCtx.resetBtn = btnReset.get();
     btnReset->setOnClick([this]() { 
         resetSettings(); 
-        uiCtx.forceApply = false;
-        uiCtx.forceDone = false;
-        uiCtx.applyBtn->setLabel("APPLY");
-        if (uiCtx.doneBtn) uiCtx.doneBtn->setLabel("DONE");
     });
 
     auto btnDone = std::make_unique<view::ui::UIButton>(
         font, "DONE", 8, sf::Vector2f(screenW - 100.f, btnY), sf::Vector2f(80.f, 20.f));
     uiCtx.doneBtn = btnDone.get();
     btnDone->setOnClick([this]() { 
-        if (draft != model::SettingsManager::instance().get() && !uiCtx.forceDone) {
-            uiCtx.forceDone = true;
-            uiCtx.doneBtn->setLabel("SURE?");
+        if (draft != model::SettingsManager::instance().get()) {
+            manager->pushState(std::make_unique<ConfirmState>(
+                "You have unsaved changes.\nDiscard and exit?",
+                [this]() {
+                    manager->popState(); // Pop ConfirmState
+                    manager->popState(); // Pop OptionsState
+                },
+                [this]() {
+                    manager->popState(); // Pop ConfirmState
+                }
+            ));
             return;
         }
         if (manager) manager->popState(); 
@@ -129,27 +141,90 @@ OptionsState::OptionsState() {
     bottomBar.add(std::move(btnDone));
 }
 
+void OptionsState::onDisplayModeChanged() {
+    float screenW = static_cast<float>(AppEngine::screenWidth());
+    relayout(screenW);
+
+    // Sync graphics settings in case F2 was pressed
+    auto s = model::SettingsManager::instance().get();
+    draft.fullscreen = s.fullscreen;
+    draft.ratio = s.ratio;
+    draft.resolutionIndex = s.resolutionIndex;
+
+    tabPanels[0].clear();
+    buildGraphicsTab(view::AssetManager::instance().getUiFont());
+}
+
+void OptionsState::onResume() {
+    // Preserve 'draft' so unsaved changes aren't lost when returning from ConfirmState.
+    // Only refresh display settings (in case F2 was pressed globally)
+    // and re-apply key visuals (colors may need refresh after state change).
+    updateKeyButtonsVisuals();
+    onDisplayModeChanged();
+}
+
+void OptionsState::relayout(float screenW) {
+    float screenH = static_cast<float>(AppEngine::ScreenHeight);
+    background.setSize({screenW, screenH});
+    
+    for (int i = 0; i < 4; ++i) {
+        tabPanels[i].setBounds(sf::FloatRect({10.f, 70.f}, {screenW - 20.f, screenH - 100.f}));
+    }
+    
+    if (uiCtx.applyBtn) {
+        uiCtx.applyBtn->setPosition(screenW - 280.f, screenH - 30.f);
+    }
+    if (uiCtx.resetBtn) {
+        uiCtx.resetBtn->setPosition(screenW - 190.f, screenH - 30.f);
+    }
+    if (uiCtx.doneBtn) {
+        uiCtx.doneBtn->setPosition(screenW - 100.f, screenH - 30.f);
+    }
+}
+
 void OptionsState::buildGraphicsTab(const sf::Font& font) {
     float cursorY = 10.f;
     auto fsBtn = std::make_unique<view::ui::UICycleButton>(
-        font, "", std::vector<std::string>{"Off", "On"}, draft.fullscreen ? 1 : 0,
+        font, "", std::vector<std::string>{"Windowed", "Fullscreen"}, draft.fullscreen ? 1 : 0,
         sf::Vector2f(0.f,0.f), sf::Vector2f(100.f, 20.f));
     fsBtn->setOnChange([this](int idx) { draft.fullscreen = (idx == 1); });
-    addRow(tabPanels[0], font, "Fullscreen", std::move(fsBtn), cursorY);
+    addRow(tabPanels[0], font, "Screen Mode", std::move(fsBtn), cursorY);
 
-    std::vector<std::string> resOpts = {"384", "448", "512"};
-    int resIdx = 0;
-    if (draft.logicalWidth == 448) resIdx = 1;
-    if (draft.logicalWidth == 512) resIdx = 2;
+    std::vector<std::string> ratioOpts = {"4:3", "16:9"};
+    auto ratioBtn = std::make_unique<view::ui::UICycleButton>(
+        font, "", ratioOpts, static_cast<int>(draft.ratio),
+        sf::Vector2f(0.f,0.f), sf::Vector2f(100.f, 20.f));
+    ratioBtn->setOnChange([this](int idx) { 
+        draft.ratio = static_cast<model::AspectRatio>(idx); 
+        draft.resolutionIndex = 0; // reset to default
+        if (resolutionBtn) {
+            std::vector<std::string> resOpts;
+            if (draft.ratio == model::AspectRatio::Ratio4x3) {
+                resOpts = {"800x600", "1024x768"};
+            } else {
+                resOpts = {"1280x720", "1920x1080"};
+            }
+            resolutionBtn->setOptions(resOpts, 0);
+        }
+    });
+    addRow(tabPanels[0], font, "Aspect Ratio", std::move(ratioBtn), cursorY);
+
+    std::vector<std::string> resOpts;
+    if (draft.ratio == model::AspectRatio::Ratio4x3) {
+        resOpts = {"800x600", "1024x768"};
+    } else {
+        resOpts = {"1280x720", "1920x1080"};
+    }
+    
+    int resIdx = std::clamp(draft.resolutionIndex, 0, static_cast<int>(resOpts.size()-1));
     auto resBtn = std::make_unique<view::ui::UICycleButton>(
         font, "", resOpts, resIdx,
-        sf::Vector2f(0.f,0.f), sf::Vector2f(100.f, 20.f));
+        sf::Vector2f(0.f,0.f), sf::Vector2f(120.f, 20.f));
+    resolutionBtn = resBtn.get();
     resBtn->setOnChange([this](int idx) { 
-        if (idx == 0) draft.logicalWidth = 384;
-        else if (idx == 1) draft.logicalWidth = 448;
-        else draft.logicalWidth = 512;
+        draft.resolutionIndex = idx;
     });
-    addRow(tabPanels[0], font, "Logical Width", std::move(resBtn), cursorY);
+    addRow(tabPanels[0], font, "Resolution", std::move(resBtn), cursorY);
 
     std::vector<std::string> qOpts = {"Low", "Medium", "High"};
     auto qBtn = std::make_unique<view::ui::UICycleButton>(
@@ -208,31 +283,42 @@ void OptionsState::buildSoundTab(const sf::Font& font) {
 
 void OptionsState::buildControlsTab(const sf::Font& font) {
     float cursorY = 10.f;
-    std::vector<std::string> labels = {"Move Left", "Move Right", "Jump", "Run", "Pause", "Dash", "Attack", "Crouch", "Interact", "Inventory"};
+    std::vector<std::string> labels = {
+        "Move Left", "Move Right", "Jump", "Run", "Pause", "Dash", "Attack",
+        "Crouch", "Interact", "Inventory", "Cycle Display", "Back"
+    };
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 12; ++i) {
         auto rowContainer = std::make_unique<view::ui::UIContainer>(view::ui::UIContainer::Layout::None);
         
         auto btn = std::make_unique<view::ui::UIButton>(
             font, "", 8, sf::Vector2f(0.f, 0.f), sf::Vector2f(100.f, 20.f));
         keyButtons[i] = btn.get();
         
-        btn->setOnClick([this, i]() {
-            if (waitingForKeyIndex != -1) {
-                draft.*(KeyFieldMap[waitingForKeyIndex]) = pendingPreviousKey;
-            }
-            waitingForKeyIndex = i;
-            pendingPreviousKey = draft.*(KeyFieldMap[i]);
-            updateKeyButtonsVisuals();
-        });
+        if (i == 10 || i == 11) {
+            btn->setEnabled(false);
+        } else {
+            btn->setOnClick([this, i]() {
+                if (waitingForKeyIndex != -1) {
+                    draft.*(KeyFieldMap[waitingForKeyIndex]) = pendingPreviousKey;
+                }
+                waitingForKeyIndex = i;
+                pendingPreviousKey = draft.*(KeyFieldMap[i]);
+                updateKeyButtonsVisuals();
+            });
+        }
 
         auto rstBtn = std::make_unique<view::ui::UIButton>(
             font, "Reset", 8, sf::Vector2f(110.f, 0.f), sf::Vector2f(50.f, 20.f));
-        rstBtn->setOnClick([this, i]() {
-            if (waitingForKeyIndex == i) waitingForKeyIndex = -1;
-            resetSingleKey(i);
-            updateKeyButtonsVisuals();
-        });
+        if (i == 10 || i == 11) {
+            rstBtn->setEnabled(false);
+        } else {
+            rstBtn->setOnClick([this, i]() {
+                if (waitingForKeyIndex == i) waitingForKeyIndex = -1;
+                resetSingleKey(i);
+                updateKeyButtonsVisuals();
+            });
+        }
 
         rowContainer->add(std::move(btn));
         rowContainer->add(std::move(rstBtn));
@@ -244,10 +330,10 @@ void OptionsState::buildControlsTab(const sf::Font& font) {
 }
 
 void OptionsState::updateKeyButtonsVisuals() {
-    std::array<int, 10> currentKeys;
-    for (int i = 0; i < 10; ++i) currentKeys[i] = draft.*(KeyFieldMap[i]);
+    std::array<int, 12> currentKeys;
+    for (int i = 0; i < 12; ++i) currentKeys[i] = draft.*(KeyFieldMap[i]);
     
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 12; ++i) {
         if (!keyButtons[i]) continue;
         
         if (i == waitingForKeyIndex) {
@@ -261,7 +347,7 @@ void OptionsState::updateKeyButtonsVisuals() {
         
         bool conflict = false;
         if (key != -1) {
-            for (int j = 0; j < 10; ++j) {
+            for (int j = 0; j < 12; ++j) {
                 if (i != j && currentKeys[j] == key) {
                     conflict = true;
                     break;
@@ -278,12 +364,12 @@ void OptionsState::updateKeyButtonsVisuals() {
 }
 
 bool OptionsState::hasKeyConflicts() const {
-    std::array<int, 10> currentKeys;
-    for (int i = 0; i < 10; ++i) currentKeys[i] = draft.*(KeyFieldMap[i]);
+    std::array<int, 12> currentKeys;
+    for (int i = 0; i < 12; ++i) currentKeys[i] = draft.*(KeyFieldMap[i]);
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 12; ++i) {
         if (currentKeys[i] == -1) continue;
-        for (int j = i + 1; j < 10; ++j) {
+        for (int j = i + 1; j < 12; ++j) {
             if (currentKeys[i] == currentKeys[j]) return true;
         }
     }
@@ -291,8 +377,8 @@ bool OptionsState::hasKeyConflicts() const {
 }
 
 void OptionsState::resetSingleKey(int index) {
-    const auto& recent = model::SettingsManager::instance().get();
-    draft.*(KeyFieldMap[index]) = recent.*(KeyFieldMap[index]);
+    // Reset to factory default, not last-applied, to be consistent with RESET ALL.
+    draft.*(KeyFieldMap[index]) = model::Settings::defaults().*(KeyFieldMap[index]);
 }
 
 void OptionsState::buildLanguageTab(const sf::Font& font) {
@@ -332,13 +418,8 @@ void OptionsState::resetSettings() {
 void OptionsState::update(float dt) {
     if (uiCtx.applyBtn) {
         if (draft != model::SettingsManager::instance().get()) {
-            if (!uiCtx.forceApply) uiCtx.applyBtn->setLabel("APPLY");
             uiCtx.applyBtn->setColors(view::ui::theme::ColorSuccessNormal, view::ui::theme::ColorSuccessHovered, view::ui::theme::ColorText);
         } else {
-            uiCtx.forceApply = false;
-            uiCtx.forceDone = false;
-            uiCtx.applyBtn->setLabel("APPLY");
-            if (uiCtx.doneBtn) uiCtx.doneBtn->setLabel("DONE");
             uiCtx.applyBtn->setColors(view::ui::theme::ColorNormal, view::ui::theme::ColorHovered, view::ui::theme::ColorText);
         }
     }

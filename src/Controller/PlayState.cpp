@@ -2,8 +2,10 @@
 
 #include "Controller/GameOverState.h"
 #include "Controller/LevelCompleteState.h"
-#include "Controller/MainMenuState.h"   // ESC → menu (PauseState placeholder)
+#include "Controller/PauseState.h"
+#include "Controller/MainMenuState.h"
 #include "Controller/StateManager.h"
+#include "Model/SettingsManager.h"
 #include "Model/Core/GameManager.h"
 #include "Model/Player/Player.h"
 
@@ -35,12 +37,12 @@ void PlayState::onEnter() {
 
 void PlayState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
+        if (static_cast<int>(key->code) == model::SettingsManager::instance().get().keyPause) {
+            manager->pushState(std::make_unique<PauseState>());
+            return;
+        }
+
         switch (key->code) {
-            case sf::Keyboard::Key::Escape:
-                // TODO: replace with PauseState in Phase 2.
-                // For now, ESC returns directly to the main menu.
-                manager->replaceState(std::make_unique<MainMenuState>());
-                break;
             case sf::Keyboard::Key::G:
                 // Debug: kill the player through the normal death flow.
                 if (scene->player() && !scene->player()->isDying()) {

@@ -6,7 +6,8 @@ namespace model {
 Settings Settings::defaults() {
   Settings s;
   s.fullscreen = false;
-  s.logicalWidth = 384;
+  s.ratio = AspectRatio::Ratio4x3;
+  s.resolutionIndex = 0; // 800x600 for 4x3 by default
   s.quality = GraphicsQuality::Low;
 
   s.masterVolume = 100;
@@ -20,7 +21,9 @@ Settings Settings::defaults() {
   s.keyMoveRight = static_cast<int>(sf::Keyboard::Key::Right);
   s.keyJump = static_cast<int>(sf::Keyboard::Key::Z);
   s.keyRun = static_cast<int>(sf::Keyboard::Key::X);
-  s.keyPause = static_cast<int>(sf::Keyboard::Key::Escape);
+  s.keyPause = static_cast<int>(sf::Keyboard::Key::Enter);
+  s.keyCycleDisplay = static_cast<int>(sf::Keyboard::Key::F2);
+  s.keyBack = static_cast<int>(sf::Keyboard::Key::Escape);
 
   s.controlSlot = 0;
   return s;

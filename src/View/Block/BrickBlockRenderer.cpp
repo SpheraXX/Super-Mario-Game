@@ -1,4 +1,5 @@
 #include "View/Block/BrickBlockRenderer.h"
+#include "View/AssetManager.h"
 
 #include "View/Base/EntityRenderUtils.h"
 #include "Model/Block/BrickBlock.h"
@@ -17,16 +18,15 @@ constexpr int BrickAtlasRow = 7;
 }
 
 BrickBlockRenderer::BrickBlockRenderer()
-    : textureLoaded(texture.loadFromFile("assets/blocks.png")) {
-    texture.setSmooth(false);
+    : texturePtr(&AssetManager::instance().getTexture("assets/blocks.png")) {
 }
 
 void BrickBlockRenderer::renderTyped(sf::RenderTarget& window,
                                      const model::BrickBlock& brickBlock,
                                      const RenderContext& /* ctx */) const {
-    if (!textureLoaded) return;
+    if (!texturePtr) return;
 
-    sf::Sprite sprite(texture);
+    sf::Sprite sprite(*texturePtr);
     sprite.setTextureRect({{BrickAtlasCol * 16, BrickAtlasRow * 16}, {16, 16}});
     sprite.setScale({SpriteScaleX, SpriteScaleY});
     sprite.setOrigin({0.0f, 0.0f});

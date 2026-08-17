@@ -22,6 +22,8 @@ class MainMenuState : public GameState {
 public:
     void onEnter() override;
     void onExit()  override {}
+    void onResume() override;
+    void onDisplayModeChanged() override;
 
     void handleEvent(const sf::Event& event) override;
     void update(float deltaTime) override;

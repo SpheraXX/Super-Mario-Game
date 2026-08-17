@@ -17,6 +17,13 @@ void UIScrollView::setContentHeight(float height) {
     updateScrollbarVisuals();
 }
 
+void UIScrollView::clear() {
+    UIContainer::clear();
+    scrollY = 0.f;
+    contentHeight = 0.f;
+    updateScrollbarVisuals();
+}
+
 void UIScrollView::applyScroll(float deltaY) {
     float oldScroll = scrollY;
     scrollY -= deltaY;

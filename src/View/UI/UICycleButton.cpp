@@ -52,6 +52,7 @@ void UICycleButton::setColors(sf::Color normal, sf::Color hovered, sf::Color tex
 }
 
 void UICycleButton::onHover(bool h) {
+    if (!enabled) return;
     isHovered = h;
     background.setFillColor(h ? colorHovered : colorNormal);
 }
@@ -74,7 +75,9 @@ bool UICycleButton::handleEvent(const sf::Event& event) {
         if (p->button == sf::Mouse::Button::Left) {
             const sf::Vector2f lp = controller::AppEngine::windowToLogical(p->position);
             if (contains(lp.x, lp.y)) {
-                onClick();
+                if (enabled) {
+                    onClick();
+                }
                 return true;
             }
         }
@@ -89,10 +92,17 @@ void UICycleButton::onMouseLeave() {
 void UICycleButton::render(sf::RenderTarget& target) {
     if (!visible || !fontPtr) return;
 
+    if (enabled) {
+        background.setFillColor(isHovered ? colorHovered : colorNormal);
+    } else {
+        background.setFillColor(sf::Color(100, 100, 100));
+    }
     target.draw(background);
 
+    sf::Color currentTextColor = enabled ? colorText : sf::Color(150, 150, 150);
+
     sf::Text lbl(*fontPtr, labelStr, LabelSize);
-    lbl.setFillColor(colorText);
+    lbl.setFillColor(currentTextColor);
     const sf::FloatRect lb = lbl.getLocalBounds();
     lbl.setPosition({std::floor(pos.x + 4.f),
                      std::floor(pos.y + (size.y - lb.size.y) / 2.f - lb.position.y)});
@@ -101,7 +111,7 @@ void UICycleButton::render(sf::RenderTarget& target) {
     if (!options.empty()) {
         const std::string display = "< " + options[currentIndex] + " >";
         sf::Text val(*fontPtr, display, ValueSize);
-        val.setFillColor(colorText);
+        val.setFillColor(currentTextColor);
         const sf::FloatRect vb = val.getLocalBounds();
         const float vx = std::floor(pos.x + size.x - vb.size.x - 6.f - vb.position.x);
         val.setPosition({vx, std::floor(pos.y + (size.y - vb.size.y) / 2.f - vb.position.y)});

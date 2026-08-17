@@ -33,6 +33,9 @@ public:
 
     // If true the string is horizontally centred inside getSize().x.
     void setCentered(bool centred) { centered = centred; }
+    
+    // Set line spacing factor (1.0 is default, > 1.0 increases spacing).
+    void setLineSpacing(float spacingFactor) { lineSpacing = spacingFactor; }
 
     void render(sf::RenderTarget& target) override;
 
@@ -42,6 +45,7 @@ private:
     unsigned int    charSize = 12u;
     sf::Color       color    = sf::Color::White;
     bool            centered = true;
+    float           lineSpacing = 1.0f;
 };
 
 }  // namespace ui

@@ -48,6 +48,7 @@ void UIButton::setSize(float w, float h) {
 // ── IClickable ────────────────────────────────────────────────────────────────
 
 void UIButton::onHover(bool hovered) {
+    if (!enabled) return;
     isHovered = hovered;
     background.setFillColor(hovered ? colorHovered : colorNormal);
 }
@@ -86,7 +87,9 @@ bool UIButton::handleEvent(const sf::Event& event) {
         if (pressed->button == sf::Mouse::Button::Left) {
             const sf::Vector2f lp = transformCoordinate(pressed->position);
             if (contains(lp.x, lp.y)) {
-                onClick();
+                if (enabled) {
+                    onClick();
+                }
                 return true;
             }
         }
@@ -104,7 +107,16 @@ void UIButton::render(sf::RenderTarget& target) {
 
     // Build sf::Text at render-time (SFML 3: no default ctor).
     sf::Text sfText(*fontPtr, labelStr, charSize);
-    sfText.setFillColor(colorText);
+    
+    if (enabled) {
+        sfText.setFillColor(colorText);
+        background.setFillColor(isHovered ? colorHovered : colorNormal);
+    } else {
+        sf::Color disabledColor(100, 100, 100);
+        sf::Color disabledText(150, 150, 150);
+        sfText.setFillColor(disabledText);
+        background.setFillColor(disabledColor);
+    }
 
     const sf::FloatRect bg  = background.getGlobalBounds();
     const sf::FloatRect lb  = sfText.getLocalBounds();

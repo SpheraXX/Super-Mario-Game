@@ -107,8 +107,10 @@ bool UISlider::handleEvent(const sf::Event& event) {
 
     if (const auto* p = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (p->button == sf::Mouse::Button::Left && hitTrack(p->position)) {
-            dragging = true;
-            setFromX(static_cast<float>(p->position.x));
+            if (enabled) {
+                dragging = true;
+                setFromX(static_cast<float>(p->position.x));
+            }
             return true;
         }
     }
@@ -128,14 +130,26 @@ bool UISlider::handleEvent(const sf::Event& event) {
 void UISlider::render(sf::RenderTarget& target) {
     if (!visible) return;
 
+    if (enabled) {
+        track.setFillColor(colorTrack);
+        fill.setFillColor(colorFill);
+        knob.setFillColor(colorKnob);
+    } else {
+        track.setFillColor(sf::Color(80, 80, 80));
+        fill.setFillColor(sf::Color(100, 100, 100));
+        knob.setFillColor(sf::Color(120, 120, 120));
+    }
+
     target.draw(track);
     target.draw(fill);
     target.draw(knob);
 
     if (!fontPtr) return;
 
+    sf::Color currentTextColor = enabled ? colorText : sf::Color(150, 150, 150);
+
     sf::Text lbl(*fontPtr, labelStr, LabelSize);
-    lbl.setFillColor(colorText);
+    lbl.setFillColor(currentTextColor);
     const sf::FloatRect lb = lbl.getLocalBounds();
     lbl.setPosition({std::floor(pos.x),
                      std::floor(pos.y + (size.y - lb.size.y) / 2.f - lb.position.y)});
@@ -143,7 +157,7 @@ void UISlider::render(sf::RenderTarget& target) {
 
     const std::string valStr = std::to_string(value) + "%";
     sf::Text val(*fontPtr, valStr, LabelSize);
-    val.setFillColor(colorText);
+    val.setFillColor(currentTextColor);
     const sf::FloatRect vb = val.getLocalBounds();
     
     const float labelW = labelStr.empty() ? 0.f : size.x * 0.45f;

@@ -3,9 +3,9 @@
 
 #include "View/Base/EntityRenderer.h"
 #include "View/Base/EntityRenderUtils.h"
+#include "View/AssetManager.h"
 
 #include <SFML/Graphics/Color.hpp>
-#include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -26,21 +26,14 @@ public:
     // way their artwork is drawn, so the renderer mirrors only when the sheet and the
     // entity disagree. Stating it per sheet avoids every renderer re-deriving the flip.
     explicit SpriteEntityRenderer(const std::string& texturePath, bool sourceFacesRight = false)
-        : textureLoaded(texture.loadFromFile(texturePath)), sourceFacesRight(sourceFacesRight) {
-        texture.setSmooth(false);
+        : texturePtr(&AssetManager::instance().getTexture(texturePath)), sourceFacesRight(sourceFacesRight) {
     }
 
     // For sheets with no alpha channel, where a flat background colour stands in for
     // transparency. The key is masked out once, at load, rather than per draw.
     SpriteEntityRenderer(const std::string& texturePath, sf::Color colorKey,
                          bool sourceFacesRight = false)
-        : textureLoaded(false), sourceFacesRight(sourceFacesRight) {
-        sf::Image sheet;
-        if (sheet.loadFromFile(texturePath)) {
-            sheet.createMaskFromColor(colorKey);
-            textureLoaded = texture.loadFromImage(sheet);
-        }
-        texture.setSmooth(false);
+        : texturePtr(&AssetManager::instance().getTexture(texturePath, colorKey)), sourceFacesRight(sourceFacesRight) {
     }
 
 protected:
@@ -49,9 +42,9 @@ protected:
     // to fill the entity's box, so any padding inside it shows up as misalignment between
     // the sprite and the hitbox.
     void drawCharacterFrame(sf::RenderTarget& window, const T& entity, sf::IntRect frame) const {
-        if (!textureLoaded) return;
+        if (!texturePtr) return;
 
-        sf::Sprite sprite(texture);
+        sf::Sprite sprite(*texturePtr);
         sprite.setTextureRect(frame);
         sprite.setColor(characterTint(entity));
         setupEntitySprite(sprite, frame, entity.getSize(),
@@ -69,9 +62,9 @@ protected:
     // short frame onto the ground rather than leaving it floating at head height.
     void drawCharacterFrame(sf::RenderTarget& window, const T& entity, sf::IntRect frame,
                             model::Vector2 drawSize, model::Vector2 drawOffset) const {
-        if (!textureLoaded) return;
+        if (!texturePtr) return;
 
-        sf::Sprite sprite(texture);
+        sf::Sprite sprite(*texturePtr);
         sprite.setTextureRect(frame);
         sprite.setColor(characterTint(entity));
         setupEntitySprite(sprite, frame, drawSize, sourceFacesRight != entity.isFacingRight(),
@@ -95,10 +88,8 @@ protected:
     // for the classic upright death; only enemy renderers opt in.
     virtual bool flipWhenDying() const { return false; }
 
-    sf::Texture texture;
-
 private:
-    bool textureLoaded;
+    const sf::Texture* texturePtr;
     bool sourceFacesRight;
 };
 

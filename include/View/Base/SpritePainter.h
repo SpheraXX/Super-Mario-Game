@@ -58,7 +58,10 @@ public:
                   const sf::Vector2f& origin) const;
 
 private:
-    sf::Image image;
+    // Working copy of the image, sourced from AssetManager::getImage().
+    // Each SpritePainter keeps its own mutable copy so per-region color
+    // keying (applyColorKey) never mutates the shared cache in AssetManager.
+    sf::Image workingImage;
     sf::Texture texture;
     bool loaded = false;
 };

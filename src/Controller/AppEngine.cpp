@@ -42,21 +42,7 @@ AppEngine::AppEngine()
     , gameContext{&audioManager, &inputMapper}
     , states(std::make_unique<MainMenuState>(), &gameContext) {
 
-    lastAppliedSettings = model::SettingsManager::instance().get();
-
-    model::SettingsManager::instance().subscribe([this](const model::Settings& s) {
-        audioManager.setMasterVolume(static_cast<float>(s.masterVolume));
-        audioManager.setMusicVolume(static_cast<float>(s.musicVolume));
-        audioManager.setSFXVolume(static_cast<float>(s.sfxVolume));
-
-        bool displayChanged = (s.ratio            != lastAppliedSettings.ratio            ||
-                               s.resolutionIndex  != lastAppliedSettings.resolutionIndex  ||
-                               s.fullscreen       != lastAppliedSettings.fullscreen);
-        if (displayChanged) {
-            applyDisplayPending = true;
-        }
-        lastAppliedSettings = s;
-    });
+    model::SettingsManager::instance().addObserver(this);
 
     applyDisplayMode();  // creates the window, the offscreen target and both views
 
@@ -73,6 +59,24 @@ AppEngine::AppEngine()
     view::ui::UIElement::transformCoordinate = [](const sf::Vector2i& p) {
         return AppEngine::windowToLogical(p);
     };
+}
+
+void AppEngine::onSettingsChanged(const model::Settings& s) {
+    audioManager.setMasterVolume(static_cast<float>(s.masterVolume));
+    audioManager.setMusicVolume(static_cast<float>(s.musicVolume));
+    audioManager.setSFXVolume(static_cast<float>(s.sfxVolume));
+
+    // Only recreate the window (and reload all VRAM assets) when display-relevant
+    // settings actually changed. Volume/key changes must NOT trigger this path.
+    const bool displayChanged = (s.fullscreen      != lastGraphicsSettings.fullscreen      ||
+                                 s.ratio           != lastGraphicsSettings.ratio           ||
+                                 s.resolutionIndex != lastGraphicsSettings.resolutionIndex ||
+                                 s.vsync           != lastGraphicsSettings.vsync);
+    lastGraphicsSettings = s;
+
+    if (displayChanged) {
+        applyDisplayMode();
+    }
 }
 
 void AppEngine::applyDisplayMode() {
@@ -121,7 +125,14 @@ void AppEngine::applyDisplayMode() {
                   s.fullscreen ? static_cast<std::uint32_t>(sf::Style::None)
                                : static_cast<std::uint32_t>(sf::Style::Titlebar | sf::Style::Close),
                   s.fullscreen ? sf::State::Fullscreen : sf::State::Windowed);
-    window.setFramerateLimit(60);
+    
+    // Apply VSync
+    window.setVerticalSyncEnabled(s.vsync);
+    if (!s.vsync) {
+        window.setFramerateLimit(60);
+    } else {
+        window.setFramerateLimit(0); // VSync handles framerate
+    }
 
     // Offscreen target at the logical resolution; the whole frame is composited here and
     // upscaled in one blit (see render()).
@@ -244,11 +255,6 @@ void AppEngine::processInput() {
             }
         }
         states.handleEvent(*event);
-    }
-
-    if (applyDisplayPending) {
-        applyDisplayPending = false;
-        applyDisplayMode();
     }
 }
 

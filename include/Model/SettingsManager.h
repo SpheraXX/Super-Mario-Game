@@ -2,10 +2,15 @@
 #define MODEL_SETTINGSMANAGER_H
 
 #include "Model/Settings.h"
-#include <functional>
 #include <vector>
 
 namespace model {
+
+class ISettingsObserver {
+public:
+    virtual ~ISettingsObserver() = default;
+    virtual void onSettingsChanged(const Settings& settings) = 0;
+};
 
 class SettingsManager {
 public:
@@ -20,14 +25,15 @@ public:
 
     static constexpr const char* FilePath = "assets/data/settings.json";
 
-    void subscribe(std::function<void(const Settings&)> callback);
+    void addObserver(ISettingsObserver* observer);
+    void removeObserver(ISettingsObserver* observer);
 
 private:
     SettingsManager();
     void load();
     void save() const;
     Settings current;
-    std::vector<std::function<void(const Settings&)>> subscribers;
+    std::vector<ISettingsObserver*> observers;
 };
 
 }  // namespace model

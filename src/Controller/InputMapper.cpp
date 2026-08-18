@@ -8,9 +8,7 @@ namespace controller {
 
 InputMapper::InputMapper() {
     // Register to listen to settings changes to keep bindings updated
-    model::SettingsManager::instance().subscribe([this](const model::Settings& s) {
-        onSettingsChanged(s);
-    });
+    model::SettingsManager::instance().addObserver(this);
 }
 
 void InputMapper::onSettingsChanged(const model::Settings& s) {

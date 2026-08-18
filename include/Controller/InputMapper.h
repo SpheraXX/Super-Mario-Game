@@ -2,19 +2,19 @@
 #define CONTROLLER_INPUTMAPPER_H
 
 #include "Model/Input/IInputMapper.h"
-#include "Model/Settings.h"
+#include "Model/SettingsManager.h"
 #include <SFML/Window/Keyboard.hpp>
 #include <unordered_map>
 
 namespace controller {
 
-class InputMapper : public model::IInputMapper {
+class InputMapper : public model::IInputMapper, public model::ISettingsObserver {
 public:
     InputMapper();
     
     bool isActionPressed(model::InputAction action) const override;
     
-    void onSettingsChanged(const model::Settings& settings);
+    void onSettingsChanged(const model::Settings& settings) override;
 
     // Convert a raw key code (as stored in Settings) to a human-readable string.
     // Lives here rather than in OptionsState so any future UI widget that needs to

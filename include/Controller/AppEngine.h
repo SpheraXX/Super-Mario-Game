@@ -4,6 +4,7 @@
 #include "Controller/StateManager.h"
 #include "Controller/AudioManager.h"
 #include "Controller/InputMapper.h"
+#include "Controller/GameState.h"
 #include "Model/SettingsManager.h"
 #include "Model/Map/TileMap.h"
 
@@ -19,7 +20,7 @@ namespace controller {
 // Top-level application object: owns the window and the state stack, and runs the core
 // game loop (process input -> fixed-step update -> render) until the window closes or the
 // state stack empties.
-class AppEngine {
+class AppEngine : public model::ISettingsObserver {
 public:
     AppEngine();
     void run();
@@ -75,8 +76,24 @@ private:
     // (Re)create the window, the offscreen target and both views for the current
     // selection. Runs once at start-up and again whenever the size is cycled.
     void applyDisplayMode();
-    // Advance the selection: the windowed sizes in order, then fullscreen, then back.
     void cycleDisplayMode();
+
+    void onSettingsChanged(const model::Settings& settings) override;
+
+    sf::RenderWindow window;
+    sf::RenderTexture scene;
+    sf::View sceneView;     // views the offscreen target
+    sf::View presentView;   // maps the target onto the window
+
+    AudioManager audioManager;
+    InputMapper  inputMapper;
+
+    GameContext gameContext;
+    StateManager states;
+
+    // Cached display settings from the last applyDisplayMode() call.
+    // Used to skip window recreation when only non-display settings change.
+    model::Settings lastGraphicsSettings;
 
     // Physics/update run at a fixed rate so collision (Issue 3) stays deterministic.
     static constexpr float TimeStep = 1.0f / 60.0f;
@@ -84,17 +101,6 @@ private:
     // Height of the window chrome (title bar + borders), so a windowed size that would
     // otherwise exactly fill the desktop still leaves its whole client area on screen.
     static constexpr unsigned int WindowChrome = 64;
-
-    sf::RenderWindow window;
-    
-    AudioManager audioManager;
-    InputMapper inputMapper;
-    GameContext gameContext;
-    StateManager states;
-
-    // Set when settings are applied or F2 is pressed
-    bool applyDisplayPending = false;
-    model::Settings lastAppliedSettings;
 
     // Logical width of the current mode (ScreenHeight is fixed). Static so the HUD, the
     // menus and the level camera can reach it the same way they already reached
@@ -107,14 +113,6 @@ private:
     static float displayScale;
 
     static unsigned int logicalWidth;
-
-    // Everything is drawn into this offscreen target at the logical resolution, then blitted
-    // to the window once. Compositing at 1:1 keeps every tile on an exact pixel (no seams)
-    // and lets the camera move in whole logical pixels (even scroll); the single scaled blit
-    // afterwards cannot introduce seams between tiles the way scaling each sprite would.
-    sf::RenderTexture scene;
-    sf::View sceneView;    // inside the offscreen target: the whole logical frame
-    sf::View presentView;  // blitting to the window: centred, integer-scaled, letterboxed
 };
 
 }

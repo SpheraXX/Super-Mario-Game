@@ -17,26 +17,29 @@ SettingsManager::SettingsManager() {
     load();
 }
 
-void SettingsManager::apply(const Settings& draft) {
-    current = draft;
-    save();
-    for (auto& cb : subscribers) {
-        cb(current);
+void SettingsManager::apply(const Settings& next) {
+    if (current != next) {
+        current = next;
+        save();
+        for (auto observer : observers) {
+            observer->onSettingsChanged(current);
+        }
     }
 }
 
-void SettingsManager::subscribe(std::function<void(const Settings&)> callback) {
-    subscribers.push_back(callback);
-    // Immediately call it with current settings so the subscriber initializes correctly
-    callback(current);
+void SettingsManager::addObserver(ISettingsObserver* observer) {
+    if (observer) {
+        observers.push_back(observer);
+        observer->onSettingsChanged(current); // Initial sync
+    }
+}
+
+void SettingsManager::removeObserver(ISettingsObserver* observer) {
+    observers.erase(std::remove(observers.begin(), observers.end(), observer), observers.end());
 }
 
 void SettingsManager::resetToDefaults() {
-    current = Settings::defaults();
-    save();
-    for (auto& cb : subscribers) {
-        cb(current);
-    }
+    apply(Settings::defaults());
 }
 
 namespace {
@@ -81,6 +84,7 @@ void SettingsManager::load() {
             if (g.contains("ratio"))           current.ratio           = static_cast<model::AspectRatio>(g["ratio"].get<int>());
             if (g.contains("resolutionIndex")) current.resolutionIndex = g["resolutionIndex"].get<int>();
             if (g.contains("quality"))         current.quality         = static_cast<model::GraphicsQuality>(g["quality"].get<int>());
+            if (g.contains("vsync"))           current.vsync           = g["vsync"].get<bool>();
         }
 
         if (j.contains("sound")) {
@@ -122,6 +126,7 @@ void SettingsManager::save() const {
     j["graphics"]["ratio"]           = static_cast<int>(current.ratio);
     j["graphics"]["resolutionIndex"] = current.resolutionIndex;
     j["graphics"]["quality"]         = static_cast<int>(current.quality);
+    j["graphics"]["vsync"]           = current.vsync;
 
     j["sound"]["masterVolume"]    = current.masterVolume;
     j["sound"]["musicVolume"]     = current.musicVolume;

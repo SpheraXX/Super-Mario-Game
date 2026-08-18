@@ -8,7 +8,7 @@
 #include "View/UI/UISlider.h"
 #include "View/UI/UICycleButton.h"
 #include "View/UI/UITheme.h"
-#include "Controller/ConfirmState.h"
+#include "Controller/WarningPopupState.h"
 
 namespace controller {
 
@@ -94,19 +94,20 @@ OptionsState::OptionsState() {
     uiCtx.applyBtn = btnApply.get();
     btnApply->setOnClick([this]() { 
         if (hasKeyConflicts()) {
-            manager->pushState(std::make_unique<ConfirmState>(
+            manager->pushState(std::make_unique<WarningPopupState>(
                 "Key conflicts detected!\nForce apply anyway?",
+                WarningPopupState::Type::YesNo,
                 [this]() {
+                    manager->popState();
                     applySettings();
-                    manager->popState(); // Pop ConfirmState
                 },
                 [this]() {
-                    manager->popState(); // Pop ConfirmState
+                    manager->popState();
                 }
             ));
-            return;
+        } else {
+            applySettings();
         }
-        applySettings(); 
     });
     
     auto btnReset = std::make_unique<view::ui::UIButton>(
@@ -121,19 +122,20 @@ OptionsState::OptionsState() {
     uiCtx.doneBtn = btnDone.get();
     btnDone->setOnClick([this]() { 
         if (draft != model::SettingsManager::instance().get()) {
-            manager->pushState(std::make_unique<ConfirmState>(
+            manager->pushState(std::make_unique<WarningPopupState>(
                 "You have unsaved changes.\nDiscard and exit?",
+                WarningPopupState::Type::YesNo,
                 [this]() {
-                    manager->popState(); // Pop ConfirmState
-                    manager->popState(); // Pop OptionsState
+                    manager->popState(); // pop WarningPopupState
+                    manager->popState(); // pop OptionsState
                 },
                 [this]() {
-                    manager->popState(); // Pop ConfirmState
+                    manager->popState(); // pop WarningPopupState
                 }
             ));
-            return;
+        } else {
+            manager->popState();
         }
-        if (manager) manager->popState(); 
     });
 
     bottomBar.add(std::move(btnApply));
@@ -145,12 +147,11 @@ void OptionsState::onDisplayModeChanged() {
     float screenW = static_cast<float>(AppEngine::screenWidth());
     relayout(screenW);
 
-    // Sync graphics settings in case F2 was pressed
-    auto s = model::SettingsManager::instance().get();
-    draft.fullscreen = s.fullscreen;
-    draft.ratio = s.ratio;
-    draft.resolutionIndex = s.resolutionIndex;
-
+    // Rebuild graphics tab to reflect the new screen width/ratio.
+    // Do NOT sync draft from SettingsManager here — that would overwrite
+    // unsaved user changes (e.g. after pressing NO in ConfirmState).
+    // Nullify the raw cache pointer BEFORE clear() destroys the widget it points to.
+    resolutionBtn = nullptr;
     tabPanels[0].clear();
     buildGraphicsTab(view::AssetManager::instance().getUiFont());
 }
@@ -405,7 +406,10 @@ void OptionsState::applySettings() {
 
 void OptionsState::resetSettings() {
     draft = model::Settings::defaults();
-    for (int i=0; i<4; ++i) {
+    // Nullify raw cache pointers BEFORE clear() destroys the widgets they point to.
+    resolutionBtn = nullptr;
+    keyButtons.fill(nullptr);
+    for (int i = 0; i < 4; ++i) {
         tabPanels[i].clear();
     }
     const sf::Font& font = view::AssetManager::instance().getUiFont();

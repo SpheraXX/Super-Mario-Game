@@ -1,5 +1,5 @@
-#ifndef CONTROLLER_CONFIRMSTATE_H
-#define CONTROLLER_CONFIRMSTATE_H
+#ifndef CONTROLLER_WARNINGPOPUPSTATE_H
+#define CONTROLLER_WARNINGPOPUPSTATE_H
 
 #include "Controller/GameState.h"
 #include "View/UI/UIButton.h"
@@ -11,9 +11,14 @@
 
 namespace controller {
 
-class ConfirmState : public GameState {
+class WarningPopupState : public GameState {
 public:
-    ConfirmState(const std::string& message, std::function<void()> onYes, std::function<void()> onNo);
+    enum class Type {
+        YesNo,
+        OkOnly
+    };
+
+    WarningPopupState(const std::string& message, Type type, std::function<void()> onPrimary, std::function<void()> onSecondary = nullptr);
 
     void update(float dt) override;
     void render(sf::RenderTarget& target) override;
@@ -26,19 +31,21 @@ public:
 private:
     void relayout(float screenW, float screenH);
     
-    // Layout constants
-    static constexpr float kBtnContainerW = 130.f; // YES(60) + gap(10) + NO(60)
-    static constexpr float kLabelOffsetY  = -35.f;
-    static constexpr float kBtnOffsetY    = +15.f;
-
     std::string message;
-    std::function<void()> onYesCallback;
-    std::function<void()> onNoCallback;
+    Type popupType;
+    std::function<void()> onPrimaryCallback;
+    std::function<void()> onSecondaryCallback;
 
     sf::RectangleShape overlay;
-    
     view::ui::UILabel titleLabel;
     view::ui::UIContainer buttonContainer;
+    
+    // Layout constants
+    static constexpr float kLabelOffsetY  = -35.f;
+    static constexpr float kBtnOffsetY    = 15.f;
+    static constexpr float kBtnWidth      = 60.f;
+    static constexpr float kBtnGap        = 10.f;
+    static constexpr float kYesNoBtnContainerW = kBtnWidth * 2.f + kBtnGap; // 130.f
 };
 
 } // namespace controller

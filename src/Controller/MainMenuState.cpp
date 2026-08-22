@@ -7,7 +7,10 @@
 #include "Controller/PlayState.h"
 #include "Controller/OptionsState.h"
 #include "Controller/StateManager.h"
+#include "Controller/WarningPopupState.h"
 #include "Model/Core/GameManager.h"
+#include "Model/Save/SaveData.h"
+#include "Model/Save/SaveManager.h"
 #include "View/AssetManager.h"
 #include "Controller/IAudioManager.h"
 
@@ -84,7 +87,34 @@ void MainMenuState::buildUI() {
 
     // ── Commands injected here — this is the ONLY place game logic is touched. ──
     makeBtn("START GAME", [this]() {
-        manager->replaceState(std::make_unique<PlayState>());
+        if (model::SaveManager::instance().hasSaveFile()) {
+            manager->pushState(std::make_unique<WarningPopupState>(
+                "Found saved game.\nContinue where you left off?",
+                WarningPopupState::Type::YesNo,
+                [this]() {
+                    model::GameSaveData save;
+                    if (model::SaveManager::instance().load(save)) {
+                        manager->clear();
+                        manager->pushState(std::make_unique<PlayState>(save));
+                    } else {
+                        model::GameManager::instance().reset();
+                        manager->clear();
+                        manager->pushState(std::make_unique<PlayState>());
+                    }
+                },
+                [this]() {
+                    model::SaveManager::instance().deleteSave();
+                    model::GameManager::instance().reset();
+                    manager->clear();
+                    manager->pushState(std::make_unique<PlayState>());
+                },
+                "CONTINUE",
+                "NEW GAME"
+            ));
+        } else {
+            model::GameManager::instance().reset();
+            manager->replaceState(std::make_unique<PlayState>());
+        }
     });
 
     makeBtn("OPTIONS", [this]() {

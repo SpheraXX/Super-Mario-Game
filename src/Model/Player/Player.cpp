@@ -1,8 +1,10 @@
 #include "Model/Player/Player.h"
+#include "Model/Save/SaveData.h"
 
+#include "Model/Core/GameManager.h"
+#include "Model/Core/LogManager.h"
 #include "Model/Core/World.h"
 #include "Model/Projectile/MarioFireball.h"
-#include "Model/Core/GameManager.h"
 
 #include <cmath>
 #include <string>
@@ -208,6 +210,28 @@ void Player::applyPowerUp(PlayerPowerUp type) {
     }
 }
 
+void Player::restoreState(const PlayerSaveData& data) {
+    setPosition({data.posX, data.posY});
+    setVelocity({data.velX, data.velY});
+    setFacingRight(data.facingDirection >= 0);
+    big = data.isBig;
+
+    const float targetHeight = big ? BigHeight : SmallHeight;
+    setSize({getSize().x, targetHeight});
+    hitbox.height = targetHeight;
+
+    if (data.power == "Fire") {
+        power = PlayerPower::Fire;
+        starDuration = 0.0f;
+    } else if (data.power == "Star") {
+        power = PlayerPower::Star;
+        starDuration = data.starDuration > 0.0f ? data.starDuration : StarDuration;
+    } else {
+        power = PlayerPower::None;
+        starDuration = 0.0f;
+    }
+}
+
 void Player::takeDamage(int amount) {
     if (!alive || isDying() || damageCooldown > 0.0f) return;
 
@@ -235,6 +259,7 @@ void Player::takeDamage(int amount) {
 void Player::die(bool bounce) {
     if (!alive || isDying()) return;
     pipeSlide.reset();  // a death mid-slide (debug key) drops the animation state
+    LogManager::instance().info("Player death");
     model::GameManager::instance().loseLife();
     beginDying(bounce);
 }

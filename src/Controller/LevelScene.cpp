@@ -1,6 +1,8 @@
 #include "Controller/LevelScene.h"
 
 #include "Controller/AppEngine.h"
+#include "Model/Core/LogManager.h"
+#include "Model/Save/SaveData.h"
 #include "Model/Block/BrickBlock.h"
 #include "Model/Block/CoinBlock.h"
 #include "Model/Character.h"
@@ -110,13 +112,17 @@ LevelScene::LevelScene()
     entityRenderers->registerRenderer<model::MarioFireball, view::FireballRenderer>();
 }
 
-bool LevelScene::loadLevel() {
+bool LevelScene::loadLevel(const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave) {
     auto& game = model::GameManager::instance();
     try {
         level.loadFromFile(game.getCurrentMapPath());
-        loadArea(0);
+        std::size_t targetArea = 0;
+        if (levelSave && levelSave->currentArea < level.areaCount()) {
+            targetArea = levelSave->currentArea;
+        }
+        loadArea(targetArea, /* keepPlayer */ false, levelSave, playerSave);
     } catch (const std::exception& error) {
-        std::cerr << "LevelScene: failed to load level assets: " << error.what() << '\n';
+        model::LogManager::instance().error(std::string("Failed to load level: ") + error.what());
         mapLoaded = false;
         return false;
     }
@@ -125,12 +131,18 @@ bool LevelScene::loadLevel() {
     game.setLevelName(level.getLevelName());
     game.setNextMapPath(level.getNextMapPath());
 
-    timer.reset(TimerStartSeconds);
-
-    // TEMP diagnostics (removed after playtest).
-    if (mapLoaded && map.getColumns() > 0) {
+    if (levelSave) {
+        timer.reset(levelSave->remainingTime);
     } else {
+        timer.reset(TimerStartSeconds);
     }
+
+    if (playerSave && playerPtr) {
+        playerPtr->restoreState(*playerSave);
+        armDormancy();
+    }
+
+    model::LogManager::instance().info("Level start: " + game.getLevelName());
     return true;
 }
 
@@ -140,7 +152,7 @@ void LevelScene::setInputMapper(model::IInputMapper* mapper) {
 
 // Instantiate the given area: copy its grid into the working map, rebuild the themed
 // renderer, append the completion zone on the FINAL area only, then spawn the area.
-void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer) {
+void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave) {
     currentArea = areaIndex;
     portals.clear();  // every visit to an area reactivates all its pipes
     worldType = level.areaWorld(areaIndex);
@@ -148,9 +160,19 @@ void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer) {
     if (currentArea == level.areaCount() - 1) {
         map.padRight(LevelCompletion::LevelPaddingTiles);
     }
+
+    // Apply removed / broken tiles if restoring this area
+    if (levelSave && levelSave->currentArea == currentArea) {
+        for (const auto& tile : levelSave->removedTiles) {
+            if (tile.row < map.getRows() && tile.col < map.getColumns()) {
+                map.setTile(tile.row, tile.col, '.');
+            }
+        }
+    }
+
     renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png", worldType);
     mapLoaded = true;
-    resetLevel(keepPlayer);
+    resetLevel(keepPlayer, levelSave, playerSave);
 }
 
 void LevelScene::teleportToPortal(const model::Portal& portal) {
@@ -251,7 +273,7 @@ void LevelScene::restartLevel() {
     loadArea(0);
 }
 
-void LevelScene::resetLevel(bool keepPlayer) {
+void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave) {
     const std::size_t tileWidth = model::TileMap::TileWidth;
     const std::size_t tileHeight = model::TileMap::TileHeight;
     const std::size_t rows = map.getRows();
@@ -271,7 +293,7 @@ void LevelScene::resetLevel(bool keepPlayer) {
 
     entities.clear();
     if (!keptPlayer) {
-        playerPtr = nullptr;  // full restart: a fresh Mario spawns below
+        playerPtr = nullptr;  // full restart: a fresh player spawns below
     }
     completion.clear();
 
@@ -286,14 +308,31 @@ void LevelScene::resetLevel(bool keepPlayer) {
             switch (symbol) {
                 case 'M':
                     if (!playerPtr) {
-                        auto mario = std::make_unique<model::Mario>(position);
-                        playerPtr = mario.get();
-                        entities.push_back(std::move(mario));
+                        std::unique_ptr<model::Player> player;
+                        if (playerSave && playerSave->isLuigi) {
+                            player = std::make_unique<model::Luigi>(position);
+                        } else {
+                            player = std::make_unique<model::Mario>(position);
+                        }
+                        playerPtr = player.get();
+                        entities.push_back(std::move(player));
                     }
                     break;
-                case 'C':
-                    entities.push_back(std::make_unique<model::CoinBlock>(position, size));
+                case 'C': {
+                    auto coinBlock = std::make_unique<model::CoinBlock>(position, size);
+                    if (levelSave && levelSave->currentArea == currentArea) {
+                        for (const auto& cbData : levelSave->coinBlocks) {
+                            if (std::abs(cbData.posX - position.x) < 1.0f && std::abs(cbData.posY - position.y) < 1.0f) {
+                                if (cbData.opened) {
+                                    coinBlock->setCoinAvailable(false);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    entities.push_back(std::move(coinBlock));
                     break;
+                }
                 case '#':
                 case 'B':
                     entities.push_back(std::make_unique<model::BrickBlock>(position, size));
@@ -362,10 +401,16 @@ void LevelScene::resetLevel(bool keepPlayer) {
     // Fallback: if the map has no 'M', keep the game playable with a fixed spawn.
     if (!playerPtr) {
         const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
-        auto mario = std::make_unique<model::Mario>(
-            model::Vector2{static_cast<float>(2 * tileWidth), groundY});
-        playerPtr = mario.get();
-        entities.push_back(std::move(mario));
+        std::unique_ptr<model::Player> player;
+        if (playerSave && playerSave->isLuigi) {
+            player = std::make_unique<model::Luigi>(
+                model::Vector2{static_cast<float>(2 * tileWidth), groundY});
+        } else {
+            player = std::make_unique<model::Mario>(
+                model::Vector2{static_cast<float>(2 * tileWidth), groundY});
+        }
+        playerPtr = player.get();
+        entities.push_back(std::move(player));
     }
 
     // An area change keeps Mario: put him back ahead of pipes and enemies (matching the
@@ -373,31 +418,89 @@ void LevelScene::resetLevel(bool keepPlayer) {
     if (keptPlayer) {
         playerPtr = static_cast<model::Player*>(keptPlayer.get());
         entities.push_back(std::move(keptPlayer));
+    } else {
+        model::LogManager::instance().info("Player spawn");
     }
 
-    // Enemies placed as digit markers (EnemyFactory ids). These are stripped to empty
-    // tiles at load, so they never double as terrain; the factory is the only place an
-    // enemy is constructed for a level. (The old letter markers 'E'/'K' were retired —
-    // the debug maps now use the same digits as the feat maps.)
-    for (const model::SpawnPoint& spawn : map.getSpawnPoints()) {
-        const model::Vector2 origin = model::TileMap::tileOrigin(spawn.row, spawn.column);
-        if (auto enemy = model::EnemyFactory::create(spawn.id, origin)) {
-            enemy->setMap(&map);  // for ledge detection
-            entities.push_back(std::move(enemy));
+    // Enemies & Items: If restored from snapshot, spawn exact living enemies and items
+    if (levelSave && levelSave->hasEntitiesSnapshot && levelSave->currentArea == currentArea) {
+        for (const auto& e : levelSave->enemies) {
+            std::unique_ptr<model::Enemy> enemy;
+            const model::Vector2 origin{e.posX, e.posY};
+            if (e.type == "Goomba") {
+                enemy = std::make_unique<model::Goomba>(origin);
+            } else if (e.type == "Koopa") {
+                auto koopa = std::make_unique<model::Koopa>(origin, e.isWinged);
+                if (e.state == "ShellSpinning") {
+                    koopa->setState(model::KoopaState::ShellSpinning);
+                } else if (e.state == "ShellIdle") {
+                    koopa->setState(model::KoopaState::ShellIdle);
+                } else {
+                    koopa->setState(model::KoopaState::Walking);
+                }
+                enemy = std::move(koopa);
+            } else if (e.type == "HammerBro") {
+                enemy = std::make_unique<model::HammerBro>(origin);
+            } else if (e.type == "Lakitu") {
+                enemy = std::make_unique<model::Lakitu>(origin);
+            } else if (e.type == "Spiny") {
+                enemy = std::make_unique<model::Spiny>(origin);
+            } else if (e.type == "Bowser") {
+                enemy = std::make_unique<model::Bowser>(origin);
+            } else if (e.type == "PiranhaPlant") {
+                enemy = std::make_unique<model::PiranhaPlant>(origin);
+            }
+            if (enemy) {
+                enemy->setPosition({e.posX, e.posY});
+                enemy->setVelocity({e.velX, e.velY});
+                enemy->setFacingRight(e.facingRight);
+                enemy->setDirection(e.direction);
+                enemy->isDormant = e.isDormant;
+                enemy->setMap(&map);
+                entities.push_back(std::move(enemy));
+            }
+        }
+
+        for (const auto& it : levelSave->items) {
+            std::unique_ptr<model::Item> item;
+            const model::Vector2 origin{it.posX, it.posY};
+            if (it.type == "Mushroom") {
+                item = std::make_unique<model::Mushroom>(origin, it.direction);
+            } else if (it.type == "FireFlower") {
+                item = std::make_unique<model::FireFlower>(origin);
+            } else if (it.type == "Starman") {
+                item = std::make_unique<model::Starman>(origin);
+            } else if (it.type == "Coin") {
+                item = std::make_unique<model::Coin>(origin);
+            }
+            if (item) {
+                item->setPosition({it.posX, it.posY});
+                item->setVelocity({it.velX, it.velY});
+                item->setDirection(it.direction);
+                item->isDormant = false;
+                entities.push_back(std::move(item));
+            }
+        }
+    } else {
+        // Enemies placed as digit markers (EnemyFactory ids). These are stripped to empty
+        // tiles at load, so they never double as terrain; the factory is the only place an
+        // enemy is constructed for a level.
+        for (const model::SpawnPoint& spawn : map.getSpawnPoints()) {
+            const model::Vector2 origin = model::TileMap::tileOrigin(spawn.row, spawn.column);
+            if (auto enemy = model::EnemyFactory::create(spawn.id, origin)) {
+                enemy->setMap(&map);  // for ledge detection
+                entities.push_back(std::move(enemy));
+            }
         }
     }
 
-    // Level completion zone, in the padded columns: flagpole, then the goal castle. It
-    // belongs to the FINAL area only — earlier areas are traversed by portal, not by
-    // walking to the edge, and must not show a goal of their own. (Guard inside build:
-    // with a failed load columns is 0 and there is nothing to spawn.)
+    // Level completion zone, in the padded columns: flagpole, then the goal castle.
     if (currentArea == level.areaCount() - 1) {
         completion.build(map, entities);
     }
 
     // Every character obeys the current world's physics (gravity/fall/drag, swim), and
-    // every entity gets this scene as its spawn channel (model::World) so emitters can
-    // put projectiles and rewards into the level without knowing a controller exists.
+    // every entity gets this scene as its spawn channel (model::World).
     const model::WorldTheme& world = model::WorldSet::forType(worldType);
     for (const auto& e : entities) {
         e->setWorld(this);
@@ -409,6 +512,125 @@ void LevelScene::resetLevel(bool keepPlayer) {
     // Everything ahead of the camera starts asleep; the player is always awake.
     armDormancy();
 
+    if (levelSave && levelSave->hasEntitiesSnapshot && levelSave->currentArea == currentArea) {
+        std::size_t enemyIdx = 0;
+        for (const auto& e : entities) {
+            if (dynamic_cast<model::Enemy*>(e.get())) {
+                if (enemyIdx < levelSave->enemies.size()) {
+                    e->isDormant = levelSave->enemies[enemyIdx].isDormant;
+                    enemyIdx++;
+                }
+            }
+        }
+    }
+}
+
+void LevelScene::captureLevelSaveData(model::LevelSaveData& outLevelSave) const {
+    outLevelSave.currentArea = currentArea;
+    outLevelSave.remainingTime = timer.getRemaining();
+
+    // 1. Removed / broken tiles: compare working map with original map of this area
+    outLevelSave.removedTiles.clear();
+    const auto& originalMap = level.areaMap(currentArea);
+    const std::size_t rows = map.getRows();
+    const std::size_t cols = std::min(map.getColumns(), originalMap.getColumns());
+    for (std::size_t r = 0; r < rows; ++r) {
+        for (std::size_t c = 0; c < cols; ++c) {
+            char orig = originalMap.getTile(r, c);
+            char curr = map.getTile(r, c);
+            if ((orig == '#' || orig == 'B' || orig == 'C') && curr == '.') {
+                outLevelSave.removedTiles.push_back({r, c});
+            }
+        }
+    }
+
+    outLevelSave.coinBlocks.clear();
+    outLevelSave.enemies.clear();
+    outLevelSave.items.clear();
+
+    for (const auto& e : entities) {
+        if (!e) continue;
+
+        // CoinBlock
+        if (auto* cb = dynamic_cast<model::CoinBlock*>(e.get())) {
+            model::BlockSaveData bsd;
+            bsd.posX = cb->getPosition().x;
+            bsd.posY = cb->getPosition().y;
+            bsd.opened = cb->isOpened();
+            outLevelSave.coinBlocks.push_back(bsd);
+            continue;
+        }
+
+        // Enemy: save living ones
+        if (auto* enemy = dynamic_cast<model::Enemy*>(e.get())) {
+            if (enemy->isActive && enemy->isAlive() && !enemy->isDying()) {
+                model::EnemySaveData esd;
+                esd.posX = enemy->getPosition().x;
+                esd.posY = enemy->getPosition().y;
+                esd.velX = enemy->getVelocity().x;
+                esd.velY = enemy->getVelocity().y;
+                esd.isDormant = enemy->isDormant;
+                esd.facingRight = enemy->isFacingRight();
+                esd.direction = enemy->getDirection();
+
+                if (auto* koopa = dynamic_cast<model::Koopa*>(enemy)) {
+                    esd.type = "Koopa";
+                    esd.isWinged = koopa->isWinged();
+                    if (koopa->getState() == model::KoopaState::ShellSpinning) {
+                        esd.state = "ShellSpinning";
+                    } else if (koopa->getState() == model::KoopaState::ShellIdle) {
+                        esd.state = "ShellIdle";
+                    } else {
+                        esd.state = "Walking";
+                    }
+                } else if (dynamic_cast<model::Goomba*>(enemy)) {
+                    esd.type = "Goomba";
+                } else if (dynamic_cast<model::HammerBro*>(enemy)) {
+                    esd.type = "HammerBro";
+                } else if (dynamic_cast<model::Lakitu*>(enemy)) {
+                    esd.type = "Lakitu";
+                } else if (dynamic_cast<model::Spiny*>(enemy)) {
+                    esd.type = "Spiny";
+                } else if (dynamic_cast<model::Bowser*>(enemy)) {
+                    esd.type = "Bowser";
+                } else if (dynamic_cast<model::PiranhaPlant*>(enemy)) {
+                    esd.type = "PiranhaPlant";
+                } else {
+                    esd.type = "Goomba";
+                }
+                outLevelSave.enemies.push_back(esd);
+            }
+            continue;
+        }
+
+        // Item: active collectibles
+        if (auto* item = dynamic_cast<model::Item*>(e.get())) {
+            if (item->isActive && item->isAlive() && !item->isDying()) {
+                model::ItemSaveData isd;
+                isd.posX = item->getPosition().x;
+                isd.posY = item->getPosition().y;
+                isd.velX = item->getVelocity().x;
+                isd.velY = item->getVelocity().y;
+                isd.direction = item->getDirection();
+
+                if (dynamic_cast<model::Mushroom*>(item)) {
+                    isd.type = "Mushroom";
+                } else if (dynamic_cast<model::FireFlower*>(item)) {
+                    isd.type = "FireFlower";
+                } else if (dynamic_cast<model::Starman*>(item)) {
+                    isd.type = "Starman";
+                } else if (dynamic_cast<model::Coin*>(item)) {
+                    isd.type = "Coin";
+                } else {
+                    continue;
+                }
+                outLevelSave.items.push_back(isd);
+            }
+            continue;
+        }
+    }
+
+    outLevelSave.hasEntitiesSnapshot = true;
 }
 
 void LevelScene::spawn(std::unique_ptr<model::Entity> entity) {

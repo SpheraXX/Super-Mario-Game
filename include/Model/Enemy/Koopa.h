@@ -32,6 +32,9 @@ public:
     // True while it still has its wings, used by the view to pick the Paratroopa frame.
     bool isWinged() const;
 
+    KoopaState getState() const { return state; }
+    void setState(KoopaState newState);
+
 private:
     // Give up the wings: gravity comes back on and it finishes the fall as a walking Koopa.
     void loseWings();

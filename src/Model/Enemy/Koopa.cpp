@@ -75,6 +75,7 @@ void Koopa::onStomped(Entity& player) {
         Vector2 sz = getSize();
         sz.y = ShellHeight;
         setSize(sz);
+        awardScore();
     } else if (state == KoopaState::ShellIdle) {
         state = KoopaState::ShellSpinning;
         // Kick direction based on player relative position
@@ -104,6 +105,32 @@ bool Koopa::isShell() const {
 
 bool Koopa::isWinged() const {
     return winged;
+}
+
+void Koopa::setState(KoopaState newState) {
+    state = newState;
+    if (state == KoopaState::ShellIdle) {
+        winged = false;
+        setGravityScale(1.0f);
+        hitbox.height = ShellHeight;
+        setSize({16.0f, ShellHeight});
+        velocity.x = 0.0f;
+    } else if (state == KoopaState::ShellSpinning) {
+        winged = false;
+        setGravityScale(1.0f);
+        hitbox.height = ShellHeight;
+        setSize({16.0f, ShellHeight});
+        velocity.x = shellSpeed * getDirection();
+    } else if (state == KoopaState::Walking) {
+        hitbox.height = StandHeight;
+        setSize({16.0f, StandHeight});
+        if (winged) {
+            setGravityScale(0.0f);
+        } else {
+            setGravityScale(1.0f);
+            velocity.x = WalkSpeed * getDirection();
+        }
+    }
 }
 
 void Koopa::onCollision(Entity& other, CollisionType /* side */) {

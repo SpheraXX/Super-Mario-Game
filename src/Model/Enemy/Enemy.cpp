@@ -1,6 +1,7 @@
 #include "Model/Enemy/Enemy.h"
 
 #include "Model/Core/GameManager.h"
+#include "Model/Core/LogManager.h"
 #include "Model/Core/World.h"
 #include "Model/Map/TileMap.h"
 #include "Model/Projectile/Projectile.h"
@@ -107,6 +108,7 @@ void Enemy::onHit(Entity& /* source */) {
 }
 
 void Enemy::awardScore() const {
+    LogManager::instance().info("Enemy defeated");
     GameManager::instance().addScore(getScoreValue());
 }
 

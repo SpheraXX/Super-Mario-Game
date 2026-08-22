@@ -9,6 +9,8 @@
 
 namespace model {
 
+struct PlayerSaveData;
+
 // The power axis: one exclusive slot. Fire and Star replace each other — they are
 // incompatible, so a Star picked over Fire drops the fireball for good (no restore on
 // expiry), and a Flower picked over Star drops the invincibility. Size is a separate,
@@ -47,6 +49,9 @@ public:
     // points when the collected power-up is redundant.
     void applyPowerUp(PlayerPowerUp type);
 
+    // Restores player position, size, power state, and direction from save data.
+    void restoreState(const PlayerSaveData& data);
+
     // Remaining star invincibility, or -1 when not starred. The view flashes the sprite
     // off this, so the flashing and the invincibility always end together.
     float getRemainingTime() const;
@@ -55,6 +60,8 @@ public:
     // `const Player&` and must tell Fire from Star without a non-const state reference.
     bool isFire() const;
     bool isStar() const;
+    PlayerPower getPower() const { return power; }
+    float getStarDuration() const { return starDuration; }
     // Whether the player is currently in a two-tile-tall form. Read off the size axis,
     // not off the power: Fire and Star never change size, so the only way to grow is a
     // Mushroom (and the only way to shrink is damage).

@@ -1,4 +1,5 @@
 #include "View/AssetManager.h"
+#include "Model/Core/LogManager.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Image.hpp>
@@ -16,21 +17,15 @@ AssetManager& AssetManager::instance() {
 
 AssetManager::AssetManager()
     : uiFontLoaded(uiFont.openFromFile("assets/fonts/PressStart2P-Regular.ttf")) {
-    // Press Start 2P is a pixel font: its glyph pages must be sampled without
-    // bilinear filtering, or the thin strokes smear once the offscreen frame is
-    // upscaled to the window.
     if (uiFontLoaded) {
         for (unsigned int size = 8; size <= 56; size += 2) {
             const_cast<sf::Texture&>(uiFont.getTexture(size)).setSmooth(false);
         }
     }
 
-    // The fallback texture is a single opaque magenta pixel — it is visually
-    // obvious that something went wrong, which is better than silently invisible.
     fallbackImage = sf::Image({1, 1}, sf::Color(255, 0, 255, 200));
     if (!fallbackTexture.loadFromImage(fallbackImage)) {
-        // If even this fails, the Texture stays default-constructed (white pixel).
-        std::cerr << "[AssetManager] WARNING: could not create fallback texture\n";
+        model::LogManager::instance().warning("[AssetManager] Could not create fallback texture");
     }
 }
 
@@ -54,7 +49,7 @@ const sf::Image& AssetManager::getImage(const std::string& filePath) {
 
     sf::Image img;
     if (!img.loadFromFile(filePath)) {
-        std::cerr << "[AssetManager] ERROR: failed to load image: " << filePath << "\n";
+        model::LogManager::instance().error("[AssetManager] Failed to load texture: " + filePath);
         return fallbackImage;
     }
 
@@ -65,36 +60,29 @@ const sf::Image& AssetManager::getImage(const std::string& filePath) {
 // ── Textures ──────────────────────────────────────────────────────────────────
 
 const sf::Texture& AssetManager::getTexture(const std::string& filePath, std::optional<sf::Color> colorKey) {
-    // Generate cache key
     std::string cacheKey = filePath;
     if (colorKey.has_value()) {
         cacheKey += "_#" + std::to_string(colorKey->toInteger());
     }
 
-    // Cache hit — return immediately, no disk I/O.
     auto it = textures.find(cacheKey);
     if (it != textures.end()) {
         return it->second.texture;
     }
 
-    // Cache miss — reuse getImage() to avoid reading from disk a second time
-    // when both getImage and getTexture are called for the same file.
     const sf::Image& srcImg = getImage(filePath);
 
-    sf::Image img = srcImg;  // local mutable copy for optional color masking
+    sf::Image img = srcImg;
     if (colorKey.has_value()) {
         img.createMaskFromColor(colorKey.value());
     }
 
-    // Upload to VRAM
     sf::Texture tex;
     if (!tex.loadFromImage(img)) {
-        std::cerr << "[AssetManager] ERROR: failed to upload texture: " << filePath << "\n";
+        model::LogManager::instance().error("[AssetManager] Failed to upload texture: " + filePath);
         return fallbackTexture;
     }
 
-    // Pixel art textures should never be smoothed: bilinear filtering blurs
-    // the hard edges that define the 8-bit aesthetic.
     tex.setSmooth(false);
 
     TextureData data;
@@ -111,7 +99,6 @@ void AssetManager::clearUnused(const std::vector<std::string>& keepList) {
     while (it != textures.end()) {
         bool keep = false;
         for (const auto& keepPath : keepList) {
-            // Keep if the cache key starts with keepPath 
             if (it->first.find(keepPath) == 0) {
                 keep = true;
                 break;
@@ -136,11 +123,11 @@ void AssetManager::clearUnused(const std::vector<std::string>& keepList) {
 }
 
 void AssetManager::reloadAll() {
-    std::cout << "[AssetManager] Reloading all assets (Context Lost Recovery)...\n";
-    
+    model::LogManager::instance().info("[AssetManager] Reloading all assets (Context Lost Recovery)...");
+
     if (!uiFont.openFromFile("assets/fonts/PressStart2P-Regular.ttf")) {
         uiFontLoaded = false;
-        std::cerr << "[AssetManager] ERROR: failed to reload font.\n";
+        model::LogManager::instance().error("[AssetManager] Failed to reload font");
     } else {
         uiFontLoaded = true;
         for (unsigned int size = 8; size <= 56; size += 2) {
@@ -162,11 +149,11 @@ void AssetManager::reloadAll() {
 
     for (auto& [path, img] : images) {
         if (!img.loadFromFile(path)) {
-            std::cerr << "[AssetManager] WARNING: failed to reload image: " << path << "\n";
+            model::LogManager::instance().warning("[AssetManager] Failed to reload optional asset: " + path);
         }
     }
-    
-    std::cout << "[AssetManager] Reload complete.\n";
+
+    model::LogManager::instance().info("[AssetManager] Reload complete");
 }
 
 }  // namespace view

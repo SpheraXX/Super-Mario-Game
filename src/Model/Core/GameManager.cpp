@@ -13,12 +13,20 @@ int GameManager::getScore() const {
     return score;
 }
 
+void GameManager::setScore(int points) {
+    score = points;
+}
+
 void GameManager::addScore(int points) {
     score += points;
 }
 
 int GameManager::getLives() const {
     return lives;
+}
+
+void GameManager::setLives(int count) {
+    lives = count;
 }
 
 void GameManager::loseLife() {
@@ -37,6 +45,10 @@ bool GameManager::isGameOver() const {
 
 int GameManager::getCoins() const {
     return coins;
+}
+
+void GameManager::setCoins(int count) {
+    coins = count;
 }
 
 void GameManager::addCoin(int count) {

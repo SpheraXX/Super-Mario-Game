@@ -16,14 +16,17 @@ public:
     GameManager& operator=(const GameManager&) = delete;
 
     int getScore() const;
+    void setScore(int points);
     void addScore(int points);
 
     int getLives() const;
+    void setLives(int count);
     void loseLife();
     void addLife();
     bool isGameOver() const;
 
     int getCoins() const;
+    void setCoins(int count);
     // Every CoinsPerLife coins collected grants a life and the tally rolls back. The count
     // parameter lets a single pickup be worth more than one coin; the default keeps every
     // existing call site compiling unchanged.

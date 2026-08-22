@@ -35,6 +35,7 @@ public:
     void render(sf::RenderTarget& window);
 
     bool empty() const;
+    GameState* activeState();
 
 private:
     enum class Action { Push, Pop, Replace, Clear };
@@ -43,8 +44,6 @@ private:
         Action action;
         std::unique_ptr<GameState> state; // populated for Push / Replace only
     };
-
-    GameState* activeState();
 
     std::vector<std::unique_ptr<GameState>> stack;
     std::vector<PendingChange> pending;

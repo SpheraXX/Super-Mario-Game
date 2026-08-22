@@ -14,6 +14,7 @@ public:
 
     void setBounds(const sf::FloatRect& boundsRect);
     void setContentHeight(float height);
+    void clear() override;
 
     void render(sf::RenderTarget& target) override;
     bool handleEvent(const sf::Event& event) override;

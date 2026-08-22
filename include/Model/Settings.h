@@ -7,11 +7,14 @@ namespace model {
 
 enum class Language { English, Vietnamese };
 enum class GraphicsQuality { Low, Medium, High };
+enum class AspectRatio { Ratio4x3, Ratio16x9 };
 
 struct Settings {
-    bool             fullscreen    = false;
-    int              logicalWidth  = 384;   
-    GraphicsQuality  quality       = GraphicsQuality::Low;
+    bool             fullscreen       = false;
+    AspectRatio      ratio            = AspectRatio::Ratio4x3;
+    int              resolutionIndex  = 0;
+    GraphicsQuality  quality          = GraphicsQuality::Low;
+    bool             vsync            = true;
 
     int  masterVolume  = 100;  
     int  musicVolume   = 80;
@@ -29,11 +32,14 @@ struct Settings {
     int keyCrouch     = -1;
     int keyInteract   = -1;
     int keyInventory  = -1;
+    int keyCycleDisplay = -1;
+    int keyBack       = -1;
 
     int controlSlot   = 0;
 
     bool operator==(const Settings& o) const {
-        return fullscreen == o.fullscreen && logicalWidth == o.logicalWidth &&
+        return fullscreen == o.fullscreen && ratio == o.ratio &&
+               resolutionIndex == o.resolutionIndex &&
                quality == o.quality && masterVolume == o.masterVolume &&
                musicVolume == o.musicVolume && sfxVolume == o.sfxVolume &&
                language == o.language && keyMoveLeft == o.keyMoveLeft &&
@@ -41,7 +47,8 @@ struct Settings {
                keyRun == o.keyRun && keyPause == o.keyPause &&
                keyDash == o.keyDash && keyAttack == o.keyAttack &&
                keyCrouch == o.keyCrouch && keyInteract == o.keyInteract &&
-               keyInventory == o.keyInventory &&
+               keyInventory == o.keyInventory && keyCycleDisplay == o.keyCycleDisplay &&
+               keyBack == o.keyBack &&
                controlSlot == o.controlSlot;
     }
     bool operator!=(const Settings& o) const {

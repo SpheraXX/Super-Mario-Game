@@ -1,18 +1,22 @@
 {
     "controls": {
+        "back": 36,
+        "cycleDisplay": 86,
         "jump": 22,
         "moveLeft": 0,
         "moveRight": 3,
-        "pause": 36,
+        "pause": 58,
         "run": 23,
         "slot": 0
     },
     "graphics": {
         "fullscreen": false,
-        "logicalWidth": 384,
-        "quality": "low"
+        "quality": 0,
+        "ratio": 0,
+        "resolutionIndex": 0,
+        "vsync": true
     },
-    "language": "en",
+    "language": "vi",
     "sound": {
         "masterVolume": 100,
         "musicVolume": 80,

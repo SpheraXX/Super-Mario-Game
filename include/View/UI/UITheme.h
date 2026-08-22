@@ -24,6 +24,9 @@ constexpr sf::Color ColorErrorHovered = sf::Color(180, 80, 80);
 constexpr sf::Color ColorSuccessNormal  = sf::Color(50, 150, 200); // Light blue
 constexpr sf::Color ColorSuccessHovered = sf::Color(80, 180, 230);
 
+// Background dimming
+constexpr sf::Color ColorOverlay = sf::Color(0, 0, 0, 140);
+
 // Special colors for UICycleButton (slightly darker)
 constexpr sf::Color CycleNormal  = sf::Color(40, 40, 70);
 constexpr sf::Color CycleHovered = sf::Color(70, 70, 110);

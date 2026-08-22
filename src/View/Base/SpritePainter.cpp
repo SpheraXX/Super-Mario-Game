@@ -1,5 +1,6 @@
 #include "View/Base/SpritePainter.h"
 
+#include "View/AssetManager.h"
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 
@@ -25,11 +26,11 @@ SpritePainter::SpritePainter(const std::string& texturePath) {
 }
 
 bool SpritePainter::load(const std::string& texturePath) {
-    if (!image.loadFromFile(texturePath)) {
-        loaded = false;
-        return false;
-    }
-    if (!texture.loadFromImage(image)) {
+    // Get image from AssetManager (no disk copy — just a pointer to cached data)
+    const sf::Image& src = AssetManager::instance().getImage(texturePath);
+    // Make a local working copy only for this painter (will be color-keyed per-region)
+    workingImage = src;
+    if (!texture.loadFromImage(workingImage)) {
         loaded = false;
         return false;
     }
@@ -55,12 +56,12 @@ void SpritePainter::applyColorKey(const sf::IntRect& area, sf::Color transparent
     for (unsigned int py = top; py < top + height; ++py) {
         for (unsigned int px = left; px < left + width; ++px) {
             const sf::Vector2u pixel(px, py);
-            if (nearlyEqual(image.getPixel(pixel), transparentColor, ColorKeyTolerance)) {
-                image.setPixel(pixel, sf::Color::Transparent);
+            if (nearlyEqual(workingImage.getPixel(pixel), transparentColor, ColorKeyTolerance)) {
+                workingImage.setPixel(pixel, sf::Color::Transparent);
             }
         }
     }
-    if (!texture.loadFromImage(image)) {
+    if (!texture.loadFromImage(workingImage)) {
         throw std::runtime_error("Could not upload tileset texture");
     }
     texture.setSmooth(false);

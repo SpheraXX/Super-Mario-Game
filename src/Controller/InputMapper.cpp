@@ -8,9 +8,7 @@ namespace controller {
 
 InputMapper::InputMapper() {
     // Register to listen to settings changes to keep bindings updated
-    model::SettingsManager::instance().subscribe([this](const model::Settings& s) {
-        onSettingsChanged(s);
-    });
+    model::SettingsManager::instance().addObserver(this);
 }
 
 void InputMapper::onSettingsChanged(const model::Settings& s) {
@@ -21,6 +19,7 @@ void InputMapper::onSettingsChanged(const model::Settings& s) {
     bindings[model::InputAction::Pause]     = static_cast<sf::Keyboard::Key>(s.keyPause);
     bindings[model::InputAction::Attack]    = static_cast<sf::Keyboard::Key>(s.keyAttack);
     bindings[model::InputAction::Crouch]    = static_cast<sf::Keyboard::Key>(s.keyCrouch);
+    bindings[model::InputAction::CycleDisplay] = static_cast<sf::Keyboard::Key>(s.keyCycleDisplay);
 }
 
 bool InputMapper::isActionPressed(model::InputAction action) const {
@@ -81,6 +80,18 @@ std::string InputMapper::getKeyName(int keyCode) {
         {(int)sf::Keyboard::Key::Down,      "Down"},
         {(int)sf::Keyboard::Key::Left,      "Left"},
         {(int)sf::Keyboard::Key::Right,     "Right"},
+        {(int)sf::Keyboard::Key::F1,        "F1"},
+        {(int)sf::Keyboard::Key::F2,        "F2"},
+        {(int)sf::Keyboard::Key::F3,        "F3"},
+        {(int)sf::Keyboard::Key::F4,        "F4"},
+        {(int)sf::Keyboard::Key::F5,        "F5"},
+        {(int)sf::Keyboard::Key::F6,        "F6"},
+        {(int)sf::Keyboard::Key::F7,        "F7"},
+        {(int)sf::Keyboard::Key::F8,        "F8"},
+        {(int)sf::Keyboard::Key::F9,        "F9"},
+        {(int)sf::Keyboard::Key::F10,       "F10"},
+        {(int)sf::Keyboard::Key::F11,       "F11"},
+        {(int)sf::Keyboard::Key::F12,       "F12"},
     };
     auto it = keyNames.find(keyCode);
     return it != keyNames.end() ? it->second : "Key " + std::to_string(keyCode);

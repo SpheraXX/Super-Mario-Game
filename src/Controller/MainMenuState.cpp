@@ -108,6 +108,25 @@ void MainMenuState::buildUI() {
 
 // ── Per-frame ─────────────────────────────────────────────────────────────────
 
+void MainMenuState::onDisplayModeChanged() {
+    const float W = static_cast<float>(AppEngine::screenWidth());
+    const float H = static_cast<float>(AppEngine::ScreenHeight);
+    
+    backdrop.setSize({W, H});
+    
+    titleLabel.setSize(W, static_cast<float>(TitleFont) * 2.f);
+    titleLabel.setPosition(0.f, H * 0.18f);
+
+    const float listX = (W - BtnWidth) / 2.f;
+    const float listY = H * 0.38f;
+    menuList.setPosition(listX, listY);
+    menuList.relayout();
+}
+
+void MainMenuState::onResume() {
+    onDisplayModeChanged();
+}
+
 void MainMenuState::handleEvent(const sf::Event& event) {
     menuList.handleEvent(event);
 }

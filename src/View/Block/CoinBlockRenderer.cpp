@@ -1,4 +1,5 @@
 #include "View/Block/CoinBlockRenderer.h"
+#include "View/AssetManager.h"
 
 #include "View/Base/EntityRenderUtils.h"
 #include "View/Base/RenderContext.h"
@@ -25,14 +26,13 @@ constexpr int TealAtlasRow = 8;
 }
 
 CoinBlockRenderer::CoinBlockRenderer()
-    : textureLoaded(texture.loadFromFile("assets/blocks.png")) {
-    texture.setSmooth(false);
+    : texturePtr(&AssetManager::instance().getTexture("assets/blocks.png")) {
 }
 
 void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
                                     const model::CoinBlock& coinBlock,
                                     const RenderContext& ctx) const {
-    if (!textureLoaded) return;
+    if (!texturePtr) return;
 
     const bool underwater = (ctx.worldType == model::WorldType::Underwater);
     const int blockRow = underwater ? TealAtlasRow : GoldAtlasRow;
@@ -41,7 +41,7 @@ void CoinBlockRenderer::renderTyped(sf::RenderTarget& window,
     const int atlasCol = coinBlock.isOpened() ? usedBlockCol : QuestionBlockAtlasCol;
 
     // Block tiles are 16x16 source pixels (one tile), unlike the 16x32 character frames.
-    sf::Sprite sprite(texture);
+    sf::Sprite sprite(*texturePtr);
     sprite.setTextureRect({{atlasCol * 16, blockRow * 16}, {16, 16}});
     sprite.setScale({SpriteScaleX, SpriteScaleY});
     sprite.setOrigin({0.0f, 0.0f});

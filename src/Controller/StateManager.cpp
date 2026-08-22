@@ -48,6 +48,9 @@ void StateManager::applyPending() {
                 if (!stack.empty()) {
                     stack.back()->onExit();
                     stack.pop_back();
+                    if (!stack.empty()) {
+                        stack.back()->onResume();
+                    }
                 }
                 break;
 

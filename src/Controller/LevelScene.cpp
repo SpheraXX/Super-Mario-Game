@@ -599,6 +599,8 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
                 enemy = std::make_unique<model::Bowser>(origin);
             } else if (e.type == "PiranhaPlant") {
                 enemy = std::make_unique<model::PiranhaPlant>(origin);
+            } else if (e.type == "CheepCheep") {
+                enemy = std::make_unique<model::CheepCheep>(origin, e.direction);
             }
             if (enemy) {
                 enemy->setPosition({e.posX, e.posY});
@@ -622,6 +624,8 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
                 item = std::make_unique<model::Starman>(origin);
             } else if (it.type == "Coin") {
                 item = std::make_unique<model::Coin>(origin);
+            } else if (it.type == "MapCoin") {
+                item = std::make_unique<model::MapCoin>(origin);
             }
             if (item) {
                 item->setPosition({it.posX, it.posY});
@@ -744,6 +748,8 @@ void LevelScene::captureLevelSaveData(model::LevelSaveData& outLevelSave) const 
                     esd.type = "Bowser";
                 } else if (dynamic_cast<model::PiranhaPlant*>(enemy)) {
                     esd.type = "PiranhaPlant";
+                } else if (dynamic_cast<model::CheepCheep*>(enemy)) {
+                    esd.type = "CheepCheep";
                 } else {
                     esd.type = "Goomba";
                 }
@@ -770,6 +776,8 @@ void LevelScene::captureLevelSaveData(model::LevelSaveData& outLevelSave) const 
                     isd.type = "Starman";
                 } else if (dynamic_cast<model::Coin*>(item)) {
                     isd.type = "Coin";
+                } else if (dynamic_cast<model::MapCoin*>(item)) {
+                    isd.type = "MapCoin";
                 } else {
                     continue;
                 }

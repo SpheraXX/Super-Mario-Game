@@ -24,6 +24,8 @@ class FlagPole;
 class Player;
 class Portal;
 class IInputMapper;
+struct LevelSaveData;
+struct PlayerSaveData;
 }
 
 namespace controller {
@@ -54,10 +56,10 @@ public:
     LevelScene();
 
     // Load the map at GameManager::instance().getCurrentMapPath(), publish its metadata
-    // where the HUD/completion flow reads it, instantiate area 0 and restart the timer.
+    // where the HUD/completion flow reads it, instantiate area 0 (or saved area) and restart/restore the timer.
     // Returns false (leaving the scene safely empty) when the assets cannot be loaded;
     // the owner logs the failure. Re-entrant: every playthrough builds a fresh scene.
-    bool loadLevel();
+    bool loadLevel(const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr);
 
     void setInputMapper(model::IInputMapper* mapper);
 
@@ -65,8 +67,11 @@ public:
     model::Player* player() const;
     model::FlagPole* flagPole() const;
 
+    std::size_t getCurrentArea() const { return currentArea; }
+
     // HUD time (whole seconds as shown) and the timer pause used by the clear play.
     int getRemainingTime() const;
+    float getTimerRemaining() const { return timer.getRemaining(); }
     void pauseTimer();
 
     // Freezes update() while the clear cinematic runs; the owner calls this when the
@@ -90,12 +95,14 @@ public:
     const model::Entity* getPlayer() const override;
     void removeTile(std::size_t row, std::size_t column) override;
 
+    void captureLevelSaveData(model::LevelSaveData& outLevelSave) const;
+
     // Rebuild the whole entity list from the working grid: called by loadArea and by
     // the owner to restart the level after a death. Idempotent (see the castle paint).
     // With keepPlayer=true the current player is preserved across an area change
     // (Mario keeps his size and power-ups); a death restart keeps the default and
     // spawns a fresh Mario.
-    void resetLevel(bool keepPlayer = false);
+    void resetLevel(bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr);
 
     // Restart the whole run from the FIRST area: a death in any later area rebuilds the
     // level from the beginning (fresh Mario, portals reactivated). Nothing else resets —
@@ -103,7 +110,7 @@ public:
     void restartLevel();
 
 private:
-    void loadArea(std::size_t areaIndex, bool keepPlayer = false);
+    void loadArea(std::size_t areaIndex, bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr);
     void teleportToPortal(const model::Portal& portal);
     // Pipe travel: SlideIn -> (teleport) -> SlideOut, with the world frozen the whole way
     // (mirror of the clear cinematic). beginPipeTransition snapshots the portal and pauses

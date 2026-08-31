@@ -21,7 +21,7 @@ Settings Settings::defaults() {
   s.keyMoveRight = static_cast<int>(sf::Keyboard::Key::Right);
   s.keyJump = static_cast<int>(sf::Keyboard::Key::Z);
   s.keyRun = static_cast<int>(sf::Keyboard::Key::X);
-  s.keyPause = static_cast<int>(sf::Keyboard::Key::Enter);
+  s.keyPause = static_cast<int>(sf::Keyboard::Key::Escape);
   s.keyCycleDisplay = static_cast<int>(sf::Keyboard::Key::F2);
   s.keyBack = static_cast<int>(sf::Keyboard::Key::Escape);
 

@@ -6,12 +6,13 @@
 #include "View/UI/UILabel.h"
 #include "View/UI/UIButton.h"
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <functional>
 
 namespace controller {
 
 class PauseState : public GameState {
 public:
-    PauseState();
+    explicit PauseState(std::function<void()> onSave = nullptr, std::function<void()> onRestart = nullptr);
 
     void update(float dt) override;
     void render(sf::RenderTarget& target) override;
@@ -22,6 +23,9 @@ public:
     bool isTransparent() const override { return true; }
 
 private:
+    std::function<void()> onSaveCallback;
+    std::function<void()> onRestartCallback;
+
     sf::RectangleShape overlay;
     view::ui::UILabel titleLabel;
     view::ui::UIContainer menuContainer;

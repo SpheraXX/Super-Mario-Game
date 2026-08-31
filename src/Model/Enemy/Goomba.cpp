@@ -26,6 +26,7 @@ void Goomba::onStomped(Entity& /* player */) {
     despawnTimer = 0.5f; // Squish sprite shows for 0.5 seconds
     hitbox.isTrigger = true; // Disable solid collision
     velocity = {0.0f, 0.0f};
+    awardScore();
 }
 
 void Goomba::onTileCollision(char /* tile */, CollisionType side) {

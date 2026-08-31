@@ -1,6 +1,7 @@
 #include "Controller/AppEngine.h"
 
 #include "Controller/MainMenuState.h"
+#include "Model/Core/LogManager.h"
 #include "Model/Map/TileMap.h"
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
@@ -218,6 +219,8 @@ void AppEngine::run() {
     // hitch in y is drawn straight to the screen with nothing moving alongside to mask it.
     constexpr float FrameSnapTolerance = TimeStep * 0.25f;  // ~4ms at 60Hz
 
+    model::LogManager::instance().info("Game start");
+
     while (window.isOpen() && !states.empty()) {
         float frameTime = std::min(clock.restart().asSeconds(), MaxFrameTime);
         if (std::fabs(frameTime - TimeStep) < FrameSnapTolerance) {
@@ -237,6 +240,8 @@ void AppEngine::run() {
         // Enact any transitions requested during input/update this frame.
         states.applyPending();
     }
+
+    model::LogManager::instance().info("Game end");
 }
 
 void AppEngine::processInput() {

@@ -18,7 +18,11 @@ public:
         OkOnly
     };
 
-    WarningPopupState(const std::string& message, Type type, std::function<void()> onPrimary, std::function<void()> onSecondary = nullptr);
+    WarningPopupState(const std::string& message, Type type,
+                      std::function<void()> onPrimary,
+                      std::function<void()> onSecondary = nullptr,
+                      const std::string& primaryLabel = "",
+                      const std::string& secondaryLabel = "");
 
     void update(float dt) override;
     void render(sf::RenderTarget& target) override;
@@ -35,6 +39,9 @@ private:
     Type popupType;
     std::function<void()> onPrimaryCallback;
     std::function<void()> onSecondaryCallback;
+    std::string primaryBtnText;
+    std::string secondaryBtnText;
+    float btnWidth = 60.f;
 
     sf::RectangleShape overlay;
     view::ui::UILabel titleLabel;
@@ -43,9 +50,7 @@ private:
     // Layout constants
     static constexpr float kLabelOffsetY  = -35.f;
     static constexpr float kBtnOffsetY    = 15.f;
-    static constexpr float kBtnWidth      = 60.f;
     static constexpr float kBtnGap        = 10.f;
-    static constexpr float kYesNoBtnContainerW = kBtnWidth * 2.f + kBtnGap; // 130.f
 };
 
 } // namespace controller

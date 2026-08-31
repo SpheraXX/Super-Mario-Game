@@ -31,6 +31,12 @@ public:
     // map, so tile collision (landing on the block's spot) and any tile rendering forget
     // it as well as the entity pass already does.
     virtual void removeTile(std::size_t row, std::size_t column) = 0;
+
+    // Erase EVERY cell carrying `symbol` from the area's map in one go. Distinct from
+    // removeTile above, which is the "this one block was just smashed" case: this is for a
+    // switch that retires a whole class of terrain at once — the castle axe cutting the
+    // bridge — where the trigger knows what to remove but not where any of it is.
+    virtual void removeTilesOfType(char symbol) = 0;
 };
 
 }

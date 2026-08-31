@@ -23,6 +23,20 @@ struct Portal {
     std::size_t destinationColumn;   // column the player re-emerges at
 };
 
+// Which way a Slider moves. The grid shape is always the same two-cell horizontal run
+// (matching the platform's fixed 32x8 art); this is what tells it to travel along that
+// run's own axis or to rise and fall in place instead.
+enum class SliderAxis { Horizontal, Vertical };
+
+// The motion of one Slider, bound to its grid placement by column exactly as a Portal is
+// bound to a Pipe (see '; slider=' in the map format comment below).
+struct SliderSpec {
+    std::size_t sourceColumn;   // anchor column of the '=' run in the source area
+    SliderAxis axis;
+    float travelDistance = 0.0f;  // world units from one end of its travel to the other
+    float speed = 0.0f;           // world units per second
+};
+
 // A multi-area level wrapped in a single .map file. The file is basically a sequence of
 // segments, each of the form:
 //
@@ -30,6 +44,7 @@ struct Portal {
 //   ; world=overworld
 //   <16 grid rows>
 //   ; pipe=col:24,enter:down,to:1:4
+//   ; slider=col:40,axis:h,dist:64,speed:30
 //   ; area
 //   ; world=underwater
 //   <16 grid rows>
@@ -48,6 +63,7 @@ public:
     const TileMap& areaMap(std::size_t index) const;
     WorldType areaWorld(std::size_t index) const;
     const std::vector<Portal>& portals(std::size_t index) const;
+    const std::vector<SliderSpec>& sliders(std::size_t index) const;
 
     const std::string& getLevelName() const;
     const std::string& getNextMapPath() const;
@@ -58,6 +74,7 @@ private:
         TileMap map;
         WorldType world = WorldType::Overworld;
         std::vector<Portal> portals;
+        std::vector<SliderSpec> sliders;
     };
 
     std::vector<Area> areas;

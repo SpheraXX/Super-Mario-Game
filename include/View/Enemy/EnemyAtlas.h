@@ -46,9 +46,13 @@ inline const sf::IntRect Lakitu({54, 138}, {16, 23});        // world 16x23
 inline const sf::IntRect SpinyEgg({36, 352}, {16, 16});      // world 16x16
 inline const sf::IntRect Spiny({72, 352}, {16, 16});         // world 16x16
 
-// Not yet implemented in the model; recorded so the layout stays complete.
-inline const sf::IntRect CheepCheep({0, 370}, {16, 16});     // world 16x16
 inline const sf::IntRect PiranhaPlant({0, 139}, {16, 23});   // world 16x23
+
+// The Cheep Cheep used to be recorded here at (0,370) against the day it was implemented.
+// It now is (Model/Enemy/CheepCheep.h) and is drawn from misc.png instead, which carries
+// both of its swim poses — see view::atlas::CheepCheep in View/Base/MiscAtlas.h. The rect
+// above was never drawn, so nothing regressed by moving it; it is gone rather than kept
+// as a duplicate so there is only ever one answer to "where is the fish".
 
 // Mario's bouncing fireball lives in enemies.png, a DIFFERENT sheet from enemies-8.png
 // above: it carries a real alpha channel, so no colour-key masking is needed at load time.

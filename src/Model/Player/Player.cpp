@@ -91,9 +91,11 @@ void Player::handleInput(float deltaTime, const InputSnapshot& input) {
     bool movingLeft = input.moveLeft;
     bool movingRight = input.moveRight;
     inputMoving = movingLeft || movingRight;
-    // Down enters pipes: kept edge-free (held state) so the play state can warp while
-    // the player stands on the cap. Pipe entry is a hold action in SMB, not a press.
+    // Down enters vertical pipes, Right enters horizontal ones: both kept edge-free (held
+    // state) so the play state can warp while the player is still in contact. Pipe entry
+    // is a hold action in SMB, not a press.
     inputDown = input.crouch;
+    inputRight = movingRight;
     if (movingLeft) {
         setDirection(-1);
     } else if (movingRight) {
@@ -268,9 +270,10 @@ bool Player::isPipeSliding() const {
     return pipeSlide != nullptr;
 }
 
-void Player::beginPipeSlide(float targetY) {
+void Player::beginPipeSlide(float target, VerticalSlide::Axis axis) {
     pipeSlide = std::make_unique<VerticalSlide>();
-    pipeSlide->begin(getPosition().y, targetY, VerticalSlide::RiseSpeed);
+    const float start = axis == VerticalSlide::Axis::Vertical ? getPosition().y : getPosition().x;
+    pipeSlide->begin(start, target, VerticalSlide::RiseSpeed, axis);
 }
 
 bool Player::advancePipeSlide(float deltaTime) {

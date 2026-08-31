@@ -21,6 +21,7 @@
 
 namespace model {
 class FlagPole;
+class LevelGoal;
 class Player;
 class Portal;
 class IInputMapper;
@@ -35,11 +36,10 @@ namespace controller {
 // multi-area level into itself (loadArea/resetLevel/teleportToPortal).
 //
 // update() runs one frame of normal play and reports what happened through an Event so
-// the owning state can react without touching the scene's internals: the flagpole was
-// touched (ClearTriggered — the owner starts the scripted clear play) or the player's
-// death fall finished (RunEnded — the owner decides restart vs. game over). While a
-// cinematic runs, the scene is frozen via setCinematicActive(true) and update() does
-// nothing — the cinematic drives the player directly.
+// the owning state can react without touching the scene's internals: the level goal or
+// flagpole was touched (ClearTriggered — the owner triggers the clear flow/overlay)
+// or the player's death fall finished (RunEnded — the owner decides restart vs. game
+// over).
 // Also the concrete model::World the level's entities see: that is how a Hammer Bro gets a
 // hammer into the world, or a coin block its reward, without either knowing a controller
 // exists. The scene is the right home for it (rather than PlayState) because it already owns
@@ -49,7 +49,7 @@ class LevelScene : public model::World {
 public:
     enum class Event {
         None,            // ordinary frame
-        ClearTriggered,  // the flagpole was touched; the owner should start the clear sequence
+        ClearTriggered,  // the level goal or flagpole was touched; the owner shows the completion overlay
         RunEnded,        // the player's death fall finished; the owner decides restart/game over
     };
 
@@ -61,6 +61,7 @@ public:
     // the owner logs the failure. Re-entrant: every playthrough builds a fresh scene.
     bool loadLevel(const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr);
 
+    // Non-owning accessor the owner reads for input and the HUD.
     void setInputMapper(model::IInputMapper* mapper);
 
     // Non-owning accessors the owner reads for input, the clear play and the HUD.
@@ -77,6 +78,7 @@ public:
     // Freezes update() while the clear cinematic runs; the owner calls this when the
     // sequence starts and clears it when the sequence is over.
     void setCinematicActive(bool active);
+    bool isCinematicActive() const { return cinematicActive; }
 
     // Debug: toggle the collision-box overlay (H key).
     void toggleHitboxes();
@@ -94,6 +96,7 @@ public:
     void spawn(std::unique_ptr<model::Entity> entity) override;
     const model::Entity* getPlayer() const override;
     void removeTile(std::size_t row, std::size_t column) override;
+    void removeTilesOfType(char symbol) override;
 
     void captureLevelSaveData(model::LevelSaveData& outLevelSave) const;
 
@@ -112,10 +115,9 @@ public:
 private:
     void loadArea(std::size_t areaIndex, bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr);
     void teleportToPortal(const model::Portal& portal);
-    // Pipe travel: SlideIn -> (teleport) -> SlideOut, with the world frozen the whole way
-    // (mirror of the clear cinematic). beginPipeTransition snapshots the portal and pauses
-    // the timer; advancePipeTransition drives the player's shared VerticalSlide and runs
-    // the actual teleport between the two legs.
+    // Pipe travel: SlideIn -> (teleport) -> SlideOut, with the world frozen the whole way.
+    // beginPipeTransition snapshots the portal and pauses the timer; advancePipeTransition
+    // drives the player's shared VerticalSlide and runs the actual teleport between legs.
     void beginPipeTransition(const model::Portal& portal);
     void advancePipeTransition(float deltaTime);
 
@@ -145,6 +147,10 @@ private:
 
     // Goal zone: flagpole + painted castle in the padded columns of the final area.
     LevelCompletion completion;
+
+    // The author-placed end-of-level marker (TileMap::GoalSymbol); non-owning, spawned by
+    // resetLevel like every other entity. Null on a map that places none.
+    model::LevelGoal* goalPtr = nullptr;
 
     std::unique_ptr<view::EntityRendererRegistry> entityRenderers;
     std::unique_ptr<model::CollisionManager> collisionManager;

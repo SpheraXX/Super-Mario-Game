@@ -30,7 +30,8 @@ public:
     void saveGame() const;
 
 private:
-    // Freeze the level and push the transparent completion overlay.
+    // Award the clear bonus (time remaining), freeze the level and push the transparent
+    // completion overlay.
     void finishClear();
 
     std::unique_ptr<LevelScene> scene;  // the live level behind this playthrough

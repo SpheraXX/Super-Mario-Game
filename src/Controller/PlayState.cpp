@@ -23,6 +23,12 @@
 
 namespace controller {
 
+namespace {
+// Level-clear rewards: a flat bonus for reaching the goal, plus time remaining.
+constexpr int GoalBonus = 5000;
+constexpr int TimeBonusPerSecond = 10;
+}
+
 PlayState::PlayState() : hasSavedState(false) {}
 
 PlayState::PlayState(const model::GameSaveData& save)
@@ -126,8 +132,8 @@ void PlayState::update(float deltaTime) {
     if (event == LevelScene::Event::ClearTriggered) {
         // Freeze the world and start the scripted clear play; without a live player or
         // pole there is nothing to animate, so jump straight to the overlay.
-        scene->setCinematicActive(true);
         if (scene->player() && scene->flagPole()) {
+            scene->setCinematicActive(true);
             sequence.begin(*scene);
         } else {
             finishClear();
@@ -152,6 +158,13 @@ void PlayState::update(float deltaTime) {
 }
 
 void PlayState::finishClear() {
+    // Award the clear bonus (a flat reward for reaching the goal, plus time remaining)
+    // before the timer stops.
+    scene->pauseTimer();
+    const int timeBonus = scene->getRemainingTime() * TimeBonusPerSecond;
+    model::GameManager::instance().addScore(GoalBonus + timeBonus);
+    model::GameManager::instance().setLevelClearBonus(GoalBonus + timeBonus);
+
     levelComplete = true;
     scene->setCinematicActive(false);
     model::LogManager::instance().info("Level end: " + model::GameManager::instance().getLevelName());

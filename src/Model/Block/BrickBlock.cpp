@@ -1,10 +1,22 @@
 #include "Model/Block/BrickBlock.h"
 
+#include "Model/Block/BrickShard.h"
 #include "Model/Core/GameManager.h"
 #include "Model/Core/World.h"
 #include "Model/Map/TileMap.h"
 
 namespace model {
+
+namespace {
+// Toss velocities for the four shards (top pair higher and wider, bottom pair shorter),
+// paired with BrickShard's own quadrant numbering (0=TL, 1=TR, 2=BL, 3=BR).
+constexpr Vector2 ShardLaunch[4] = {
+    {-60.0f, -260.0f},
+    {60.0f, -260.0f},
+    {-40.0f, -180.0f},
+    {40.0f, -180.0f},
+};
+}
 
 BrickBlock::BrickBlock(Vector2 position, Vector2 size)
     : Block(position, size, '#') {
@@ -21,6 +33,16 @@ bool BrickBlock::onBlockHit(const BlockHitEvent& event) {
     // makes the brick bounce.
     if (event.player.canBreakBricks()) {
         GameManager::instance().addScore(BreakScore);
+        if (world) {
+            const Vector2 pos = getPosition();
+            const Vector2 half{getSize().x / 2.0f, getSize().y / 2.0f};
+            for (int quadrant = 0; quadrant < 4; ++quadrant) {
+                const Vector2 shardPos{pos.x + (quadrant % 2) * half.x,
+                                       pos.y + (quadrant / 2) * half.y};
+                world->spawn(std::make_unique<BrickShard>(shardPos, quadrant,
+                                                           ShardLaunch[quadrant]));
+            }
+        }
         eraseFromMap();
         isActive = false;
         return true;

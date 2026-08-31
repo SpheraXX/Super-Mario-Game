@@ -83,6 +83,9 @@ public:
     // Debug: toggle the collision-box overlay (H key).
     void toggleHitboxes();
 
+    // The world type (overworld / underground / underwater / castle) of the currently loaded area.
+    model::WorldType getWorldType() const { return worldType; }
+
     // X position of the painted castle's door — the walk target of the clear play.
     float castleDoorX() const;
 
@@ -179,7 +182,7 @@ private:
 
     model::WorldType worldType = model::WorldType::Overworld;
     view::HitboxRenderer hitboxRenderer;
-    bool showHitboxes = true;
+    bool showHitboxes = false;
     bool cinematicActive = false;
 
     model::LevelTimer timer;

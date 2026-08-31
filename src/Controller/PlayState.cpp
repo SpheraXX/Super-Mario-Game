@@ -1,6 +1,7 @@
 #include "Controller/PlayState.h"
 
 #include "Controller/GameOverState.h"
+#include "Controller/IAudioManager.h"
 #include "Controller/LevelCompleteState.h"
 #include "Controller/PauseState.h"
 #include "Controller/MainMenuState.h"
@@ -11,6 +12,7 @@
 #include "Model/Player/Player.h"
 #include "Model/Save/SaveData.h"
 #include "Model/Save/SaveManager.h"
+#include "Model/World/WorldType.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
@@ -71,6 +73,9 @@ void PlayState::onEnter() {
     hudRenderer = std::make_unique<view::HudRenderer>();
 
     levelComplete = false;
+
+    // Start the world-appropriate background theme.
+    playWorldMusic();
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
@@ -146,6 +151,8 @@ void PlayState::update(float deltaTime) {
         } else {
             model::LogManager::instance().info("Player respawn");
             scene->restartLevel();
+            // Restart the world theme music from the beginning on respawn.
+            playWorldMusic();
         }
     }
 
@@ -155,6 +162,22 @@ void PlayState::update(float deltaTime) {
     hudData.coins = game.getCoins();
     hudData.levelName = game.getLevelName();
     hudData.time = scene->getRemainingTime();
+}
+
+void PlayState::playWorldMusic() {
+    if (!context || !context->audio) return;
+    // Map WorldType to the audio track IDs registered in audio_meta.json.
+    std::string trackId;
+    switch (scene->getWorldType()) {
+        case model::WorldType::Underground: trackId = "underground"; break;
+        case model::WorldType::Underwater:  trackId = "underwater";  break;
+        case model::WorldType::Castle:      trackId = "castle";      break;
+        case model::WorldType::Overworld:
+        default:                            trackId = "overworld";   break;
+    }
+    // Force restart so respawns replay the theme from the top.
+    context->audio->stopMusic();
+    context->audio->playMusic(trackId);
 }
 
 void PlayState::finishClear() {

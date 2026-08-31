@@ -54,9 +54,6 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldTyp
     loadTileset(MarioAssetPath);
 
     const WorldAtlas atlas = atlasFor(worldType);
-    const auto blockRect = [&atlas](int dx, int dy) {
-        return sf::IntRect({atlas.blockX + dx, atlas.blockY + dy}, {Cell, Cell});
-    };
     const auto sceneryRect = [&atlas](int dx, int dy) {
         return sf::IntRect({atlas.sceneryX + dx, atlas.sceneryY + dy}, {Cell, Cell});
     };
@@ -64,8 +61,16 @@ TileMapRenderer::TileMapRenderer(const std::string& tilesetPath, model::WorldTyp
     // Terrain. 'C' (CoinBlock) and '#' (BrickBlock) are NOT registered here — those spawn
     // as entities and render themselves. These block rects are solid artwork edge to edge,
     // with no backdrop pixels inside them, so unlike the scenery they need no colour key.
-    registerTile('G', MarioAssetPath, blockRect(SolidBlockDX, 0));
-    registerTile(model::TileMap::StairSymbol, MarioAssetPath, blockRect(0, StairDY));
+    //
+    // groundOrigin points to the beveled-stone tile; brickOrigin points to the brick-mortar tile.
+    // Previously the two were swapped (the atlas block origin was set from brickOrigin and then
+    // SolidBlockDX was applied to reach what is actually the BRICK column).  Now the ground tile
+    // is addressed directly via atlas::groundOrigin so the correct artwork is shown.
+    const sf::Vector2i groundPx = atlas::groundOrigin(worldType);
+    registerTile('G', MarioAssetPath,
+                 sf::IntRect({groundPx.x,           groundPx.y},          {Cell, Cell}));
+    registerTile(model::TileMap::StairSymbol, MarioAssetPath,
+                 sf::IntRect({groundPx.x,           groundPx.y + StairDY},{Cell, Cell}));
 
     // A bush is three cells wide and centred on the cell the author marked, so the marker
     // reads as "the bush is here" rather than "the bush starts here".

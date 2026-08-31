@@ -8,11 +8,14 @@
 namespace view {
 namespace atlas {
 
-// Where each landscape's block quadrant begins in the shared sheet (super_mario_asset.png)
-// — the brick IS each quadrant's origin, and the solid block / stair tile are offset from
-// it (see TileMapRenderer::atlasFor). Kept in exactly one place so the brick, its renderer
-// and the shards it breaks into can never drift out of step with the terrain tileset.
-inline sf::Vector2i brickOrigin(model::WorldType worldType) {
+// Where each landscape's block quadrant begins in the shared sheet (super_mario_asset.png).
+//
+// groundOrigin  — the beveled stone tile (column 0). Used for solid terrain ('G') and stairs.
+// brickOrigin   — the staggered brick-mortar tile (column 2, 34px to the right).
+//                 Used by BrickBlockRenderer and BrickShardRenderer.
+//
+// Previously these two were swapped; this is the corrected mapping.
+inline sf::Vector2i groundOrigin(model::WorldType worldType) {
     switch (worldType) {
         case model::WorldType::Underground: return {147, 16};
         case model::WorldType::Underwater:  return {147, 100};
@@ -20,6 +23,12 @@ inline sf::Vector2i brickOrigin(model::WorldType worldType) {
         case model::WorldType::Overworld:
         default:                            return {0, 16};
     }
+}
+
+inline sf::Vector2i brickOrigin(model::WorldType worldType) {
+    // The brick tile is always 34px (2 × Pitch) to the right of the ground tile.
+    const sf::Vector2i g = groundOrigin(worldType);
+    return {g.x + 34, g.y};
 }
 
 }

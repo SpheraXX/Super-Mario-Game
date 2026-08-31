@@ -33,6 +33,7 @@ private:
     // Award the clear bonus (time remaining), freeze the level and push the transparent
     // completion overlay.
     void finishClear();
+    void playWorldMusic();
 
     std::unique_ptr<LevelScene> scene;  // the live level behind this playthrough
     LevelClearSequence sequence;        // the flagpole clear cinematic

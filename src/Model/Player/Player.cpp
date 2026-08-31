@@ -263,8 +263,6 @@ void Player::die(bool bounce) {
     pipeSlide.reset();  // a death mid-slide (debug key) drops the animation state
     LogManager::instance().info("Player death");
     model::GameManager::instance().loseLife();
-    model::GameManager::instance().setScore(0);
-    model::GameManager::instance().setCoins(0);
     beginDying(bounce);
 }
 

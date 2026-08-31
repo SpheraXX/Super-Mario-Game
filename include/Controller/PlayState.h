@@ -43,6 +43,11 @@ private:
 
     bool hasSavedState = false;
     std::unique_ptr<model::GameSaveData> savedState;
+
+    // Score and coin count at the start of the level — restored on death.
+    // Updated each time a level is cleared so the next level starts from the cleared value.
+    int checkpointScore = 0;
+    int checkpointCoins = 0;
 };
 
 }

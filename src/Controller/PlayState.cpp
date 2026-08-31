@@ -74,6 +74,11 @@ void PlayState::onEnter() {
 
     levelComplete = false;
 
+    // Snapshot score and coins at level entry — restored on death so dying doesn't
+    // permanently cost progress accumulated during previous levels.
+    checkpointScore = model::GameManager::instance().getScore();
+    checkpointCoins = model::GameManager::instance().getCoins();
+
     // Start the world-appropriate background theme.
     playWorldMusic();
 }
@@ -150,6 +155,9 @@ void PlayState::update(float deltaTime) {
             manager->replaceState(std::make_unique<GameOverState>());
         } else {
             model::LogManager::instance().info("Player respawn");
+            // Restore score and coins to the start of this level.
+            model::GameManager::instance().setScore(checkpointScore);
+            model::GameManager::instance().setCoins(checkpointCoins);
             scene->restartLevel();
             // Restart the world theme music from the beginning on respawn.
             playWorldMusic();
@@ -187,6 +195,11 @@ void PlayState::finishClear() {
     const int timeBonus = scene->getRemainingTime() * TimeBonusPerSecond;
     model::GameManager::instance().addScore(GoalBonus + timeBonus);
     model::GameManager::instance().setLevelClearBonus(GoalBonus + timeBonus);
+
+    // Save the post-clear score and coins as the new checkpoint so that if the player
+    // dies on a later level they revert to this (not the very start of the run).
+    checkpointScore = model::GameManager::instance().getScore();
+    checkpointCoins = model::GameManager::instance().getCoins();
 
     levelComplete = true;
     scene->setCinematicActive(false);

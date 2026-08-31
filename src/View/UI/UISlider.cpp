@@ -1,10 +1,11 @@
 #include "View/UI/UISlider.h"
-#include "Controller/AppEngine.h"
+
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include "View/UI/UITheme.h"
 
 namespace view {
 namespace ui {
@@ -89,7 +90,7 @@ bool UISlider::handleEvent(const sf::Event& event) {
     if (!visible) return false;
 
     auto hitTrack = [&](sf::Vector2i wp) {
-        const sf::Vector2f lp = controller::AppEngine::windowToLogical(wp);
+        const sf::Vector2f lp = transformCoordinate(wp);
         const sf::FloatRect tr = track.getGlobalBounds();
         return lp.x >= tr.position.x && lp.x <= tr.position.x + tr.size.x &&
                lp.y >= pos.y && lp.y <= pos.y + size.y;
@@ -97,7 +98,7 @@ bool UISlider::handleEvent(const sf::Event& event) {
 
     auto setFromX = [&](float wx) {
         const sf::FloatRect tr = track.getGlobalBounds();
-        const sf::Vector2f lp = controller::AppEngine::windowToLogical({static_cast<int>(wx), 0});
+        const sf::Vector2f lp = transformCoordinate({static_cast<int>(wx), 0});
         const float t = std::clamp((lp.x - tr.position.x) / tr.size.x, 0.f, 1.f);
         const int newVal = minVal + static_cast<int>(std::round(t * (maxVal - minVal)));
         const int oldVal = value;
@@ -135,9 +136,9 @@ void UISlider::render(sf::RenderTarget& target) {
         fill.setFillColor(colorFill);
         knob.setFillColor(colorKnob);
     } else {
-        track.setFillColor(sf::Color(80, 80, 80));
-        fill.setFillColor(sf::Color(100, 100, 100));
-        knob.setFillColor(sf::Color(120, 120, 120));
+        track.setFillColor(theme::SliderTrack);
+        fill.setFillColor(theme::SliderFill);
+        knob.setFillColor(theme::SliderKnob);
     }
 
     target.draw(track);
@@ -146,7 +147,7 @@ void UISlider::render(sf::RenderTarget& target) {
 
     if (!fontPtr) return;
 
-    sf::Color currentTextColor = enabled ? colorText : sf::Color(150, 150, 150);
+    sf::Color currentTextColor = enabled ? colorText : theme::ColorTextDisabled;
 
     sf::Text lbl(*fontPtr, labelStr, LabelSize);
     lbl.setFillColor(currentTextColor);

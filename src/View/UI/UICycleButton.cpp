@@ -1,5 +1,5 @@
 #include "View/UI/UICycleButton.h"
-#include "Controller/AppEngine.h"
+
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Window/Mouse.hpp>
@@ -68,12 +68,12 @@ bool UICycleButton::handleEvent(const sf::Event& event) {
     if (!visible) return false;
 
     if (const auto* m = event.getIf<sf::Event::MouseMoved>()) {
-        const sf::Vector2f lp = controller::AppEngine::windowToLogical(m->position);
+        const sf::Vector2f lp = transformCoordinate(m->position);
         onHover(contains(lp.x, lp.y));
     }
     if (const auto* p = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (p->button == sf::Mouse::Button::Left) {
-            const sf::Vector2f lp = controller::AppEngine::windowToLogical(p->position);
+            const sf::Vector2f lp = transformCoordinate(p->position);
             if (contains(lp.x, lp.y)) {
                 if (enabled) {
                     onClick();
@@ -95,11 +95,12 @@ void UICycleButton::render(sf::RenderTarget& target) {
     if (enabled) {
         background.setFillColor(isHovered ? colorHovered : colorNormal);
     } else {
-        background.setFillColor(sf::Color(100, 100, 100));
+        background.setFillColor(theme::ColorDisabled);
     }
+
     target.draw(background);
 
-    sf::Color currentTextColor = enabled ? colorText : sf::Color(150, 150, 150);
+    sf::Color currentTextColor = enabled ? colorText : theme::ColorTextDisabled;
 
     sf::Text lbl(*fontPtr, labelStr, LabelSize);
     lbl.setFillColor(currentTextColor);

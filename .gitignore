@@ -58,6 +58,8 @@ bin/
 # Build folder
 build/
 out/
+/resources/
+
 
 # Personal learning notes (not for commit)
 tempt.md

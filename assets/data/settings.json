@@ -11,12 +11,12 @@
     },
     "graphics": {
         "fullscreen": false,
-        "quality": 0,
-        "ratio": 0,
+        "quality": 2,
+        "ratio": 1,
         "resolutionIndex": 0,
         "vsync": true
     },
-    "language": "vi",
+    "language": "en",
     "sound": {
         "masterVolume": 100,
         "musicVolume": 80,

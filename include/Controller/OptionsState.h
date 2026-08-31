@@ -13,6 +13,12 @@
 #include <array>
 #include <algorithm>
 
+namespace view {
+namespace ui {
+class UIKeyIcon;
+}
+}
+
 namespace controller {
 
 class OptionsState : public GameState {
@@ -46,6 +52,10 @@ private:
                 const std::string& label, std::unique_ptr<view::ui::UIElement> widget,
                 float& cursorY);
 
+    void addVolumeRow(view::ui::UIScrollView& panel, const sf::Font& font,
+                     const std::string& label, int initialValue,
+                     std::function<void(int)> onChange, float& cursorY);
+
     model::Settings draft;
 
     sf::RectangleShape background;
@@ -61,6 +71,7 @@ private:
     sf::Clock soundThrottleClock;
 
     std::array<view::ui::UIButton*, 12> keyButtons = {nullptr};
+    std::array<view::ui::UIKeyIcon*, 12> keyIcons = {nullptr};
     int waitingForKeyIndex = -1;
     int pendingPreviousKey = -1;
     

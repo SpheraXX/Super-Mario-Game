@@ -9,6 +9,7 @@
 #include "Controller/IAudioManager.h"
 #include "Model/SettingsManager.h"
 #include "Controller/InputMapper.h"
+#include "View/UI/UITheme.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -28,11 +29,11 @@ void GameOverState::onEnter() {
     fontLoaded = view::AssetManager::instance().isFontLoaded();
     if (fontLoaded) {
         const float fitWidth = static_cast<float>(AppEngine::screenWidth()) * 0.94f;
-        titleSize = view::text::fitCharacterSize(font, "GAME OVER", fitWidth, 28);
+        titleSize = view::text::fitCharacterSize(font, "GAME OVER", fitWidth, view::ui::layout::TitleFontSize * 2);
         
         std::string backKeyName = InputMapper::getKeyName(model::SettingsManager::instance().get().keyBack);
         std::string hintStr = "Press ENTER or " + backKeyName + " to return to Menu";
-        hintSize = view::text::fitCharacterSize(font, hintStr, fitWidth, 10);
+        hintSize = view::text::fitCharacterSize(font, hintStr, fitWidth, view::ui::layout::ButtonFontSize);
     }
 }
 
@@ -51,7 +52,7 @@ void GameOverState::update(float deltaTime) {
 }
 
 void GameOverState::render(sf::RenderTarget& window) {
-    window.clear(sf::Color(60, 10, 10));
+    window.clear(view::ui::theme::GameOverBackground);
 
     if (!fontLoaded) {
         return;

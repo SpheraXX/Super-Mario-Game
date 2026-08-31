@@ -13,7 +13,7 @@
 namespace controller {
 
 PauseState::PauseState() 
-    : menuContainer(view::ui::UIContainer::Layout::Vertical, 10.f) {
+    : menuContainer(view::ui::UIContainer::Layout::Vertical, view::ui::layout::MenuButtonGap) {
     
     // Dim the screen underneath
     overlay.setSize({static_cast<float>(AppEngine::screenWidth()),
@@ -22,27 +22,27 @@ PauseState::PauseState()
 
     const sf::Font& font = view::AssetManager::instance().getUiFont();
 
-    titleLabel = view::ui::UILabel(font, "PAUSED", 16);
+    titleLabel = view::ui::UILabel(font, "PAUSED", view::ui::layout::TitleFontSize);
     // Center title horizontally
     float screenW = static_cast<float>(AppEngine::screenWidth());
     titleLabel.setPosition((screenW - 96.f) / 2.f, 40.f);
 
-    menuContainer.setPosition((screenW - 120.f) / 2.f, 90.f);
+    menuContainer.setPosition((screenW - view::ui::layout::MenuButtonWidth) / 2.f, 90.f);
 
     auto btnResume = std::make_unique<view::ui::UIButton>(
-        font, "RESUME", 8, sf::Vector2f(0.f, 0.f), sf::Vector2f(120.f, 25.f));
+        font, "RESUME", view::ui::layout::ButtonFontSize, sf::Vector2f(0.f, 0.f), sf::Vector2f(view::ui::layout::MenuButtonWidth, view::ui::layout::MenuButtonHeight));
     btnResume->setOnClick([this]() {
         if (manager) manager->popState();
     });
 
     auto btnOptions = std::make_unique<view::ui::UIButton>(
-        font, "OPTIONS", 8, sf::Vector2f(0.f, 0.f), sf::Vector2f(120.f, 25.f));
+        font, "OPTIONS", view::ui::layout::ButtonFontSize, sf::Vector2f(0.f, 0.f), sf::Vector2f(view::ui::layout::MenuButtonWidth, view::ui::layout::MenuButtonHeight));
     btnOptions->setOnClick([this]() {
         if (manager) manager->pushState(std::make_unique<OptionsState>());
     });
 
     auto btnMainMenu = std::make_unique<view::ui::UIButton>(
-        font, "MAIN MENU", 8, sf::Vector2f(0.f, 0.f), sf::Vector2f(120.f, 25.f));
+        font, "MAIN MENU", view::ui::layout::ButtonFontSize, sf::Vector2f(0.f, 0.f), sf::Vector2f(view::ui::layout::MenuButtonWidth, view::ui::layout::MenuButtonHeight));
     btnMainMenu->setOnClick([this]() {
         if (manager) {
             // TODO: [SAVE] save progress here
@@ -62,7 +62,7 @@ void PauseState::onDisplayModeChanged() {
     
     overlay.setSize({screenW, screenH});
     titleLabel.setPosition((screenW - 96.f) / 2.f, 40.f);
-    menuContainer.setPosition((screenW - 120.f) / 2.f, 90.f);
+    menuContainer.setPosition((screenW - view::ui::layout::MenuButtonWidth) / 2.f, 90.f);
     menuContainer.relayout();
 }
 

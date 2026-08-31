@@ -5,6 +5,7 @@
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
 #include "View/UI/UIElement.h"
+#include "View/UI/UIConfigManager.h"
 
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/VideoMode.hpp>
@@ -252,6 +253,9 @@ void AppEngine::processInput() {
                 cycleDisplayMode();
                 // cycleDisplayMode calls SettingsManager::apply() which triggers the subscription,
                 // setting applyDisplayPending = true.
+            }
+            if (key->code == sf::Keyboard::Key::F5) {
+                view::ui::UIConfigManager::instance().load();
             }
         }
         states.handleEvent(*event);

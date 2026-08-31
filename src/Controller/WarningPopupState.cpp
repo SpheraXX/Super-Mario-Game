@@ -11,9 +11,9 @@ WarningPopupState::WarningPopupState(const std::string& msg, Type type, std::fun
     
     // Dim the background
     overlay.setFillColor(view::ui::theme::ColorOverlay);
-    
+
     const sf::Font& font = view::AssetManager::instance().getUiFont();
-    
+
     titleLabel = view::ui::UILabel(font, message, 10);
     titleLabel.setLineSpacing(1.5f);
     

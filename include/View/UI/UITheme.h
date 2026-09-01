@@ -61,6 +61,10 @@ constexpr sf::Color PopupBox        = sf::Color(40, 40, 50, 240);
 constexpr sf::Color PopupBorder     = sf::Color(200, 50, 50);
 constexpr sf::Color PopupTitleText  = sf::Color(255, 100, 100);
 
+// Dimming level cho từng loại màn hình BGA
+constexpr sf::Color BgaDimMenu    = sf::Color(160, 160, 160); // 63% - đủ nhìn logo
+constexpr sf::Color BgaDimOptions = sf::Color(130, 130, 130); // 51% - tối hơn vì nhiều chữ
+
 } // namespace theme
 
 namespace layout {
@@ -75,6 +79,10 @@ constexpr float SmallButtonHeight = 20.f;
 constexpr unsigned int TitleFontSize  = 16u;
 constexpr unsigned int ButtonFontSize = 8u;
 constexpr unsigned int SmallFontSize  = 6u;
+
+// BGA scaling constants
+constexpr float BgaScaleMultiplier = 2.f;   // Scale factor beyond screen-height fit
+constexpr float TitleWidthRatio    = 0.4f;  // Title image target width = 40% of screen
 } // namespace layout
 
 } // namespace ui

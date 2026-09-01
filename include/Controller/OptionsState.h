@@ -9,6 +9,7 @@
 #include "View/UI/UIButton.h"
 #include "View/UI/UICycleButton.h"
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Sprite.hpp>
 #include <SFML/System/Clock.hpp>
 #include <array>
 #include <algorithm>
@@ -58,7 +59,7 @@ private:
 
     model::Settings draft;
 
-    sf::RectangleShape background;
+    sf::Sprite bgaSprite;
 
     view::ui::UILabel     titleLabel;
     view::ui::UIContainer tabBar;

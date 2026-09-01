@@ -43,12 +43,18 @@ void OptionsState::addRow(view::ui::UIContainer &parent, const sf::Font &font,
   cursorY += kRowHeight;
 }
 
-OptionsState::OptionsState() {
-  draft = model::SettingsManager::instance().get();
+OptionsState::OptionsState() 
+  : draft(model::SettingsManager::instance().get()),
+    bgaSprite(view::AssetManager::instance().getTexture("assets/images/bga_options.png")) {
 
-  background.setSize({static_cast<float>(AppEngine::screenWidth()),
-                      static_cast<float>(AppEngine::ScreenHeight)});
-  background.setFillColor(view::ui::theme::ScreenBackground);
+  bgaSprite.setColor(view::ui::theme::BgaDimOptions);
+
+  float W = static_cast<float>(AppEngine::screenWidth());
+  float H = static_cast<float>(AppEngine::ScreenHeight);
+  float scale = H / static_cast<float>(bgaSprite.getTexture().getSize().y);
+  bgaSprite.setScale({scale, scale});
+  bgaSprite.setOrigin({static_cast<float>(bgaSprite.getTexture().getSize().x) / 2.f, static_cast<float>(bgaSprite.getTexture().getSize().y) / 2.f});
+  bgaSprite.setPosition({W / 2.f, H / 2.f});
 
   const sf::Font &font = view::AssetManager::instance().getUiFont();
 
@@ -169,7 +175,12 @@ void OptionsState::onResume() {
 
 void OptionsState::relayout(float screenW) {
   float screenH = static_cast<float>(AppEngine::ScreenHeight);
-  background.setSize({screenW, screenH});
+  
+  const sf::Texture& tex = bgaSprite.getTexture();
+  float scale = screenH / static_cast<float>(tex.getSize().y);
+  bgaSprite.setScale({scale, scale});
+  bgaSprite.setOrigin({static_cast<float>(tex.getSize().x) / 2.f, static_cast<float>(tex.getSize().y) / 2.f});
+  bgaSprite.setPosition({screenW / 2.f, screenH / 2.f});
 
   for (int i = 0; i < 4; ++i) {
     tabPanels[i].setBounds(
@@ -470,7 +481,7 @@ void OptionsState::update(float dt) {
 }
 
 void OptionsState::render(sf::RenderTarget &target) {
-  target.draw(background);
+  target.draw(bgaSprite);
   titleLabel.render(target);
   tabBar.render(target);
   tabPanels[currentTab].render(target);

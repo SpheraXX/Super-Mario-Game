@@ -6,8 +6,9 @@
       "preview_image": "assets/images/banner/overworld.png",
       "bga_image": "assets/images/bga_overworld.jpg",
       "levels": [
-        { "id": "1-1", "map_path": "assets/maps/1-1.json" },
-        { "id": "1-2", "map_path": "assets/maps/1-2.json" }
+        { "id": "1-1", "map_path": "assets/maps/lv1_1.map" },
+        { "id": "1-2", "map_path": "assets/maps/lv1_2.map" },
+        { "id": "1-4", "map_path": "assets/maps/lv1_4.map" }
       ]
     },
     {
@@ -16,7 +17,9 @@
       "preview_image": "assets/images/banner/underground.png",
       "bga_image": "assets/images/bga_underground.jpg",
       "levels": [
-        { "id": "2-1", "map_path": "assets/maps/2-1.json" }
+        { "id": "2-1", "map_path": "assets/maps/lv2_1.map" },
+        { "id": "2-2", "map_path": "assets/maps/lv2_2.map" },
+        { "id": "2-4", "map_path": "assets/maps/lv2_4.map" }
       ]
     },
     {

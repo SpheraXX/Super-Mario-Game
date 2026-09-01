@@ -38,6 +38,9 @@ bool SaveManager::save(const GameSaveData& data, const std::string& path) const 
         j["lives"]   = data.lives;
         j["coins"]   = data.coins;
 
+        j["unlocked_worlds"] = data.unlocked_worlds;
+        j["level_progress"] = data.level_progress;
+
         // Level data
         j["level"]["currentLevel"]        = data.level.currentLevel;
         j["level"]["mapPath"]             = data.level.mapPath;
@@ -139,6 +142,13 @@ bool SaveManager::load(GameSaveData& outData, const std::string& path) const {
         outData.score   = j.value("score", 0);
         outData.lives   = j.value("lives", 10);
         outData.coins   = j.value("coins", 0);
+
+        if (j.contains("unlocked_worlds") && j["unlocked_worlds"].is_array()) {
+            outData.unlocked_worlds = j["unlocked_worlds"].get<std::vector<std::string>>();
+        }
+        if (j.contains("level_progress") && j["level_progress"].is_object()) {
+            outData.level_progress = j["level_progress"].get<std::unordered_map<std::string, std::string>>();
+        }
 
         if (j.contains("level") && j["level"].is_object()) {
             const auto& lvl = j["level"];

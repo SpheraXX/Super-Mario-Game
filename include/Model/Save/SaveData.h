@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cstddef>
+#include <unordered_map>
 
 namespace model {
 
@@ -71,6 +72,10 @@ struct GameSaveData {
     int lives = 3;
     int coins = 0;
     int version = 1;
+    
+    std::vector<std::string> unlocked_worlds;
+    std::unordered_map<std::string, std::string> level_progress;
+    
     LevelSaveData level;
     PlayerSaveData player;
 };

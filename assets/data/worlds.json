@@ -1,0 +1,32 @@
+{
+  "worlds": [
+    {
+      "id": "world_1",
+      "title": "World 1",
+      "preview_image": "assets/images/banner/overworld.png",
+      "bga_image": "assets/images/bga_overworld.jpg",
+      "levels": [
+        { "id": "1-1", "map_path": "assets/maps/1-1.json" },
+        { "id": "1-2", "map_path": "assets/maps/1-2.json" }
+      ]
+    },
+    {
+      "id": "world_2",
+      "title": "World 2",
+      "preview_image": "assets/images/banner/underground.png",
+      "bga_image": "assets/images/bga_underground.jpg",
+      "levels": [
+        { "id": "2-1", "map_path": "assets/maps/2-1.json" }
+      ]
+    },
+    {
+      "id": "world_3",
+      "title": "World 3",
+      "preview_image": "assets/images/banner/underwater.png",
+      "bga_image": "assets/images/bga_underwater.jpg",
+      "levels": [
+        { "id": "3-1", "map_path": "assets/maps/3-1.json" }
+      ]
+    }
+  ]
+}

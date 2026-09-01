@@ -30,6 +30,7 @@ private:
     sf::RectangleShape m_background;
     sf::Sprite m_spinnerSprite;
     float m_rotation = 0.f;
+    float m_elapsedTime = 0.f;
     bool m_firstFrameDone = false;
 };
 

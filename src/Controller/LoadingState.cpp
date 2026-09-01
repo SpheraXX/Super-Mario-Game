@@ -36,9 +36,11 @@ void LoadingState::handleEvent(const sf::Event&) {
     // Ignore inputs while loading
 }
 
-void LoadingState::update(float) {
-    // Update spinner rotation (animation state mutation belongs here, not in render)
-    m_rotation += 5.f;
+void LoadingState::update(float dt) {
+    m_elapsedTime += dt;
+
+    // BUG-1 fix: rotation is dt-based, not frame-based
+    m_rotation += 300.f * dt;
     m_spinnerSprite.setRotation(sf::degrees(m_rotation));
 
     if (!m_firstFrameDone) {
@@ -46,12 +48,15 @@ void LoadingState::update(float) {
         return;
     }
 
+    // BUG-2 fix: reset timer AFTER work completes so the loading screen
+    // displays for at least the minimum duration regardless of callback length
     if (m_workCallback) {
         m_workCallback();
         m_workCallback = nullptr;
+        m_elapsedTime = 0.f;
     }
 
-    if (m_nextState) {
+    if (m_nextState && m_elapsedTime >= 0.5f) {
         manager->replaceState(std::move(m_nextState));
     }
 }

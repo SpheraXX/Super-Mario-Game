@@ -2,8 +2,8 @@
 #define CONTROLLER_GAMEOVERSTATE_H
 
 #include "Controller/GameState.h"
-
 #include <SFML/Graphics/Font.hpp>
+#include <SFML/Graphics/Sprite.hpp>
 #include "View/UI/UIContainer.h"
 #include "View/UI/UILabel.h"
 #include "View/Effect/LerpAnimator.h"
@@ -28,10 +28,10 @@ private:
 
     std::function<void()> m_onRestartCallback;
     
-    view::ui::UILabel m_titleLabel;
     view::ui::UILabel m_scoreLabel;
     view::ui::UIContainer m_buttonList;
     view::effect::LerpAnimator m_slideIn;
+    sf::Sprite m_background;
     
     bool fontLoaded = false;
 };

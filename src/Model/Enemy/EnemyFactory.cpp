@@ -1,6 +1,7 @@
 #include "Model/Enemy/EnemyFactory.h"
 
 #include "Model/Enemy/Bowser.h"
+#include "Model/Enemy/CheepCheep.h"
 #include "Model/Enemy/Enemy.h"
 #include "Model/Enemy/Goomba.h"
 #include "Model/Enemy/HammerBro.h"
@@ -50,9 +51,7 @@ std::unique_ptr<Enemy> EnemyFactory::create(int id, Vector2 tileOrigin) {
             return std::make_unique<model::PiranhaPlant>(
                 Vector2{tileOrigin.x, tileOrigin.y + TileMap::TileHeight});
 
-        case CheepCheep:
-            model::LogManager::instance().warning("EnemyFactory: enemy id " + std::to_string(id) + " is not implemented yet; skipping this spawn point.");
-            return nullptr;
+        case CheepCheep:      return make<model::CheepCheep>(tileOrigin);
 
         default:
             model::LogManager::instance().warning("EnemyFactory: unknown enemy id " + std::to_string(id) + " in map; skipping.");

@@ -30,8 +30,10 @@ public:
     void saveGame() const;
 
 private:
-    // Freeze the level and push the transparent completion overlay.
+    // Award the clear bonus (time remaining), freeze the level and push the transparent
+    // completion overlay.
     void finishClear();
+    void playWorldMusic();
 
     std::unique_ptr<LevelScene> scene;  // the live level behind this playthrough
     LevelClearSequence sequence;        // the flagpole clear cinematic
@@ -41,6 +43,11 @@ private:
 
     bool hasSavedState = false;
     std::unique_ptr<model::GameSaveData> savedState;
+
+    // Score and coin count at the start of the level — restored on death.
+    // Updated each time a level is cleared so the next level starts from the cleared value.
+    int checkpointScore = 0;
+    int checkpointCoins = 0;
 };
 
 }

@@ -102,15 +102,19 @@ public:
 
     // Down-input intent from the last handleInput() (see the protected member).
     bool getInputDown() const { return inputDown; }
+    // Right-input intent from the last handleInput(): a horizontal pipe's mouth faces
+    // left, so walking into its face while holding Right is what enters it.
+    bool getInputRight() const { return inputRight; }
 
     // Pipe-entry state (the shared VerticalSlide component, same motion as items popping
     // out of blocks): while it runs the player has no physics, no input and no damage —
     // the scene freezes the world and drives the slide directly, and the body is drawn
     // behind the terrain so the pipe mouth covers it. beginPipeSlide() slides from the
-    // current y to targetY; advancePipeSlide() returns true while still sliding and
-    // false the frame the target is reached; endPipeSlide() drops the state.
+    // current position to target along axis (y for a vertical pipe, x for a horizontal
+    // one); advancePipeSlide() returns true while still sliding and false the frame the
+    // target is reached; endPipeSlide() drops the state.
     bool isPipeSliding() const;
-    void beginPipeSlide(float targetY);
+    void beginPipeSlide(float target, VerticalSlide::Axis axis = VerticalSlide::Axis::Vertical);
     bool advancePipeSlide(float deltaTime);
     void endPipeSlide();
 
@@ -148,6 +152,9 @@ protected:
     // Down input intent from the last handleInput(): standing on a pipe and holding
     // Down enters it (play state reads this to teleport to the portal target).
     bool inputDown = false;
+    // Right input intent from the last handleInput(): the horizontal-pipe equivalent of
+    // inputDown, held while walking into a pipe's left face to enter it.
+    bool inputRight = false;
 
     static constexpr float DamageCooldownTime = 1.0f;
     // Height of the one-tile (Small) form, used by isBig(). Super/Fire are two tiles.

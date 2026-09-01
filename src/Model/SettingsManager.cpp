@@ -50,19 +50,6 @@ std::string langToStr(Language l) {
 Language strToLang(const std::string& s) {
     return s == "vi" ? Language::Vietnamese : Language::English;
 }
-
-std::string qualityToStr(GraphicsQuality q) {
-    switch (q) {
-        case GraphicsQuality::Medium: return "medium";
-        case GraphicsQuality::High:   return "high";
-        default:                      return "low";
-    }
-}
-GraphicsQuality strToQuality(const std::string& s) {
-    if (s == "medium") return GraphicsQuality::Medium;
-    if (s == "high")   return GraphicsQuality::High;
-    return GraphicsQuality::Low;
-}
 }
 
 void SettingsManager::load() {

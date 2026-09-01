@@ -33,6 +33,16 @@ inline const sf::Color MarioAssetColorKey(148, 148, 255);
 
 inline const sf::IntRect Coin({298, 95}, {16, 16});       // world 16x16
 
+// The placed (map) coin cycles these. They sit on a 17px pitch to the right of the frame
+// above and all three share one silhouette — only the palette changes (gold with face
+// detail, then flat brown, then flat dark brown) — so the cycle reads as a colour pulse
+// rather than a spin. Dropping back to a static coin is a matter of listing one entry.
+inline const sf::IntRect CoinSpin[3] = {
+    {{298, 95}, {16, 16}},
+    {{315, 95}, {16, 16}},
+    {{332, 95}, {16, 16}},
+};
+
 }
 
 }

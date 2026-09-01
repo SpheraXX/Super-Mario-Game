@@ -1,6 +1,7 @@
 #include "Controller/PlayState.h"
 
 #include "Controller/GameOverState.h"
+#include "Controller/IAudioManager.h"
 #include "Controller/LevelCompleteState.h"
 #include "Controller/PauseState.h"
 #include "Controller/MainMenuState.h"
@@ -11,6 +12,7 @@
 #include "Model/Player/Player.h"
 #include "Model/Save/SaveData.h"
 #include "Model/Save/SaveManager.h"
+#include "Model/World/WorldType.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
@@ -22,6 +24,12 @@
 #include <string>
 
 namespace controller {
+
+namespace {
+// Level-clear rewards: a flat bonus for reaching the goal, plus time remaining.
+constexpr int GoalBonus = 5000;
+constexpr int TimeBonusPerSecond = 10;
+}
 
 PlayState::PlayState() : hasSavedState(false) {}
 
@@ -65,6 +73,14 @@ void PlayState::onEnter() {
     hudRenderer = std::make_unique<view::HudRenderer>();
 
     levelComplete = false;
+
+    // Snapshot score and coins at level entry — restored on death so dying doesn't
+    // permanently cost progress accumulated during previous levels.
+    checkpointScore = model::GameManager::instance().getScore();
+    checkpointCoins = model::GameManager::instance().getCoins();
+
+    // Start the world-appropriate background theme.
+    playWorldMusic();
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
@@ -125,8 +141,8 @@ void PlayState::update(float deltaTime) {
     if (event == LevelScene::Event::ClearTriggered) {
         // Freeze the world and start the scripted clear play; without a live player or
         // pole there is nothing to animate, so jump straight to the overlay.
-        scene->setCinematicActive(true);
         if (scene->player() && scene->flagPole()) {
+            scene->setCinematicActive(true);
             sequence.begin(*scene);
         } else {
             finishClear();
@@ -142,7 +158,12 @@ void PlayState::update(float deltaTime) {
             manager->replaceState(std::make_unique<GameOverState>(std::move(restartCb)));
         } else {
             model::LogManager::instance().info("Player respawn");
+            // Restore score and coins to the start of this level.
+            model::GameManager::instance().setScore(checkpointScore);
+            model::GameManager::instance().setCoins(checkpointCoins);
             scene->restartLevel();
+            // Restart the world theme music from the beginning on respawn.
+            playWorldMusic();
         }
     }
 
@@ -154,7 +175,35 @@ void PlayState::update(float deltaTime) {
     hudData.time = scene->getRemainingTime();
 }
 
+void PlayState::playWorldMusic() {
+    if (!context || !context->audio) return;
+    // Map WorldType to the audio track IDs registered in audio_meta.json.
+    std::string trackId;
+    switch (scene->getWorldType()) {
+        case model::WorldType::Underground: trackId = "underground"; break;
+        case model::WorldType::Underwater:  trackId = "underwater";  break;
+        case model::WorldType::Castle:      trackId = "castle";      break;
+        case model::WorldType::Overworld:
+        default:                            trackId = "overworld";   break;
+    }
+    // Force restart so respawns replay the theme from the top.
+    context->audio->stopMusic();
+    context->audio->playMusic(trackId);
+}
+
 void PlayState::finishClear() {
+    // Award the clear bonus (a flat reward for reaching the goal, plus time remaining)
+    // before the timer stops.
+    scene->pauseTimer();
+    const int timeBonus = scene->getRemainingTime() * TimeBonusPerSecond;
+    model::GameManager::instance().addScore(GoalBonus + timeBonus);
+    model::GameManager::instance().setLevelClearBonus(GoalBonus + timeBonus);
+
+    // Save the post-clear score and coins as the new checkpoint so that if the player
+    // dies on a later level they revert to this (not the very start of the run).
+    checkpointScore = model::GameManager::instance().getScore();
+    checkpointCoins = model::GameManager::instance().getCoins();
+
     levelComplete = true;
     scene->setCinematicActive(false);
     model::LogManager::instance().info("Level end: " + model::GameManager::instance().getLevelName());

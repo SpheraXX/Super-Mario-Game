@@ -93,3 +93,8 @@ CMakeUserPresets.json
 /include/mbedtls/
 /log.txt
 /trace_log.txt
+/settings.json
+settings.json
+/save.json
+save.json
+

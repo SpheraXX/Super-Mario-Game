@@ -10,4 +10,9 @@ Hammer::Hammer(Vector2 position, Entity* owner, int direction)
     setGravityScale(ArcGravityScale);
 }
 
+void Hammer::update(float deltaTime) {
+    flightTime += deltaTime;
+    Projectile::update(deltaTime);
+}
+
 }

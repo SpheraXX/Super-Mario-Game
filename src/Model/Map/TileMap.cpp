@@ -138,9 +138,10 @@ bool TileMap::hasNextMap() const {
 }
 
 bool TileMap::isSolidTile(char symbol) {
-    // Static tile geometry: ground, the painted castle, and pipes. 'C', 'B', 'M', 'E', 'K'
-    // and '#' spawn as entities (blocks and characters) that manage their own collision,
-    // and scenery ('O', 'T') is decorative.
+    // Static tile geometry: ground and pipes. 'C', 'B', 'M', 'E' and '#' spawn as entities
+    // (blocks and characters) that manage their own collision, and scenery ('O', 'T') --
+    // including the castle, which is a backdrop now that 'E' ends the level -- is
+    // decorative.
     //
     // Pipes are terrain rather than entities. The entity pass only ever resolves the
     // PLAYER against solid entities (see CollisionManager::resolveEntityInteraction, which
@@ -148,7 +149,19 @@ bool TileMap::isSolidTile(char symbol) {
     // entity is invisible to enemies and they walk straight through it. As tiles they are
     // resolved by the tile pass, which runs for every Character. A Pipe entity is still
     // spawned for columns that carry a warp portal, since that needs the column linkage.
-    return symbol == 'G' || isPipeSymbol(symbol) || isCastleSymbol(symbol);
+    // The stair block is terrain for the same reason: it is an unbreakable brick, so it
+    // needs no entity of its own and every Character resolves against it in the tile pass.
+    return isStandableTerrain(symbol) || isPipeSymbol(symbol);
+}
+
+bool TileMap::isStandableTerrain(char symbol) {
+    // The chain (bridge deck) is here and not merely in isSolidTile because standing on it
+    // is the whole point: it has to hold the player AND Bowser up until the axe cuts it,
+    // and it stops doing so the moment ChainTrigger erases those cells, with no special
+    // case anywhere. A firebar's marker cell is also the BLOCK the bar is mounted on —
+    // ordinary footing in the original — which is why one symbol carries both.
+    return symbol == 'G' || symbol == StairSymbol || symbol == ChainSymbol
+           || symbol == FirebarSymbol;
 }
 
 bool TileMap::isPipeSymbol(char symbol) {
@@ -157,12 +170,7 @@ bool TileMap::isPipeSymbol(char symbol) {
 }
 
 bool TileMap::isCastleSymbol(char symbol) {
-    for (const char candidate : CastleSymbols) {
-        if (candidate == symbol) {
-            return true;
-        }
-    }
-    return false;
+    return symbol == CastleUpperSymbol || symbol == CastleLowerSymbol;
 }
 
 void TileMap::parseHeader(const std::string& line) {

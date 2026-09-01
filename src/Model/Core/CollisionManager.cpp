@@ -20,13 +20,24 @@ namespace {
 // side hit (and damage) frame-to-frame.
 constexpr float StompBias = 0.75f;
 
-// A tile the player can stand on. The static ground is 'G', and block cells ('C'/'B'/'#')
-// always hold a static solid entity, so landing on them is equivalent. Grounding on these
-// cells keeps isGrounded stable on top of blocks (gravity + animation never flap).
+// A tile the player can stand on. The static ground is 'G', the stair block is unbreakable
+// terrain, and block cells ('C'/'B'/'#') always hold a static solid entity, so landing on
+// any of them is equivalent. Grounding on these cells keeps isGrounded stable on top of
+// blocks (gravity + animation never flap).
+//
+// This list decides LANDING (the feet), and is deliberately a different set from
+// TileMap::isSolidTile, which decides what blocks movement at all. Anything walkable has to
+// appear in BOTH: a symbol that is solid but not ground stops the player sideways and
+// overhead yet never supports him, so he drops straight through the top of it — which is
+// exactly what the stair block did before it was added here.
 bool isGroundTile(char symbol) {
-    return symbol == 'G' || symbol == 'C' || symbol == 'B' || symbol == '#'
-        || model::TileMap::isPipeSymbol(symbol)
-        || model::TileMap::isCastleSymbol(symbol);
+    // Standable terrain (ground, stair, chain, firebar mount) plus the block ENTITIES,
+    // which are landable but are not terrain, plus pipe tops. Keeping the terrain half in
+    // TileMap::isStandableTerrain is what stops this list drifting out of step with
+    // isSolidTile again.
+    return model::TileMap::isStandableTerrain(symbol)
+        || symbol == 'C' || symbol == 'B' || symbol == '#'
+        || model::TileMap::isPipeSymbol(symbol);
 }
 
 // Minimum upward speed (world units/s) for a top-face block contact to count as a bump.
@@ -280,7 +291,7 @@ void CollisionManager::processEntityCollisions(std::vector<Entity*>& entities) {
             }
 
             // Trigger pass: trigger hitboxes never block or push; they only fire the
-            // onTriggerEnter hook when the other entity is the player (e.g. FlagPole).
+            // onTriggerEnter hook when the other entity is the player (e.g. LevelGoal).
             if (a->hitbox.isTrigger || b->hitbox.isTrigger) {
                 Entity* trigger = a->hitbox.isTrigger ? a : b;
                 Entity* other = (trigger == a) ? b : a;
@@ -451,6 +462,15 @@ bool CollisionManager::resolveEntityInteraction(Entity& a, Entity& b, CollisionT
         // blocker is actually a Block: a solid pipe never reacts to a bump.
         const float upwardSpeed = std::max(0.0f, -playerCharacter.getVelocity().y);
         pushOutOfBlock(playerCharacter, *other, playerSide);
+        // Riding a mover (Slider): pushOutOfBlock already re-snapped the vertical axis to
+        // the blocker's CURRENT (post-move) position, whichever way it moved this frame —
+        // so only the horizontal component still needs carrying across. A blocker that
+        // isn't moving (every ordinary Block/Pipe) reports {0,0} here and this is a no-op.
+        if (playerSide == CollisionType::Bottom) {
+            const Vector2 carry = other->getCarryDelta();
+            playerCharacter.setPosition(
+                {playerCharacter.getPosition().x + carry.x, playerCharacter.getPosition().y});
+        }
         if (playerSide == CollisionType::Top && upwardSpeed >= MinBumpSpeed) {
             if (auto* block = dynamic_cast<Block*>(other)) {
                 // The block reports whether it actually reacted: a spent ? block returns

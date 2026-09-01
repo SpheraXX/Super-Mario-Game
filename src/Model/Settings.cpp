@@ -19,8 +19,10 @@ Settings Settings::defaults() {
   // Mapping virtual keys directly to SFML's default keyboard buttons
   s.keyMoveLeft = static_cast<int>(sf::Keyboard::Key::Left);
   s.keyMoveRight = static_cast<int>(sf::Keyboard::Key::Right);
-  s.keyJump = static_cast<int>(sf::Keyboard::Key::Z);
-  s.keyRun = static_cast<int>(sf::Keyboard::Key::X);
+  s.keyJump = static_cast<int>(sf::Keyboard::Key::Up);
+  s.keyRun = static_cast<int>(sf::Keyboard::Key::LShift);
+  s.keyAttack = static_cast<int>(sf::Keyboard::Key::Z);
+  s.keyCrouch = static_cast<int>(sf::Keyboard::Key::Down);
   s.keyPause = static_cast<int>(sf::Keyboard::Key::Escape);
   s.keyCycleDisplay = static_cast<int>(sf::Keyboard::Key::F2);
 

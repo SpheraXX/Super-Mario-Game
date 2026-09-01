@@ -1,6 +1,7 @@
 #include "View/UI/NineSliceButtonSkin.h"
 #include "View/AssetManager.h"
 #include "View/UI/UITheme.h"
+#include "Model/Core/LogManager.h"
 #include <iostream>
 
 namespace view {
@@ -36,7 +37,7 @@ NineSliceButtonSkin::~NineSliceButtonSkin() {
 void NineSliceButtonSkin::reloadFromConfig() {
     const UIConfig* config = UIConfigManager::instance().getConfig(m_configId);
     if (!config) {
-        std::cerr << "[NineSliceButtonSkin] Config ID not found: " << m_configId << "\n";
+        model::LogManager::instance().error("[NineSliceButtonSkin] Config ID not found: " + m_configId);
         return;
     }
     m_config = *config;

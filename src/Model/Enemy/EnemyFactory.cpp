@@ -10,6 +10,8 @@
 #include "Model/Enemy/Spiny.h"
 #include "Model/Map/TileMap.h"
 
+#include "Model/Core/LogManager.h"
+
 #include <iostream>
 
 namespace model {
@@ -49,12 +51,11 @@ std::unique_ptr<Enemy> EnemyFactory::create(int id, Vector2 tileOrigin) {
                 Vector2{tileOrigin.x, tileOrigin.y + TileMap::TileHeight});
 
         case CheepCheep:
-            std::cerr << "EnemyFactory: enemy id " << id
-                      << " is not implemented yet; skipping this spawn point.\n";
+            model::LogManager::instance().warning("EnemyFactory: enemy id " + std::to_string(id) + " is not implemented yet; skipping this spawn point.");
             return nullptr;
 
         default:
-            std::cerr << "EnemyFactory: unknown enemy id " << id << " in map; skipping.\n";
+            model::LogManager::instance().warning("EnemyFactory: unknown enemy id " + std::to_string(id) + " in map; skipping.");
             return nullptr;
     }
 }

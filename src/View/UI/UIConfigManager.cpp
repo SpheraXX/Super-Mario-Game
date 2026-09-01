@@ -1,4 +1,5 @@
 #include "View/UI/UIConfigManager.h"
+#include "Model/Core/LogManager.h"
 #include "ext/json.hpp"
 #include <algorithm>
 #include <fstream>
@@ -22,7 +23,7 @@ UIConfigManager::UIConfigManager() {
 bool UIConfigManager::load(const std::string& filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
-        std::cerr << "[UIConfigManager] Could not open " << filepath << "\n";
+        model::LogManager::instance().error("[UIConfigManager] Could not open " + filepath);
         return false;
     }
 
@@ -70,12 +71,12 @@ bool UIConfigManager::load(const std::string& filepath) {
             
             configs[key] = config;
         }
-        std::cout << "[UIConfigManager] Successfully loaded " << configs.size() << " configs from " << filepath << "\n";
+        model::LogManager::instance().info("[UIConfigManager] Successfully loaded " + std::to_string(configs.size()) + " configs from " + filepath);
         // Notify all registered skins to reload their texture/rect
         for (auto& [id, cb] : m_reloadCallbacks) cb();
         return true;
     } catch (const json::exception& e) {
-        std::cerr << "[UIConfigManager] JSON parse error in " << filepath << ": " << e.what() << "\n";
+        model::LogManager::instance().error(std::string("[UIConfigManager] JSON parse error in ") + filepath + ": " + e.what());
         return false;
     }
 }

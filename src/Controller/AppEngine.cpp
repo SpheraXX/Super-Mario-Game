@@ -167,13 +167,15 @@ void AppEngine::applyDisplayMode() {
     displayOffsetY = offsetY;
     displayScale   = scale;
 
-    std::cerr << "display: " << (s.fullscreen ? "fullscreen" : "windowed")
-              << " window " << client.x << 'x' << client.y
-              << "  logical " << logicalWidth << 'x' << ScreenHeight
-              << " (" << logicalWidth / model::TileMap::TileWidth << " cols x "
-              << model::TileMap::Rows << " rows)"
-              << "  scale " << scale << 'x'
-              << "  bars " << offsetX << ',' << offsetY << '\n';
+    model::LogManager::instance().info(
+        "display: " + std::string(s.fullscreen ? "fullscreen" : "windowed") +
+        " window " + std::to_string(client.x) + "x" + std::to_string(client.y) +
+        "  logical " + std::to_string(logicalWidth) + "x" + std::to_string(ScreenHeight) +
+        " (" + std::to_string(logicalWidth / model::TileMap::TileWidth) + " cols x " +
+        std::to_string(model::TileMap::Rows) + " rows)" +
+        "  scale " + std::to_string(scale) + "x" +
+        "  bars " + std::to_string(offsetX) + "," + std::to_string(offsetY)
+    );
 
     // Recover graphics context: window recreation destroys all VRAM objects.
     view::AssetManager::instance().reloadAll();

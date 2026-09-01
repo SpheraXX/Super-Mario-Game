@@ -1,4 +1,5 @@
 #include "Model/SettingsManager.h"
+#include "Model/Core/LogManager.h"
 #include "ext/json.hpp"
 #include <filesystem>
 #include <fstream>
@@ -69,7 +70,7 @@ void SettingsManager::load() {
 
     std::ifstream file(FilePath);
     if (!file.is_open()) {
-        std::cerr << "[SettingsManager] settings.json not found, creating with defaults.\n";
+        model::LogManager::instance().warning("[SettingsManager] settings.json not found, creating with defaults.");
         save();
         return;
     }
@@ -111,7 +112,7 @@ void SettingsManager::load() {
         }
 
     } catch (const json::exception& e) {
-        std::cerr << "[SettingsManager] JSON parse error: " << e.what() << "\n";
+        model::LogManager::instance().error(std::string("[SettingsManager] JSON parse error: ") + e.what());
         current = Settings::defaults();
         save();
     }

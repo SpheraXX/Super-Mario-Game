@@ -1,5 +1,6 @@
 #include "Controller/AppEngine.h"
 
+#include "Controller/IntroState.h"
 #include "Controller/MainMenuState.h"
 #include "Model/Core/LogManager.h"
 #include "Model/Core/WorldManager.h"
@@ -43,7 +44,7 @@ AppEngine::AppEngine()
     : audioManager()
     , inputMapper()
     , gameContext{&audioManager, &inputMapper}
-    , states(std::make_unique<MainMenuState>(), &gameContext) {
+    , states(std::make_unique<IntroState>(), &gameContext) {
 
     model::SettingsManager::instance().addObserver(this);
 
@@ -57,7 +58,7 @@ AppEngine::AppEngine()
 
     model::WorldManager::instance().load();
 
-    states.pushState(std::make_unique<MainMenuState>());
+    states.pushState(std::make_unique<IntroState>());
     states.applyPending(); // make the initial state live before the loop starts
 
     // Inject coordinate transform into UI layer once — keeps View independent of Controller.

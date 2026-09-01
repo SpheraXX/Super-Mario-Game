@@ -70,12 +70,25 @@ constexpr sf::Color BgaDimOptions =
 
 namespace layout {
 // Standardized sizes to avoid magic numbers across states
-constexpr float MenuButtonWidth = 160.f;
-constexpr float MenuButtonHeight = 20.f;
-constexpr float MenuButtonGap = 8.f;
+constexpr float MenuButtonWidth = 120.f;
+constexpr float MenuButtonHeight = 26.f;
+constexpr float MenuButtonGap = 2.f;
 
 constexpr float SmallButtonWidth = 80.f;
-constexpr float SmallButtonHeight = 20.f;
+constexpr float SmallButtonHeight = 24.f;
+
+constexpr float ScreenPadding = 20.f;
+
+// Popup / Alert sizes
+constexpr float PopupBtnWidthWide = 80.f;
+constexpr float PopupBtnWidthShort = 60.f;
+
+// Options Tab sizes
+constexpr float OptionWidgetWidth = 120.f;
+constexpr float OptionSliderWidth = 130.f;
+constexpr float KeyBtnWidth = 50.f;
+constexpr float KeyResetWidth = 60.f;
+constexpr float KeyResetOffsetX = 60.f;
 
 constexpr unsigned int TitleFontSize = 16u;
 constexpr unsigned int ButtonFontSize = 8u;
@@ -86,6 +99,18 @@ constexpr float BgaScaleMultiplier =
     1.f; // Scale factor beyond screen-height fit
 constexpr float TitleWidthRatio =
     0.4f; // Title image target width = 40% of screen
+constexpr float TitleYRatio =
+    0.18f; // Title image Y position = 18% of screen height
+
+// Credits screen constants
+constexpr float CreditsLineSpacing   = 25.f;
+constexpr float CreditsLogoPreSpace  = 50.f;
+constexpr float CreditsLogoScale     = 0.3f;
+constexpr float CreditsScrollSpeed   = 40.f;  // Pixels per second
+constexpr float CreditsShineInterval = 3.f;   // Title shine interval in seconds
+constexpr float CreditsCullMarginTop    = 100.f; // Pixels below title header
+constexpr float CreditsCullMarginBottom =  50.f; // Pixels below screen bottom
+constexpr float CreditsCullLogoMargin   = 200.f; // Extra pixels below screen for logo
 } // namespace layout
 
 } // namespace ui

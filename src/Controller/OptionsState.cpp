@@ -27,7 +27,7 @@ int model::Settings::*const KeyFieldMap[11] = {
 }
 
 // Layout constants for addRow
-static constexpr float kRowHeight      = 25.f;
+static constexpr float kRowHeight      = 30.f; // increased from 25.f to accommodate larger buttons
 static constexpr float kRowPaddingX    = 20.f;
 static constexpr float kWidgetOffsetX  = 130.f;
 
@@ -36,7 +36,7 @@ void OptionsState::addRow(view::ui::UIContainer &parent, const sf::Font &font,
                           std::unique_ptr<view::ui::UIElement> widget,
                           float &cursorY) {
   auto lbl = std::make_unique<view::ui::UILabel>(font, label, view::ui::layout::ButtonFontSize);
-  lbl->setPosition(kRowPaddingX, cursorY + 4.f);
+  lbl->setPosition(kRowPaddingX, cursorY + (view::ui::layout::SmallButtonHeight - view::ui::layout::ButtonFontSize) / 2.f);
   widget->setPosition(kWidgetOffsetX, cursorY);
   parent.add(std::move(lbl));
   parent.add(std::move(widget));
@@ -80,7 +80,7 @@ OptionsState::OptionsState()
                                                     sf::Vector2f(view::ui::layout::SmallButtonWidth, view::ui::layout::SmallButtonHeight));
     btn->setOnClick([this, i]() { switchTab(i); });
     tabBar.add(std::move(btn));
-    currentX += 85.f;
+    currentX += view::ui::layout::SmallButtonWidth + 5.f;
 
     tabPanels[i] = view::ui::UIScrollView();
     tabPanels[i].setPosition(10.f, 70.f);
@@ -209,14 +209,14 @@ void OptionsState::buildGraphicsTab(const sf::Font &font) {
   auto fsBtn = std::make_unique<view::ui::UICycleButton>(
       font, "", std::vector<std::string>{"Windowed", "Fullscreen"},
       draft.fullscreen ? 1 : 0, sf::Vector2f(0.f, 0.f),
-      sf::Vector2f(120.f, view::ui::layout::SmallButtonHeight));
+      sf::Vector2f(view::ui::layout::OptionWidgetWidth, view::ui::layout::SmallButtonHeight));
   fsBtn->setOnChange([this](int idx) { draft.fullscreen = (idx == 1); });
   addRow(tabPanels[0], font, "Screen Mode", std::move(fsBtn), cursorY);
 
   std::vector<std::string> ratioOpts = {"4:3", "16:9"};
   auto ratioBtn = std::make_unique<view::ui::UICycleButton>(
       font, "", ratioOpts, static_cast<int>(draft.ratio),
-      sf::Vector2f(0.f, 0.f), sf::Vector2f(120.f, view::ui::layout::SmallButtonHeight));
+      sf::Vector2f(0.f, 0.f), sf::Vector2f(view::ui::layout::OptionWidgetWidth, view::ui::layout::SmallButtonHeight));
   ratioBtn->setOnChange([this](int idx) {
     draft.ratio = static_cast<model::AspectRatio>(idx);
     draft.resolutionIndex = 0; // reset to default
@@ -243,7 +243,7 @@ void OptionsState::buildGraphicsTab(const sf::Font &font) {
                           static_cast<int>(resOpts.size() - 1));
   auto resBtn = std::make_unique<view::ui::UICycleButton>(
       font, "", resOpts, resIdx, sf::Vector2f(0.f, 0.f),
-      sf::Vector2f(120.f, view::ui::layout::SmallButtonHeight));
+      sf::Vector2f(view::ui::layout::OptionWidgetWidth, view::ui::layout::SmallButtonHeight));
   resolutionBtn = resBtn.get();
   resBtn->setOnChange([this](int idx) { draft.resolutionIndex = idx; });
   addRow(tabPanels[0], font, "Resolution", std::move(resBtn), cursorY);
@@ -251,7 +251,7 @@ void OptionsState::buildGraphicsTab(const sf::Font &font) {
   std::vector<std::string> qOpts = {"Low", "Medium", "High"};
   auto qBtn = std::make_unique<view::ui::UICycleButton>(
       font, "", qOpts, static_cast<int>(draft.quality), sf::Vector2f(0.f, 0.f),
-      sf::Vector2f(120.f, view::ui::layout::SmallButtonHeight));
+      sf::Vector2f(view::ui::layout::OptionWidgetWidth, view::ui::layout::SmallButtonHeight));
   qBtn->setOnChange([this](int idx) {
     draft.quality = static_cast<model::GraphicsQuality>(idx);
   });
@@ -266,7 +266,7 @@ void OptionsState::addVolumeRow(view::ui::UIScrollView &panel,
                                float &cursorY) {
   auto slider = std::make_unique<view::ui::UISlider>(
       font, "", 0, 100, 5, initialValue, sf::Vector2f(0, 0),
-      sf::Vector2f(130.f, view::ui::layout::SmallButtonHeight));
+      sf::Vector2f(view::ui::layout::OptionSliderWidth, view::ui::layout::SmallButtonHeight));
   slider->setOnChange([this, onChange = std::move(onChange)](int v) {
     onChange(v);
     if (context && context->audio) {
@@ -318,7 +318,7 @@ void OptionsState::buildControlsTab(const sf::Font &font) {
     keyIcons[i] = icon.get();
 
     auto btn = std::make_unique<view::ui::UIButton>(
-        font, "", view::ui::layout::ButtonFontSize, sf::Vector2f(0.f, 0.f), sf::Vector2f(50.f, view::ui::layout::SmallButtonHeight));
+        font, "", view::ui::layout::ButtonFontSize, sf::Vector2f(0.f, 0.f), sf::Vector2f(view::ui::layout::KeyBtnWidth, view::ui::layout::SmallButtonHeight));
     btn->setColors(view::ui::theme::ColorMaskNormal,
                    view::ui::theme::ColorMaskHovered, sf::Color::Transparent);
     btn->setMaskMode(true); // stays transparent even when disabled
@@ -338,7 +338,7 @@ void OptionsState::buildControlsTab(const sf::Font &font) {
     }
 
     auto rstBtn = std::make_unique<view::ui::UIButton>(
-        font, "Reset", view::ui::layout::ButtonFontSize, sf::Vector2f(60.f, 0.f), sf::Vector2f(45.f, view::ui::layout::SmallButtonHeight));
+        font, "Reset", view::ui::layout::ButtonFontSize, sf::Vector2f(view::ui::layout::KeyResetOffsetX, 0.f), sf::Vector2f(view::ui::layout::KeyResetWidth, view::ui::layout::SmallButtonHeight));
     if (i == 10) {
       rstBtn->setEnabled(false);
     } else {
@@ -431,7 +431,7 @@ void OptionsState::buildLanguageTab(const sf::Font &font) {
   std::vector<std::string> opts = {"English", "Vietnamese"};
   auto lang = std::make_unique<view::ui::UICycleButton>(
       font, "", opts, static_cast<int>(draft.language), sf::Vector2f(0, 0),
-      sf::Vector2f(120.f, view::ui::layout::SmallButtonHeight));
+      sf::Vector2f(view::ui::layout::OptionWidgetWidth, view::ui::layout::SmallButtonHeight));
   lang->setOnChange(
       [this](int idx) { draft.language = static_cast<model::Language>(idx); });
   addRow(tabPanels[3], font, "Language", std::move(lang), cursorY);
@@ -469,7 +469,7 @@ void OptionsState::resetSettings() {
 
 void OptionsState::update(float dt) {
   if (uiCtx.applyBtn) {
-    if (draft != model::SettingsManager::instance().get() && !hasKeyConflicts()) {
+    if (draft != model::SettingsManager::instance().get()) {
       uiCtx.applyBtn->setEnabled(true);
     } else {
       uiCtx.applyBtn->setEnabled(false);

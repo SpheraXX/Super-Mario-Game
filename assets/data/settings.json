@@ -11,8 +11,8 @@
     "graphics": {
         "fullscreen": false,
         "quality": 0,
-        "ratio": 0,
-        "resolutionIndex": 1,
+        "ratio": 1,
+        "resolutionIndex": 0,
         "vsync": true
     },
     "language": "en",

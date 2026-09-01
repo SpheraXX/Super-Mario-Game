@@ -26,18 +26,18 @@ WarningPopupState::WarningPopupState(const std::string& msg, Type type,
     secondaryBtnText = secondaryLabel.empty() ? "NO" : secondaryLabel;
 
     if (primaryBtnText.length() > 4 || secondaryBtnText.length() > 4) {
-        btnWidth = 75.f;
+        btnWidth = view::ui::layout::PopupBtnWidthWide;
     } else {
-        btnWidth = 60.f;
+        btnWidth = view::ui::layout::PopupBtnWidthShort;
     }
     
     if (popupType == Type::YesNo) {
-        auto btnYes = std::make_unique<view::ui::UIButton>(font, primaryBtnText, 8, sf::Vector2f(0.f, 0.f), sf::Vector2f(btnWidth, 20.f));
+        auto btnYes = std::make_unique<view::ui::UIButton>(font, primaryBtnText, 8, sf::Vector2f(0.f, 0.f), sf::Vector2f(btnWidth, view::ui::layout::SmallButtonHeight));
         btnYes->setOnClick([this]() {
             if (onPrimaryCallback) onPrimaryCallback();
         });
         
-        auto btnNo = std::make_unique<view::ui::UIButton>(font, secondaryBtnText, 8, sf::Vector2f(btnWidth + kBtnGap, 0.f), sf::Vector2f(btnWidth, 20.f));
+        auto btnNo = std::make_unique<view::ui::UIButton>(font, secondaryBtnText, 8, sf::Vector2f(btnWidth + kBtnGap, 0.f), sf::Vector2f(btnWidth, view::ui::layout::SmallButtonHeight));
         btnNo->setOnClick([this]() {
             if (onSecondaryCallback) onSecondaryCallback();
         });
@@ -45,7 +45,7 @@ WarningPopupState::WarningPopupState(const std::string& msg, Type type,
         buttonContainer.add(std::move(btnYes));
         buttonContainer.add(std::move(btnNo));
     } else if (popupType == Type::OkOnly) {
-        auto btnOk = std::make_unique<view::ui::UIButton>(font, primaryBtnText, 8, sf::Vector2f(0.f, 0.f), sf::Vector2f(btnWidth, 20.f));
+        auto btnOk = std::make_unique<view::ui::UIButton>(font, primaryBtnText, 8, sf::Vector2f(0.f, 0.f), sf::Vector2f(btnWidth, view::ui::layout::SmallButtonHeight));
         btnOk->setOnClick([this]() {
             if (onPrimaryCallback) onPrimaryCallback();
         });

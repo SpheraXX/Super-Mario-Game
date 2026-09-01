@@ -107,7 +107,6 @@ void SettingsManager::load() {
             if (c.contains("run"))        current.keyRun       = c["run"].get<int>();
             if (c.contains("pause"))      current.keyPause     = c["pause"].get<int>();
             if (c.contains("cycleDisplay")) current.keyCycleDisplay = c["cycleDisplay"].get<int>();
-            if (c.contains("back"))       current.keyBack      = c["back"].get<int>();
             if (c.contains("slot"))       current.controlSlot  = c["slot"].get<int>();
         }
 
@@ -141,7 +140,6 @@ void SettingsManager::save() const {
     j["controls"]["run"]          = current.keyRun;
     j["controls"]["pause"]        = current.keyPause;
     j["controls"]["cycleDisplay"] = current.keyCycleDisplay;
-    j["controls"]["back"]         = current.keyBack;
     j["controls"]["slot"]         = current.controlSlot;
 
     std::ofstream file(FilePath);

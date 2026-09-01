@@ -1,6 +1,5 @@
 {
     "controls": {
-        "back": 36,
         "cycleDisplay": 86,
         "jump": 22,
         "moveLeft": 0,
@@ -12,8 +11,8 @@
     "graphics": {
         "fullscreen": false,
         "quality": 0,
-        "ratio": 1,
-        "resolutionIndex": 0,
+        "ratio": 0,
+        "resolutionIndex": 1,
         "vsync": true
     },
     "language": "en",

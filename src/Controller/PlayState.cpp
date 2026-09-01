@@ -71,7 +71,6 @@ void PlayState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
         const auto& settings = model::SettingsManager::instance().get();
         if (static_cast<int>(key->code) == settings.keyPause ||
-            static_cast<int>(key->code) == settings.keyBack ||
             key->code == sf::Keyboard::Key::Escape) {
             model::LogManager::instance().info("Pause");
             manager->pushState(std::make_unique<PauseState>(

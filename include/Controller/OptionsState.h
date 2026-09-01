@@ -62,7 +62,7 @@ private:
     sf::Sprite bgaSprite;
 
     view::ui::UILabel     titleLabel;
-    view::ui::UIContainer tabBar;
+    view::ui::UIScrollView tabBar;
     
     std::array<view::ui::UIScrollView, 4> tabPanels;
     int currentTab = 0;

@@ -2,6 +2,7 @@
 
 #include "Controller/MainMenuState.h"
 #include "Model/Core/LogManager.h"
+#include "Model/Core/WorldManager.h"
 #include "Model/Map/TileMap.h"
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
@@ -53,6 +54,8 @@ AppEngine::AppEngine()
     if (scene.getSize().x == 0) {
         throw std::runtime_error("Could not create the offscreen render target");
     }
+
+    model::WorldManager::instance().load();
 
     states.pushState(std::make_unique<MainMenuState>());
     states.applyPending(); // make the initial state live before the loop starts

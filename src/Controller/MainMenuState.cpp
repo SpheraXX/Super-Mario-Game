@@ -9,6 +9,7 @@
 #include "Controller/PlayState.h"
 #include "Controller/StateManager.h"
 #include "Controller/WarningPopupState.h"
+#include "Controller/WorldSelectState.h"
 #include "Model/Core/GameManager.h"
 #include "Model/Save/SaveData.h"
 #include "Model/Save/SaveManager.h"
@@ -28,9 +29,6 @@ namespace controller {
 namespace {
 constexpr sf::Color BgColor = sf::Color(10, 10, 30);
 constexpr sf::Color TitleColor = sf::Color(230, 90, 30);
-constexpr sf::Color BtnNormal = sf::Color(40, 40, 70);
-constexpr sf::Color BtnHovered = sf::Color(80, 80, 130);
-constexpr sf::Color BtnText = sf::Color(220, 220, 240);
 } // namespace
 
 // ── Lifecycle
@@ -89,7 +87,6 @@ void MainMenuState::buildUI() {
         font, label, view::ui::layout::ButtonFontSize, sf::Vector2f{listX, 0.f},
         sf::Vector2f{view::ui::layout::MenuButtonWidth,
                      view::ui::layout::MenuButtonHeight});
-    btn->setColors(BtnNormal, BtnHovered, BtnText);
     btn->setOnClick(std::move(cmd));
     menuList.add(std::move(btn));
   };
@@ -116,12 +113,12 @@ void MainMenuState::buildUI() {
             model::SaveManager::instance().deleteSave();
             model::GameManager::instance().reset();
             manager->clear();
-            manager->pushState(std::make_unique<PlayState>());
+            manager->pushState(std::make_unique<WorldSelectState>());
           },
           "CONTINUE", "NEW GAME"));
     } else {
       model::GameManager::instance().reset();
-      manager->replaceState(std::make_unique<PlayState>());
+      manager->replaceState(std::make_unique<WorldSelectState>());
     }
   });
 
@@ -149,7 +146,9 @@ void MainMenuState::onDisplayModeChanged() {
   const float H = static_cast<float>(AppEngine::ScreenHeight);
 
   const sf::Texture &tex = bgaSprite.getTexture();
-  float scale = H / static_cast<float>(tex.getSize().y) * view::ui::layout::BgaScaleMultiplier;
+  float scaleX = W / static_cast<float>(tex.getSize().x);
+  float scaleY = H / static_cast<float>(tex.getSize().y);
+  float scale = std::max(scaleX, scaleY) * view::ui::layout::BgaScaleMultiplier;
   bgaSprite.setScale({scale, scale});
   bgaSprite.setOrigin({static_cast<float>(tex.getSize().x) / 2.f,
                        static_cast<float>(tex.getSize().y) / 2.f});

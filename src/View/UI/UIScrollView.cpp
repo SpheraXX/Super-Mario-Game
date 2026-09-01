@@ -12,6 +12,11 @@ void UIScrollView::setBounds(const sf::FloatRect& boundsRect) {
     updateScrollbarVisuals();
 }
 
+void UIScrollView::setContentWidth(float width) {
+    contentWidth = width;
+    updateScrollbarVisuals();
+}
+
 void UIScrollView::setContentHeight(float height) {
     contentHeight = height;
     updateScrollbarVisuals();
@@ -20,24 +25,30 @@ void UIScrollView::setContentHeight(float height) {
 void UIScrollView::clear() {
     UIContainer::clear();
     scrollY = 0.f;
+    scrollX = 0.f;
     contentHeight = 0.f;
+    contentWidth = 0.f;
     updateScrollbarVisuals();
 }
 
-void UIScrollView::applyScroll(float deltaY) {
-    float oldScroll = scrollY;
+void UIScrollView::applyScroll(float deltaX, float deltaY) {
+    float oldScrollY = scrollY;
     scrollY -= deltaY;
+    float maxScrollY = std::max(0.f, contentHeight - bounds.size.y);
+    scrollY = std::clamp(scrollY, 0.f, maxScrollY);
+    float actualDeltaY = oldScrollY - scrollY;
     
-    float maxScroll = std::max(0.f, contentHeight - bounds.size.y);
-    scrollY = std::clamp(scrollY, 0.f, maxScroll);
-    
-    float actualDelta = oldScroll - scrollY;
+    float oldScrollX = scrollX;
+    scrollX -= deltaX;
+    float maxScrollX = std::max(0.f, contentWidth - bounds.size.x);
+    scrollX = std::clamp(scrollX, 0.f, maxScrollX);
+    float actualDeltaX = oldScrollX - scrollX;
     
     // Shift all children
     for (auto& child : children) {
         float cx = child->getPosition().x;
         float cy = child->getPosition().y;
-        child->setPosition(cx, cy + actualDelta);
+        child->setPosition(cx + actualDeltaX, cy + actualDeltaY);
     }
     
     updateScrollbarVisuals();
@@ -45,26 +56,43 @@ void UIScrollView::applyScroll(float deltaY) {
 
 void UIScrollView::updateScrollbarVisuals() {
     if (contentHeight <= bounds.size.y || bounds.size.y == 0.f) {
-        scrollbarThumb.setSize({0.f, 0.f}); // Hide scrollbar if no scrolling needed
-        return;
+        scrollbarThumbY.setSize({0.f, 0.f}); // Hide scrollbar if no scrolling needed
+    } else {
+        float viewRatio = bounds.size.y / contentHeight;
+        float thumbHeight = std::max(10.f, bounds.size.y * viewRatio);
+        
+        float maxScroll = contentHeight - bounds.size.y;
+        float scrollRatio = scrollY / maxScroll;
+        
+        float maxThumbY = bounds.size.y - thumbHeight;
+        float thumbY = bounds.position.y + (scrollRatio * maxThumbY);
+        
+        scrollbarThumbY.setSize({4.f, thumbHeight});
+        scrollbarThumbY.setPosition({bounds.position.x + bounds.size.x - 4.f, thumbY});
     }
     
-    float viewRatio = bounds.size.y / contentHeight;
-    float thumbHeight = std::max(10.f, bounds.size.y * viewRatio);
-    
-    float maxScroll = contentHeight - bounds.size.y;
-    float scrollRatio = scrollY / maxScroll;
-    
-    float maxThumbY = bounds.size.y - thumbHeight;
-    float thumbY = bounds.position.y + (scrollRatio * maxThumbY);
-    
-    scrollbarThumb.setSize({4.f, thumbHeight});
-    scrollbarThumb.setPosition({bounds.position.x + bounds.size.x - 4.f, thumbY});
+    if (contentWidth <= bounds.size.x || bounds.size.x == 0.f) {
+        scrollbarThumbX.setSize({0.f, 0.f});
+    } else {
+        float viewRatio = bounds.size.x / contentWidth;
+        float thumbWidth = std::max(10.f, bounds.size.x * viewRatio);
+        
+        float maxScroll = contentWidth - bounds.size.x;
+        float scrollRatio = scrollX / maxScroll;
+        
+        float maxThumbX = bounds.size.x - thumbWidth;
+        float thumbX = bounds.position.x + (scrollRatio * maxThumbX);
+        
+        scrollbarThumbX.setSize({thumbWidth, 4.f});
+        scrollbarThumbX.setPosition({thumbX, bounds.position.y + bounds.size.y - 4.f});
+    }
     
     if (isMouseInside) {
-        scrollbarThumb.setFillColor(view::ui::theme::ScrollbarHovered);
+        scrollbarThumbY.setFillColor(view::ui::theme::ScrollbarHovered);
+        scrollbarThumbX.setFillColor(view::ui::theme::ScrollbarHovered);
     } else {
-        scrollbarThumb.setFillColor(view::ui::theme::ScrollbarNormal);
+        scrollbarThumbY.setFillColor(view::ui::theme::ScrollbarNormal);
+        scrollbarThumbX.setFillColor(view::ui::theme::ScrollbarNormal);
     }
 }
 
@@ -75,7 +103,15 @@ bool UIScrollView::handleEvent(const sf::Event& event) {
         sf::Vector2f lp = transformCoordinate(scrolled->position);
         if (bounds.contains(lp)) {
             constexpr float ScrollSpeed = 25.f;
-            applyScroll(scrolled->delta * ScrollSpeed);
+            if (scrolled->wheel == sf::Mouse::Wheel::Horizontal) {
+                applyScroll(scrolled->delta * ScrollSpeed, 0.f);
+            } else {
+                if (contentHeight > bounds.size.y) {
+                    applyScroll(0.f, scrolled->delta * ScrollSpeed);
+                } else if (contentWidth > bounds.size.x) {
+                    applyScroll(scrolled->delta * ScrollSpeed, 0.f);
+                }
+            }
             return true; // Consume event
         }
     }
@@ -138,8 +174,11 @@ void UIScrollView::render(sf::RenderTarget& target) {
     target.setView(oldView);
     
     // Render scrollbar on top of the clipped view, using the original target view
-    if (scrollbarThumb.getSize().y > 0.f) {
-        target.draw(scrollbarThumb);
+    if (scrollbarThumbY.getSize().y > 0.f) {
+        target.draw(scrollbarThumbY);
+    }
+    if (scrollbarThumbX.getSize().x > 0.f) {
+        target.draw(scrollbarThumbX);
     }
 }
 

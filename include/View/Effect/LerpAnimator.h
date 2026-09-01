@@ -18,7 +18,7 @@ public:
     LerpAnimator() = default;
 
     LerpAnimator(float from, float to, float duration, Easing easing = Easing::OutQuad)
-        : m_from(from), m_to(to), m_duration(duration), m_easing(easing) {
+        : m_from(from), m_to(to), m_duration(duration), m_easing(easing), m_currentValue(from) {
         if (m_duration <= 0.0f) {
             m_duration = 0.001f; // Prevent division by zero
         }

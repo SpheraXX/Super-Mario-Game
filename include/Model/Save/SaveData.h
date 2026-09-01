@@ -68,7 +68,7 @@ struct LevelSaveData {
 
 struct GameSaveData {
     int score = 0;
-    int lives = 10;
+    int lives = 3;
     int coins = 0;
     int version = 1;
     LevelSaveData level;

@@ -53,7 +53,7 @@ public:
     // Restore starting values for a brand new game.
     void reset();
 
-    static constexpr int StartingLives = 10;
+    static constexpr int StartingLives = 3;
     static constexpr int FirstLevel = 1;
     static constexpr int CoinsPerLife = 100;
     // The map the game boots into (AppEngine starts directly in PlayState).

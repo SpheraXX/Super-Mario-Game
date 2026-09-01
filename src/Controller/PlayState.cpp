@@ -136,7 +136,11 @@ void PlayState::update(float deltaTime) {
         // The player's death fall is over: either the run is over or the whole level
         // restarts from its first area (whatever area the body fell in).
         if (model::GameManager::instance().isGameOver()) {
-            manager->replaceState(std::make_unique<GameOverState>());
+            auto restartCb = [m = this->manager]() {
+                model::GameManager::instance().reset();
+                m->replaceState(std::make_unique<PlayState>());
+            };
+            manager->replaceState(std::make_unique<GameOverState>(std::move(restartCb)));
         } else {
             model::LogManager::instance().info("Player respawn");
             scene->restartLevel();

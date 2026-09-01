@@ -4,6 +4,7 @@
 // This is the DIP boundary: the header (and thus every file that includes it)
 // stays decoupled from gameplay internals.
 #include "Controller/AppEngine.h"
+#include "Controller/CreditsState.h"
 #include "Controller/IAudioManager.h"
 #include "Controller/OptionsState.h"
 #include "Controller/PlayState.h"
@@ -130,7 +131,7 @@ void MainMenuState::buildUI() {
   });
 
   makeBtn("CREDITS", [this]() {
-    // TODO: push CreditsState.
+    manager->pushState(std::make_unique<CreditsState>());
   });
 
   makeBtn("EXIT", [this]() { manager->clear(); });

@@ -52,7 +52,7 @@ void ProfileInputPopupState::relayout(float W, float H) {
 
     buttonContainer = view::ui::UIContainer(view::ui::UIContainer::Layout::None, 0.f);
     
-    float btnW = view::ui::layout::PopupBtnWidthShort;
+    float btnW = view::ui::layout::PopupBtnWidthWide;
     float btnH = view::ui::layout::SmallButtonHeight;
     float gap = view::ui::layout::ProfilePopupBtnGap;
 

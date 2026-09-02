@@ -304,6 +304,17 @@ void OptionsState::buildSoundTab(const sf::Font &font) {
 
 void OptionsState::buildControlsTab(const sf::Font &font) {
   float cursorY = 10.f;
+
+  // Character: takes effect on APPLY like everything else here, including live (mid-level,
+  // if PlayState is paused underneath) via PlayState::onResume noticing the change.
+  std::vector<std::string> charOpts = {"Mario", "Luigi"};
+  auto charBtn = std::make_unique<view::ui::UICycleButton>(
+      font, "", charOpts, draft.luigiSelected ? 1 : 0, sf::Vector2f(0.f, 0.f),
+      sf::Vector2f(view::ui::layout::OptionWidgetWidth, view::ui::layout::SmallButtonHeight));
+  charBtn->setOnChange(
+      [this](int idx) { draft.luigiSelected = (idx == 1); });
+  addRow(tabPanels[2], font, "Character", std::move(charBtn), cursorY);
+
   std::vector<std::string> keyLabels = {
       "Move Left", "Move Right", "Jump",     "Run",
       "Pause",     "Dash",       "Attack",   "Crouch",

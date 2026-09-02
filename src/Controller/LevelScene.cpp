@@ -38,6 +38,7 @@
 #include "Model/Player/Luigi.h"
 #include "Model/Player/Mario.h"
 #include "Model/Player/Player.h"
+#include "Model/SettingsManager.h"
 #include "Model/World/WorldSet.h"
 #include "View/Base/RenderContext.h"
 #include "View/Block/BrickBlockRenderer.h"
@@ -351,6 +352,44 @@ void LevelScene::restartLevel() {
     loadArea(0);
 }
 
+void LevelScene::switchCharacter(bool toLuigi) {
+    if (!playerPtr || playerPtr->isLuigi() == toLuigi) {
+        return;
+    }
+
+    // Snapshot exactly the fields PlayState::captureSaveData() persists for the player,
+    // so the new character picks up position/velocity/facing/size/power unchanged --
+    // the same restoreState() a death-respawn already uses.
+    model::PlayerSaveData snapshot;
+    snapshot.posX = playerPtr->getPosition().x;
+    snapshot.posY = playerPtr->getPosition().y;
+    snapshot.velX = playerPtr->getVelocity().x;
+    snapshot.velY = playerPtr->getVelocity().y;
+    snapshot.isBig = playerPtr->isBig();
+    snapshot.starDuration = playerPtr->getStarDuration();
+    snapshot.facingDirection = playerPtr->getDirection();
+    snapshot.power = playerPtr->isStar() ? "Star" : (playerPtr->isFire() ? "Fire" : "None");
+
+    const auto it = std::find_if(entities.begin(), entities.end(),
+        [this](const std::unique_ptr<model::Entity>& e) { return e.get() == playerPtr; });
+    if (it == entities.end()) {
+        return;
+    }
+    entities.erase(it);
+    playerPtr = nullptr;
+
+    std::unique_ptr<model::Player> fresh;
+    if (toLuigi) {
+        fresh = std::make_unique<model::Luigi>(model::Vector2{snapshot.posX, snapshot.posY});
+    } else {
+        fresh = std::make_unique<model::Mario>(model::Vector2{snapshot.posX, snapshot.posY});
+    }
+    fresh->restoreState(snapshot, /*keepPosition=*/true);
+    fresh->setWorld(model::WorldSet::forType(worldType));
+
+    playerPtr = static_cast<model::Player*>(addEntity(std::move(fresh)));
+}
+
 void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
     const std::size_t tileWidth = model::TileMap::TileWidth;
     const std::size_t tileHeight = model::TileMap::TileHeight;
@@ -375,6 +414,11 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
     }
     goalPtr = nullptr;
 
+    // A save's own character always wins on resume; a brand-new spawn (no save at all)
+    // uses whichever character is currently selected in Options.
+    const bool wantLuigi = playerSave ? playerSave->isLuigi
+                                      : model::SettingsManager::instance().get().luigiSelected;
+
     for (std::size_t row = 0; row < rows; ++row) {
         for (std::size_t column = 0; column < columns; ++column) {
             const char symbol = map.getTile(row, column);
@@ -387,7 +431,7 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
                 case 'M':
                     if (!playerPtr) {
                         std::unique_ptr<model::Player> player;
-                        if (playerSave && playerSave->isLuigi) {
+                        if (wantLuigi) {
                             player = std::make_unique<model::Luigi>(position);
                         } else {
                             player = std::make_unique<model::Mario>(position);
@@ -566,7 +610,7 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
     if (!playerPtr) {
         const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
         std::unique_ptr<model::Player> player;
-        if (playerSave && playerSave->isLuigi) {
+        if (wantLuigi) {
             player = std::make_unique<model::Luigi>(
                 model::Vector2{static_cast<float>(2 * tileWidth), groundY});
         } else {

@@ -115,6 +115,14 @@ public:
     // score, coins and the timer keep their state like a plain resetLevel does.
     void restartLevel();
 
+    // Live character swap: replaces the current player entity with a freshly-built
+    // Mario/Luigi at the same position, carrying over velocity/facing/size/power exactly
+    // as a death-respawn restore does. Called by PlayState::onResume when the Character
+    // option was changed while this level was paused. No-op if already the requested
+    // character, or if there is no live player. Must be called outside update()'s entity
+    // loop (see addEntity's contract).
+    void switchCharacter(bool toLuigi);
+
 private:
     void loadArea(std::size_t areaIndex, bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr, bool keepPlayerPosition = true);
     // True when the currently loaded area's grid already carries an author-placed goal

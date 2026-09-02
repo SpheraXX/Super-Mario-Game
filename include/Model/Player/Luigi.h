@@ -20,10 +20,14 @@ public:
     // concrete type; without the override Luigi would render with Mario's palette.
     bool isLuigi() const override { return true; }
 
-    static constexpr float WalkSpeed = 80.0f;
-    static constexpr float RunSpeed = 175.0f;
-    static constexpr float MaxJumpSpeed = 300.0f;
-    static constexpr float JumpAccel = 1700.0f;
+    // Classic Luigi identity (Mario: 90/180/340/1550): quicker on his feet AND a taller,
+    // floatier jump — both the higher ceiling (MaxJumpSpeed) and the stronger boost rate
+    // (JumpAccel) contribute, so the extra height reads throughout the arc, not just at
+    // the top.
+    static constexpr float WalkSpeed = 100.0f;
+    static constexpr float RunSpeed = 210.0f;
+    static constexpr float MaxJumpSpeed = 400.0f;
+    static constexpr float JumpAccel = 1650.0f;
 
     // Luigi's stomp bounce is springier than Mario's: a higher rebound fraction and a
     // smaller subtraction, matching his floaty, high-jump identity. At the same ~350px/s

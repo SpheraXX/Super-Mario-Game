@@ -23,6 +23,11 @@ public:
     ~PlayState() override;
 
     void onEnter() override;
+    // Fires when a state pushed on top of this one (Pause, and Options pushed from
+    // Pause) is popped back down to PlayState -- the natural point to notice the player
+    // changed the Character option while paused and apply it live (see
+    // LevelScene::switchCharacter).
+    void onResume() override;
     void handleEvent(const sf::Event& event) override;
     void update(float deltaTime) override;
     void render(sf::RenderTarget& window) override;

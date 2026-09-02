@@ -15,6 +15,11 @@ struct Settings {
     int              resolutionIndex  = 0;
     GraphicsQuality  quality          = GraphicsQuality::Medium;
     bool             vsync            = true;
+    // Which character a fresh spawn uses (Mario if false). A save file's own
+    // PlayerSaveData::isLuigi always wins over this when resuming an existing save; this
+    // field only decides brand-new spawns and drives PlayState's live mid-level swap when
+    // changed from the Options screen (see PlayState::onResume, LevelScene::switchCharacter).
+    bool             luigiSelected    = false;
 
     int  masterVolume  = 100;  
     int  musicVolume   = 80;
@@ -39,7 +44,8 @@ struct Settings {
     bool operator==(const Settings& o) const {
         return fullscreen == o.fullscreen && ratio == o.ratio &&
                resolutionIndex == o.resolutionIndex &&
-               quality == o.quality && vsync == o.vsync && masterVolume == o.masterVolume &&
+               quality == o.quality && vsync == o.vsync &&
+               luigiSelected == o.luigiSelected && masterVolume == o.masterVolume &&
                musicVolume == o.musicVolume && sfxVolume == o.sfxVolume &&
                language == o.language && keyMoveLeft == o.keyMoveLeft &&
                keyMoveRight == o.keyMoveRight && keyJump == o.keyJump &&

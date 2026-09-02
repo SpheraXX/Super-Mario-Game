@@ -103,6 +103,16 @@ void PlayState::onEnter() {
     model::SaveManager::instance().load(m_cachedSaveBase);
 }
 
+void PlayState::onResume() {
+    if (!scene || !scene->player()) {
+        return;
+    }
+    const bool wantLuigi = model::SettingsManager::instance().get().luigiSelected;
+    if (scene->player()->isLuigi() != wantLuigi) {
+        scene->switchCharacter(wantLuigi);
+    }
+}
+
 void PlayState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
         const auto& settings = model::SettingsManager::instance().get();

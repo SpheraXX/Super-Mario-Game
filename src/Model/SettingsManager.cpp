@@ -75,6 +75,11 @@ void SettingsManager::load() {
             if (g.contains("vsync"))           current.vsync           = g["vsync"].get<bool>();
         }
 
+        if (j.contains("gameplay")) {
+            const auto& gp = j["gameplay"];
+            if (gp.contains("luigiSelected")) current.luigiSelected = gp["luigiSelected"].get<bool>();
+        }
+
         if (j.contains("sound")) {
             const auto& s = j["sound"];
             if (s.contains("masterVolume")) current.masterVolume = s["masterVolume"].get<int>();
@@ -114,6 +119,8 @@ void SettingsManager::save() const {
     j["graphics"]["resolutionIndex"] = current.resolutionIndex;
     j["graphics"]["quality"]         = static_cast<int>(current.quality);
     j["graphics"]["vsync"]           = current.vsync;
+
+    j["gameplay"]["luigiSelected"] = current.luigiSelected;
 
     j["sound"]["masterVolume"]    = current.masterVolume;
     j["sound"]["musicVolume"]     = current.musicVolume;

@@ -9,6 +9,7 @@ Settings Settings::defaults() {
   s.ratio = AspectRatio::Ratio4x3;
   s.resolutionIndex = 0; // 800x600 for 4x3 by default
   s.quality = GraphicsQuality::Medium;
+  s.luigiSelected = false;
 
   s.masterVolume = 100;
   s.musicVolume = 80;

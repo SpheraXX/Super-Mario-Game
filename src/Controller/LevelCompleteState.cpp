@@ -1,7 +1,7 @@
 #include "Controller/LevelCompleteState.h"
 
 #include "Controller/AppEngine.h"
-#include "Controller/MenuState.h"
+#include "Controller/MainMenuState.h"
 #include "Controller/PlayState.h"
 #include "Controller/StateManager.h"
 #include "Model/Core/GameManager.h"
@@ -21,10 +21,15 @@ void LevelCompleteState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
         if (key->code == sf::Keyboard::Key::Enter || key->code == sf::Keyboard::Key::Space) {
             auto& game = model::GameManager::instance();
-            // A finished map with no '; next=' is the last one: back to the menu.
+            // A finished map with no '; next=' is the last one: back to the menu. This
+            // must be the real MainMenuState, not the legacy MenuState stub -- that stub's
+            // Enter/Space jumps straight into a fresh PlayState using whatever map
+            // GameManager::reset() just fell back to (the campaign default), which is
+            // exactly what made finishing a custom map look like it silently switched you
+            // into an unrelated map.
             if (game.getNextMapPath().empty()) {
                 manager->clear();
-                manager->pushState(std::make_unique<MenuState>());
+                manager->pushState(std::make_unique<MainMenuState>());
             } else {
                 game.setCurrentMapPath(game.getNextMapPath());
                 game.nextLevel();

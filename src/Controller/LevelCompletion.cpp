@@ -25,24 +25,15 @@ void LevelCompletion::build(
     const float groundTop = geometry::groundTopAt(map, baseColumns > 0 ? baseColumns - 1 : 0);
     const float poleHeight = 112.0f;
 
-    // The goal castle is painted into the grid from its 21-tile sheet (see
-    // TileMap::CastleSymbols), row-major over a 5x5 silhouette standing on the ground:
-    // the upper two rows are the 3-wide tower, the lower three the 5-wide base, the
-    // centre-bottom pair is the door, and the two outer cells of the tower rows stay
-    // air. The paint is deterministic, so re-running resetLevel (enter/death) is
-    // idempotent.
+    // The goal castle is painted into the grid using CastleUpperSymbol and CastleLowerSymbol
+    // standing on the ground: upper tower is 3x2, lower base is 5x3.
     const std::size_t groundRowTop =
         rows - 1 - static_cast<std::size_t>(groundTop / static_cast<float>(tileHeight));
     const std::size_t castleCol = baseColumns + CastleOffsetTiles;
-    std::size_t castleIndex = 0;
-    for (std::size_t silhouetteRow = 0; silhouetteRow < 5; ++silhouetteRow) {
-        for (std::size_t silhouetteColumn = 0; silhouetteColumn < 5; ++silhouetteColumn) {
-            if (silhouetteRow < 2 && (silhouetteColumn == 0 || silhouetteColumn == 4)) {
-                continue;
-            }
-            map.setTile(groundRowTop + 5 - silhouetteRow, castleCol + silhouetteColumn,
-                        model::TileMap::CastleSymbols[castleIndex++]);
-        }
+
+    if (groundRowTop + 5 < rows && castleCol + 4 < columns) {
+        map.setTile(groundRowTop + 5, castleCol + 1, model::TileMap::CastleUpperSymbol);
+        map.setTile(groundRowTop + 3, castleCol, model::TileMap::CastleLowerSymbol);
     }
 
     auto flag = std::make_unique<model::FlagPole>(
@@ -63,7 +54,7 @@ model::FlagPole* LevelCompletion::flagPole() const {
 
 float LevelCompletion::castleDoorX(const model::TileMap& map) const {
     return static_cast<float>(
-        (map.getColumns() - LevelPaddingTiles + CastleOffsetTiles) * model::TileMap::TileWidth);
+        (map.getColumns() - LevelPaddingTiles + CastleOffsetTiles + 2) * model::TileMap::TileWidth);
 }
 
 }

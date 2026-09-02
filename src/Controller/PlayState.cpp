@@ -1,6 +1,7 @@
 #include "Controller/PlayState.h"
 
 #include "Controller/GameOverState.h"
+#include "Controller/IAudioManager.h"
 #include "Controller/LevelCompleteState.h"
 #include "Controller/PauseState.h"
 #include "Controller/MainMenuState.h"
@@ -11,6 +12,9 @@
 #include "Model/Player/Player.h"
 #include "Model/Save/SaveData.h"
 #include "Model/Save/SaveManager.h"
+#include "Model/Save/ProfileManager.h"
+#include "Model/World/WorldType.h"
+#include "Model/Core/WorldManager.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
@@ -19,9 +23,20 @@
 
 #include <iostream>
 #include <memory>
+#include <algorithm>
 #include <string>
 
 namespace controller {
+
+namespace {
+// Level-clear rewards: a flat bonus for reaching the goal, plus time remaining.
+constexpr int GoalBonus = 5000;
+constexpr int TimeBonusPerSecond = 10;
+// How long to wait after death before transitioning (lets 'lost_a_life' theme finish).
+constexpr float DeathMusicDelay = 2.0f;
+// Audio track ID for the Starman/Invincibility theme, must match audio_meta.json.
+constexpr const char* StarmanTrackId = "starman";
+}
 
 PlayState::PlayState() : hasSavedState(false) {}
 
@@ -50,14 +65,21 @@ void PlayState::onEnter() {
             game.setLevelName(savedState->level.levelName);
         }
 
-        if (!scene->loadLevel(&savedState->level, &savedState->player)) {
+        if (!scene->loadLevel(&savedState->level, &savedState->player, true)) {
             model::LogManager::instance().error("PlayState: failed to load level assets from save");
         }
         savedState.reset();
         hasSavedState = false;
     } else {
-        if (!scene->loadLevel()) {
-            model::LogManager::instance().error("PlayState: failed to load level assets");
+        model::GameSaveData currentSave;
+        if (model::SaveManager::instance().load(currentSave)) {
+            if (!scene->loadLevel(nullptr, &currentSave.player, false)) {
+                model::LogManager::instance().error("PlayState: failed to load level assets");
+            }
+        } else {
+            if (!scene->loadLevel()) {
+                model::LogManager::instance().error("PlayState: failed to load level assets");
+            }
         }
     }
 
@@ -65,13 +87,26 @@ void PlayState::onEnter() {
     hudRenderer = std::make_unique<view::HudRenderer>();
 
     levelComplete = false;
+
+    // Snapshot score and coins at level entry — restored on death so dying doesn't
+    // permanently cost progress accumulated during previous levels.
+    checkpointScore = model::GameManager::instance().getScore();
+    checkpointCoins = model::GameManager::instance().getCoins();
+
+    // Start the world-appropriate background theme.
+    m_lastKnownWorldType = scene->getWorldType();
+    playWorldMusic();
+
+    // Cache level progress and high scores from disk so captureSaveData() doesn't
+    // need to re-read the file each time it's called (e.g. on pause-save).
+    m_cachedSaveBase = model::GameSaveData{};
+    model::SaveManager::instance().load(m_cachedSaveBase);
 }
 
 void PlayState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
         const auto& settings = model::SettingsManager::instance().get();
         if (static_cast<int>(key->code) == settings.keyPause ||
-            static_cast<int>(key->code) == settings.keyBack ||
             key->code == sf::Keyboard::Key::Escape) {
             model::LogManager::instance().info("Pause");
             manager->pushState(std::make_unique<PauseState>(
@@ -122,24 +157,65 @@ void PlayState::update(float deltaTime) {
         return;
     }
 
+    if (deathDelayTimer > 0.0f) {
+        deathDelayTimer -= deltaTime;
+        if (deathDelayTimer <= 0.0f) {
+            if (model::GameManager::instance().isGameOver()) {
+                auto restartCb = [m = this->manager]() {
+                    model::GameManager::instance().reset();
+                    m->replaceState(std::make_unique<PlayState>());
+                };
+                manager->replaceState(std::make_unique<GameOverState>(std::move(restartCb)));
+            } else {
+                model::LogManager::instance().info("Player respawn");
+                // Restore score and coins to the start of this level.
+                model::GameManager::instance().setScore(checkpointScore);
+                model::GameManager::instance().setCoins(checkpointCoins);
+                scene->restartLevel();
+                // Restart the world theme music from the beginning on respawn.
+                playWorldMusic();
+            }
+        }
+        return;
+    }
+
     const LevelScene::Event event = scene->update(deltaTime);
     if (event == LevelScene::Event::ClearTriggered) {
         // Freeze the world and start the scripted clear play; without a live player or
         // pole there is nothing to animate, so jump straight to the overlay.
-        scene->setCinematicActive(true);
         if (scene->player() && scene->flagPole()) {
+            scene->setCinematicActive(true);
             sequence.begin(*scene);
         } else {
             finishClear();
         }
     } else if (event == LevelScene::Event::RunEnded) {
-        // The player's death fall is over: either the run is over or the whole level
-        // restarts from its first area (whatever area the body fell in).
-        if (model::GameManager::instance().isGameOver()) {
-            manager->replaceState(std::make_unique<GameOverState>());
-        } else {
-            model::LogManager::instance().info("Player respawn");
-            scene->restartLevel();
+        // The player's death fall is over. Instead of transitioning immediately,
+        // we wait 2 seconds to let the 'lost_a_life' music finish.
+        deathDelayTimer = DeathMusicDelay;
+        return;
+    }
+
+    // Handle Starman music
+    if (auto* player = scene->player()) {
+        if (player->isStar() && !playingStarmanMusic) {
+            playingStarmanMusic = true;
+            if (context && context->audio) {
+                context->audio->stopMusic();
+                context->audio->playMusic(StarmanTrackId);
+            }
+        } else if (!player->isStar() && playingStarmanMusic) {
+            playingStarmanMusic = false;
+            playWorldMusic();
+        }
+    }
+
+    // Handle area (world type) transitions (e.g. entering a pipe)
+    if (scene->getWorldType() != m_lastKnownWorldType) {
+        m_lastKnownWorldType = scene->getWorldType();
+        // Only change music if we aren't currently overriding it with Starman
+        if (!playingStarmanMusic) {
+            playWorldMusic();
         }
     }
 
@@ -147,14 +223,104 @@ void PlayState::update(float deltaTime) {
     auto& game = model::GameManager::instance();
     hudData.score = game.getScore();
     hudData.coins = game.getCoins();
+    hudData.lives = game.getLives();
     hudData.levelName = game.getLevelName();
     hudData.time = scene->getRemainingTime();
 }
 
+void PlayState::playWorldMusic() {
+    if (!context || !context->audio) return;
+    // Map WorldType to the audio track IDs registered in audio_meta.json.
+    std::string trackId;
+    switch (scene->getWorldType()) {
+        case model::WorldType::Underground: trackId = "underground"; break;
+        case model::WorldType::Underwater:  trackId = "underwater";  break;
+        case model::WorldType::Castle:      trackId = "castle";      break;
+        case model::WorldType::Overworld:
+        default:                            trackId = "overworld";   break;
+    }
+    // Force restart so respawns replay the theme from the top.
+    context->audio->stopMusic();
+    context->audio->playMusic(trackId);
+}
+
+void PlayState::updateProgressAndUnlocks(model::GameSaveData& data) {
+    std::string currentLevelId = model::GameManager::instance().getLevelName();
+
+    // High Score logic (Task 3): only update if this run scored higher
+    auto it = data.high_scores.find(currentLevelId);
+    int scoreGainedThisLevel = model::GameManager::instance().getScore() - checkpointScore;
+    if (it == data.high_scores.end() || scoreGainedThisLevel > it->second) {
+        data.high_scores[currentLevelId] = scoreGainedThisLevel;
+    }
+
+    // Level progress (Task 5): mark as passed, track first-time clear
+    m_isFirstTimeClear = (data.level_progress[currentLevelId] != "pass");
+    if (m_isFirstTimeClear) {
+        data.level_progress[currentLevelId] = "pass";
+    }
+
+    // Data-driven unlocking (Task 6): scan WorldManager for levels requiring this level
+    for (const auto& w : model::WorldManager::instance().getWorlds()) {
+        for (const auto& l : w.levels) {
+            if (l.unlockRequires == currentLevelId) {
+                if (data.level_progress[l.id] != "pass") {
+                    data.level_progress[l.id] = "available";
+                }
+                // Unlock the parent world if not already
+                if (std::find(data.unlocked_worlds.begin(),
+                              data.unlocked_worlds.end(), w.id)
+                    == data.unlocked_worlds.end()) {
+                    data.unlocked_worlds.push_back(w.id);
+                }
+            }
+        }
+    }
+}
+
+void PlayState::syncProfileStats(const model::GameSaveData& data) {
+    auto& pm = model::ProfileManager::instance();
+    int activeIdx = pm.getActiveProfileIndex();
+    if (activeIdx < 0 || activeIdx >= 4) return;
+
+    auto p = pm.getProfiles()[activeIdx];
+
+    int totalHighScore = 0;
+    for (const auto& kv : data.high_scores) {
+        totalHighScore += kv.second;
+    }
+    p.total_score = totalHighScore;
+
+    if (m_isFirstTimeClear) {
+        p.passed_levels += 1;
+    }
+    pm.updateProfile(activeIdx, p);
+}
+
 void PlayState::finishClear() {
+    // Award the clear bonus (a flat reward for reaching the goal, plus time remaining)
+    // before the timer stops.
+    scene->pauseTimer();
+    const int timeBonus = scene->getRemainingTime() * TimeBonusPerSecond;
+    model::GameManager::instance().addScore(GoalBonus + timeBonus);
+    model::GameManager::instance().setLevelClearBonus(GoalBonus + timeBonus);
+
+    // Update checkpoint so death on later levels doesn't lose post-clear progress.
+    checkpointScore = model::GameManager::instance().getScore();
+    checkpointCoins = model::GameManager::instance().getCoins();
+
     levelComplete = true;
     scene->setCinematicActive(false);
-    model::LogManager::instance().info("Level end: " + model::GameManager::instance().getLevelName());
+
+    // Build save data and apply progress/unlock logic
+    model::GameSaveData data = captureSaveData();
+    updateProgressAndUnlocks(data);
+    model::SaveManager::instance().save(data);
+    syncProfileStats(data);
+
+    model::LogManager::instance().info(
+        "Level end: " + model::GameManager::instance().getLevelName()
+    );
     manager->pushState(std::make_unique<LevelCompleteState>());
 }
 
@@ -169,7 +335,10 @@ void PlayState::render(sf::RenderTarget& window) {
 }
 
 model::GameSaveData PlayState::captureSaveData() const {
-    model::GameSaveData data;
+    // Start from the cached base (loaded in onEnter) to preserve level_progress
+    // and high_scores without re-reading from disk each time.
+    model::GameSaveData data = m_cachedSaveBase;
+
     auto& game = model::GameManager::instance();
     data.score = game.getScore();
     data.lives = game.getLives();

@@ -28,6 +28,10 @@ bool InputMapper::isActionPressed(model::InputAction action) const {
         sf::Keyboard::Key key = it->second;
         // In SFML 3, Unknown is sf::Keyboard::Key::Unknown
         if (key != sf::Keyboard::Key::Unknown && static_cast<int>(key) != -1) {
+            if (key == sf::Keyboard::Key::LShift || key == sf::Keyboard::Key::RShift) {
+                return sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift) ||
+                       sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RShift);
+            }
             return sf::Keyboard::isKeyPressed(key);
         }
     }

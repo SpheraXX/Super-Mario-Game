@@ -20,6 +20,31 @@ std::string trim(const std::string& value) {
 std::size_t parseSizeT(const std::string& text) {
     return static_cast<std::size_t>(std::strtoull(text.c_str(), nullptr, 10));
 }
+
+float parseFloat(const std::string& text) {
+    return std::strtof(text.c_str(), nullptr);
+}
+
+// Splits a comma-separated "key:value" token list (shared by '; pipe=' and '; slider=')
+// and hands each pair to `assign`.
+template <typename Assign>
+void forEachToken(const std::string& value, Assign assign) {
+    std::size_t cursor = 0;
+    while (cursor <= value.size()) {
+        const std::size_t comma = value.find(',', cursor);
+        const std::string token =
+            value.substr(cursor, comma == std::string::npos ? std::string::npos
+                                                             : comma - cursor);
+        const std::size_t colon = token.find(':');
+        if (colon != std::string::npos && colon + 1 < token.size()) {
+            assign(trim(token.substr(0, colon)), trim(token.substr(colon + 1)));
+        }
+        if (comma == std::string::npos) {
+            break;
+        }
+        cursor = comma + 1;
+    }
+}
 }
 
 void Level::loadFromFile(const std::string& filePath) {
@@ -74,42 +99,47 @@ void Level::loadFromFile(const std::string& filePath) {
                     areas.push_back(Area{});
                 }
                 areas.back().world = worldTypeFromString(value);
-} else if (key == "pipe") {
+            } else if (key == "pipe") {
                 if (areas.empty()) {
                     areas.push_back(Area{});
                 }
                 Portal portal{};
-                std::size_t cursor = 0;
-                while (cursor <= value.size()) {
-                    const std::size_t comma = value.find(',', cursor);
-                    const std::string token =
-                        value.substr(cursor, comma == std::string::npos ? std::string::npos
-                                                                        : comma - cursor);
-                    const std::size_t colon = token.find(':');
-                    if (colon != std::string::npos && colon + 1 < token.size()) {
-                        const std::string k = trim(token.substr(0, colon));
-                        const std::string v = trim(token.substr(colon + 1));
-                        if (k == "col") {
-                            portal.sourceColumn = parseSizeT(v);
-                        } else if (k == "enter") {
-                            portal.direction =
-                                (v == "up" || v == "Up") ? PortalDirection::Up
-                                                         : PortalDirection::Down;
-                        } else if (k == "to" || k == "dest") {
-                            // "to:<area>:<column>".
-                            const std::size_t sep = v.find(':');
-                            if (sep != std::string::npos) {
-                                portal.destinationArea = parseSizeT(v.substr(0, sep));
-                                portal.destinationColumn = parseSizeT(v.substr(sep + 1));
-                            }
+                forEachToken(value, [&](const std::string& k, const std::string& v) {
+                    if (k == "col") {
+                        portal.sourceColumn = parseSizeT(v);
+                    } else if (k == "enter") {
+                        portal.direction =
+                            (v == "up" || v == "Up") ? PortalDirection::Up
+                                                     : PortalDirection::Down;
+                    } else if (k == "to" || k == "dest") {
+                        // "to:<area>:<column>".
+                        const std::size_t sep = v.find(':');
+                        if (sep != std::string::npos) {
+                            portal.destinationArea = parseSizeT(v.substr(0, sep));
+                            portal.destinationColumn = parseSizeT(v.substr(sep + 1));
                         }
                     }
-                    if (comma == std::string::npos) {
-                        break;
-                    }
-                    cursor = comma + 1;
-                }
+                });
                 areas.back().portals.push_back(portal);
+            } else if (key == "slider") {
+                if (areas.empty()) {
+                    areas.push_back(Area{});
+                }
+                SliderSpec spec{};
+                forEachToken(value, [&](const std::string& k, const std::string& v) {
+                    if (k == "col") {
+                        spec.sourceColumn = parseSizeT(v);
+                    } else if (k == "axis") {
+                        spec.axis = (v == "v" || v == "vertical" || v == "V")
+                            ? SliderAxis::Vertical
+                            : SliderAxis::Horizontal;
+                    } else if (k == "dist") {
+                        spec.travelDistance = parseFloat(v);
+                    } else if (k == "speed") {
+                        spec.speed = parseFloat(v);
+                    }
+                });
+                areas.back().sliders.push_back(spec);
             }
             continue;
         }
@@ -129,13 +159,12 @@ void Level::loadFromFile(const std::string& filePath) {
         throw std::runtime_error("Level file contains no playable area: " + filePath);
     }
 
-    // Legacy single-area files keep any world (a lone underwater/castle map played exactly
-    // like before). Once a file declares MULTIPLE areas the terminal world must be the
-    // Overworld: the procedural completion zone (flagpole + castle) only reads as a goal
-    // there, and every non-final area has to be exited through a pipe.
-    if (areas.size() > 1 && areas.back().world != WorldType::Overworld) {
-        throw std::runtime_error("Last area of a multi-area level must be an Overworld: " + filePath);
-    }
+    // No constraint on the terminal area's world. There used to be one -- the last area
+    // had to be an Overworld -- because the completion zone (flagpole + castle) was
+    // generated procedurally and only read as a goal there. That zone is gone: the goal is
+    // an author-placed 'E' (see Model/Level/LevelGoal.h) and the castle is backdrop, so any
+    // area of any world may be the last one. World 1-1 is the case that needs it: it ends
+    // on the underground coin room, which the old rule rejected.
 }
 
 std::size_t Level::areaCount() const {
@@ -156,6 +185,10 @@ WorldType Level::areaWorld(std::size_t index) const {
 
 const std::vector<Portal>& Level::portals(std::size_t index) const {
     return areas.at(index).portals;
+}
+
+const std::vector<SliderSpec>& Level::sliders(std::size_t index) const {
+    return areas.at(index).sliders;
 }
 
 const std::string& Level::getLevelName() const {

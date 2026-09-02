@@ -1,0 +1,46 @@
+{
+  "worlds": [
+    {
+      "id": "world_1",
+      "title": "World 1",
+      "music_track": "overworld",
+      "preview_image": "assets/images/banner/overworld.png",
+      "bga_image": "assets/images/bga_overworld.jpg",
+      "levels": [
+        { "id": "1-1", "map_path": "assets/maps/lv1_1.map" },
+        { "id": "1-2", "map_path": "assets/maps/lv2_1.map", "unlock_requires": "1-1" }
+      ]
+    },
+    {
+      "id": "world_2",
+      "title": "World 2",
+      "music_track": "underground",
+      "preview_image": "assets/images/banner/underground.png",
+      "bga_image": "assets/images/bga_underground.jpg",
+      "levels": [
+        { "id": "2-1", "map_path": "assets/maps/lv1_2.map", "unlock_requires": "1-2" }
+      ]
+    },
+    {
+      "id": "world_3",
+      "title": "World 3",
+      "music_track": "underwater",
+      "preview_image": "assets/images/banner/underwater.png",
+      "bga_image": "assets/images/bga_underwater.jpg",
+      "levels": [
+        { "id": "3-1", "map_path": "assets/maps/lv2_2.map", "unlock_requires": "2-1" }
+      ]
+    },
+    {
+      "id": "world_4",
+      "title": "World 4",
+      "music_track": "castle",
+      "preview_image": "assets/images/banner/castle.png",
+      "bga_image": "assets/images/bga_underground.jpg",
+      "levels": [
+        { "id": "4-1", "map_path": "assets/maps/lv1_4.map", "unlock_requires": "3-1" },
+        { "id": "4-2", "map_path": "assets/maps/lv2_4.map", "unlock_requires": "4-1" }
+      ]
+    }
+  ]
+}

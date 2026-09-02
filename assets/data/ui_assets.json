@@ -1,0 +1,23 @@
+{
+  "elegant_panel": {
+    "texture": "resources/elegant_ui/panel/panel.png",
+    "rect_normal": [
+      0,
+      96,
+      48,
+      48
+    ],
+    "rect_hovered": [
+      48,
+      96,
+      48,
+      48
+    ],
+    "margin": [
+      8,
+      8,
+      8,
+      8
+    ]
+  }
+}

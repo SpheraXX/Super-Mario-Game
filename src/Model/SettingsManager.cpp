@@ -1,4 +1,5 @@
 #include "Model/SettingsManager.h"
+#include "Model/Core/LogManager.h"
 #include "ext/json.hpp"
 #include <filesystem>
 #include <fstream>
@@ -49,19 +50,6 @@ std::string langToStr(Language l) {
 Language strToLang(const std::string& s) {
     return s == "vi" ? Language::Vietnamese : Language::English;
 }
-
-std::string qualityToStr(GraphicsQuality q) {
-    switch (q) {
-        case GraphicsQuality::Medium: return "medium";
-        case GraphicsQuality::High:   return "high";
-        default:                      return "low";
-    }
-}
-GraphicsQuality strToQuality(const std::string& s) {
-    if (s == "medium") return GraphicsQuality::Medium;
-    if (s == "high")   return GraphicsQuality::High;
-    return GraphicsQuality::Low;
-}
 }
 
 void SettingsManager::load() {
@@ -69,7 +57,7 @@ void SettingsManager::load() {
 
     std::ifstream file(FilePath);
     if (!file.is_open()) {
-        std::cerr << "[SettingsManager] settings.json not found, creating with defaults.\n";
+        model::LogManager::instance().warning("[SettingsManager] settings.json not found, creating with defaults.");
         save();
         return;
     }
@@ -106,12 +94,11 @@ void SettingsManager::load() {
             if (c.contains("run"))        current.keyRun       = c["run"].get<int>();
             if (c.contains("pause"))      current.keyPause     = c["pause"].get<int>();
             if (c.contains("cycleDisplay")) current.keyCycleDisplay = c["cycleDisplay"].get<int>();
-            if (c.contains("back"))       current.keyBack      = c["back"].get<int>();
             if (c.contains("slot"))       current.controlSlot  = c["slot"].get<int>();
         }
 
     } catch (const json::exception& e) {
-        std::cerr << "[SettingsManager] JSON parse error: " << e.what() << "\n";
+        model::LogManager::instance().error(std::string("[SettingsManager] JSON parse error: ") + e.what());
         current = Settings::defaults();
         save();
     }
@@ -140,7 +127,6 @@ void SettingsManager::save() const {
     j["controls"]["run"]          = current.keyRun;
     j["controls"]["pause"]        = current.keyPause;
     j["controls"]["cycleDisplay"] = current.keyCycleDisplay;
-    j["controls"]["back"]         = current.keyBack;
     j["controls"]["slot"]         = current.controlSlot;
 
     std::ofstream file(FilePath);

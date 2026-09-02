@@ -6,6 +6,7 @@
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 
+#include "View/UI/IButtonSkin.h"
 #include "View/UI/UITheme.h"
 
 #include <functional>
@@ -38,6 +39,7 @@ public:
     void setSize(float w, float h) override;
 
     // ── UIElement overrides ──────────────────────────────────────────────────
+    void update(float deltaTime) override;
     void render(sf::RenderTarget& target) override;
     bool handleEvent(const sf::Event& event) override;
 
@@ -54,7 +56,7 @@ private:
     std::vector<std::string>  options;
     int                       currentIndex = 0;
 
-    sf::RectangleShape        background;
+    std::unique_ptr<IButtonSkin> skin;
     bool                      isHovered    = false;
 
     sf::Color colorNormal  = theme::CycleNormal;

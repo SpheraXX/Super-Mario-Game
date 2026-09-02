@@ -33,14 +33,13 @@ struct Settings {
     int keyInteract   = -1;
     int keyInventory  = -1;
     int keyCycleDisplay = -1;
-    int keyBack       = -1;
 
     int controlSlot   = 0;
 
     bool operator==(const Settings& o) const {
         return fullscreen == o.fullscreen && ratio == o.ratio &&
                resolutionIndex == o.resolutionIndex &&
-               quality == o.quality && masterVolume == o.masterVolume &&
+               quality == o.quality && vsync == o.vsync && masterVolume == o.masterVolume &&
                musicVolume == o.musicVolume && sfxVolume == o.sfxVolume &&
                language == o.language && keyMoveLeft == o.keyMoveLeft &&
                keyMoveRight == o.keyMoveRight && keyJump == o.keyJump &&
@@ -48,7 +47,6 @@ struct Settings {
                keyDash == o.keyDash && keyAttack == o.keyAttack &&
                keyCrouch == o.keyCrouch && keyInteract == o.keyInteract &&
                keyInventory == o.keyInventory && keyCycleDisplay == o.keyCycleDisplay &&
-               keyBack == o.keyBack &&
                controlSlot == o.controlSlot;
     }
     bool operator!=(const Settings& o) const {

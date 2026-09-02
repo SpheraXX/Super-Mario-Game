@@ -1,0 +1,30 @@
+{
+  "sections": [
+    {
+      "title": "DEVELOPMENT TEAM",
+      "lines": [
+        "Duc-Huy Nguyen - 25125014",
+        "Dang-Khang Nguyen - 25125017",
+        "Minh-Nhat Le - 25125032",
+        "Viet-Thanh Bui - 25125065",
+        "Mai-Thuy Vu 23125046"
+      ]
+    },
+    {
+      "title": "INSTRUCTORS",
+      "lines": [
+        "Lecturer: Mr. Ba-Tien Dinh",
+        "TA: Mr. Phuoc-Loc Truong",
+        "TA: Mr. Tuan-Thanh Ho"
+      ]
+    },
+    {
+      "title": "RESOURCES",
+      "lines": [
+        "SFML 3.0.1",
+        "nlohmann/json",
+        "Super Mario Bros Sprites by Nintendo"
+      ]
+    }
+  ]
+}

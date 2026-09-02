@@ -1,8 +1,9 @@
 #include "View/UI/UICycleButton.h"
-#include "Controller/AppEngine.h"
+
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Window/Mouse.hpp>
+#include "View/UI/NineSliceButtonSkin.h"
 #include <algorithm>
 #include <cmath>
 
@@ -16,13 +17,18 @@ UICycleButton::UICycleButton(const sf::Font& font, const std::string& label,
     , currentIndex(std::clamp(idx, 0, static_cast<int>(opts.size()) - 1)) {
     pos  = position;
     size = sz;
-    background.setFillColor(colorNormal);
+    skin = std::make_unique<NineSliceButtonSkin>("elegant_panel");
+    skin->setPosition(pos.x, pos.y);
+    skin->setSize(size.x, size.y);
+    skin->setColors(sf::Color::White, sf::Color::White);
     updateLayout();
 }
 
 void UICycleButton::updateLayout() {
-    background.setPosition(pos);
-    background.setSize(size);
+    if (skin) {
+        skin->setPosition(pos.x, pos.y);
+        skin->setSize(size.x, size.y);
+    }
 }
 
 void UICycleButton::setPosition(float x, float y) {
@@ -48,13 +54,13 @@ void UICycleButton::setColors(sf::Color normal, sf::Color hovered, sf::Color tex
     colorNormal  = normal;
     colorHovered = hovered;
     colorText    = text;
-    background.setFillColor(isHovered ? colorHovered : colorNormal);
+    if (skin) skin->setColors(normal, hovered);
 }
 
 void UICycleButton::onHover(bool h) {
     if (!enabled) return;
     isHovered = h;
-    background.setFillColor(h ? colorHovered : colorNormal);
+    if (skin) skin->updateState(isHovered, enabled);
 }
 
 void UICycleButton::onClick() {
@@ -68,12 +74,12 @@ bool UICycleButton::handleEvent(const sf::Event& event) {
     if (!visible) return false;
 
     if (const auto* m = event.getIf<sf::Event::MouseMoved>()) {
-        const sf::Vector2f lp = controller::AppEngine::windowToLogical(m->position);
+        const sf::Vector2f lp = transformCoordinate(m->position);
         onHover(contains(lp.x, lp.y));
     }
     if (const auto* p = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (p->button == sf::Mouse::Button::Left) {
-            const sf::Vector2f lp = controller::AppEngine::windowToLogical(p->position);
+            const sf::Vector2f lp = transformCoordinate(p->position);
             if (contains(lp.x, lp.y)) {
                 if (enabled) {
                     onClick();
@@ -89,17 +95,16 @@ void UICycleButton::onMouseLeave() {
     onHover(false);
 }
 
+void UICycleButton::update(float deltaTime) {
+    if (skin) skin->update(deltaTime);
+}
+
 void UICycleButton::render(sf::RenderTarget& target) {
     if (!visible || !fontPtr) return;
 
-    if (enabled) {
-        background.setFillColor(isHovered ? colorHovered : colorNormal);
-    } else {
-        background.setFillColor(sf::Color(100, 100, 100));
-    }
-    target.draw(background);
+    if (skin) skin->render(target);
 
-    sf::Color currentTextColor = enabled ? colorText : sf::Color(150, 150, 150);
+    sf::Color currentTextColor = enabled ? colorText : theme::ColorTextDisabled;
 
     sf::Text lbl(*fontPtr, labelStr, LabelSize);
     lbl.setFillColor(currentTextColor);
@@ -109,11 +114,11 @@ void UICycleButton::render(sf::RenderTarget& target) {
     target.draw(lbl);
 
     if (!options.empty()) {
-        const std::string display = "< " + options[currentIndex] + " >";
+        const std::string display = options[currentIndex];
         sf::Text val(*fontPtr, display, ValueSize);
         val.setFillColor(currentTextColor);
         const sf::FloatRect vb = val.getLocalBounds();
-        const float vx = std::floor(pos.x + size.x - vb.size.x - 6.f - vb.position.x);
+        const float vx = std::floor(pos.x + (size.x - vb.size.x) / 2.f - vb.position.x);
         val.setPosition({vx, std::floor(pos.y + (size.y - vb.size.y) / 2.f - vb.position.y)});
         target.draw(val);
     }

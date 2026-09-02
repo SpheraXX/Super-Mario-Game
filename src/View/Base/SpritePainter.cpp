@@ -61,10 +61,18 @@ void SpritePainter::applyColorKey(const sf::IntRect& area, sf::Color transparent
             }
         }
     }
+    colorKeyDirty = true;
+}
+
+void SpritePainter::commitColorKeys() {
+    if (!loaded || !colorKeyDirty) {
+        return;
+    }
     if (!texture.loadFromImage(workingImage)) {
         throw std::runtime_error("Could not upload tileset texture");
     }
     texture.setSmooth(false);
+    colorKeyDirty = false;
 }
 
 void SpritePainter::draw(sf::RenderTarget& window, const sf::IntRect& frame,

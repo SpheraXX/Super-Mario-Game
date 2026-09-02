@@ -27,7 +27,7 @@ void MenuState::onEnter() {
         titleSize = view::text::fitCharacterSize(font, "SUPER MARIO", fitWidth, 28);
         startHintSize = view::text::fitCharacterSize(font, "Press ENTER or SPACE to Start", fitWidth, 12);
         
-        std::string backKeyName = InputMapper::getKeyName(model::SettingsManager::instance().get().keyBack);
+        std::string backKeyName = InputMapper::getKeyName(model::SettingsManager::instance().get().keyPause);
         std::string quitStr = "Press " + backKeyName + " to Quit";
         quitHintSize = view::text::fitCharacterSize(font, quitStr, fitWidth, 10);
     }
@@ -37,7 +37,7 @@ void MenuState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
         if (key->code == sf::Keyboard::Key::Enter || key->code == sf::Keyboard::Key::Space) {
             manager->replaceState(std::make_unique<PlayState>());
-        } else if (static_cast<int>(key->code) == model::SettingsManager::instance().get().keyBack) {
+        } else if (static_cast<int>(key->code) == model::SettingsManager::instance().get().keyPause) {
             manager->clear(); // empties the stack -> AppEngine loop exits
         }
     }
@@ -65,7 +65,7 @@ void MenuState::render(sf::RenderTarget& window) {
     startHint.setFillColor(sf::Color::White);
     view::text::drawCentered(window, startHint, centerX, centerY * 0.55f);
 
-    std::string backKeyName = InputMapper::getKeyName(model::SettingsManager::instance().get().keyBack);
+    std::string backKeyName = InputMapper::getKeyName(model::SettingsManager::instance().get().keyPause);
     std::string quitStr = "Press " + backKeyName + " to Quit";
     sf::Text quitHint(font, quitStr, quitHintSize);
     quitHint.setFillColor(sf::Color(200, 200, 200));

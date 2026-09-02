@@ -70,7 +70,7 @@ public:
     void setVisible(bool v)          { visible = v; }
 
     bool isEnabled() const           { return enabled; }
-    void setEnabled(bool e)          { enabled = e; }
+    virtual void setEnabled(bool e)  { enabled = e; }
 
 protected:
     // Check if a window-space point is inside this element's bounding box.

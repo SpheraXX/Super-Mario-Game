@@ -1,0 +1,4 @@
+Game recognizes EMPTY key as a normal key so if there are some keys that arent binded (EMPTY state) then there are conflicts when user just click on those keys
+
+Keys that are locked from user (for debugger using) arent colored with DISABLED color (but RESET buttons are next to them are colored?)
+

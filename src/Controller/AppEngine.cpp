@@ -1,11 +1,14 @@
 #include "Controller/AppEngine.h"
 
+#include "Controller/IntroState.h"
 #include "Controller/MainMenuState.h"
 #include "Model/Core/LogManager.h"
+#include "Model/Core/WorldManager.h"
 #include "Model/Map/TileMap.h"
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
 #include "View/UI/UIElement.h"
+#include "View/UI/UIConfigManager.h"
 
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/VideoMode.hpp>
@@ -41,7 +44,7 @@ AppEngine::AppEngine()
     : audioManager()
     , inputMapper()
     , gameContext{&audioManager, &inputMapper}
-    , states(std::make_unique<MainMenuState>(), &gameContext) {
+    , states(std::make_unique<IntroState>(), &gameContext) {
 
     model::SettingsManager::instance().addObserver(this);
 
@@ -53,7 +56,9 @@ AppEngine::AppEngine()
         throw std::runtime_error("Could not create the offscreen render target");
     }
 
-    states.pushState(std::make_unique<MainMenuState>());
+    model::WorldManager::instance().load();
+
+    states.pushState(std::make_unique<IntroState>());
     states.applyPending(); // make the initial state live before the loop starts
 
     // Inject coordinate transform into UI layer once — keeps View independent of Controller.
@@ -166,13 +171,15 @@ void AppEngine::applyDisplayMode() {
     displayOffsetY = offsetY;
     displayScale   = scale;
 
-    std::cerr << "display: " << (s.fullscreen ? "fullscreen" : "windowed")
-              << " window " << client.x << 'x' << client.y
-              << "  logical " << logicalWidth << 'x' << ScreenHeight
-              << " (" << logicalWidth / model::TileMap::TileWidth << " cols x "
-              << model::TileMap::Rows << " rows)"
-              << "  scale " << scale << 'x'
-              << "  bars " << offsetX << ',' << offsetY << '\n';
+    model::LogManager::instance().info(
+        "display: " + std::string(s.fullscreen ? "fullscreen" : "windowed") +
+        " window " + std::to_string(client.x) + "x" + std::to_string(client.y) +
+        "  logical " + std::to_string(logicalWidth) + "x" + std::to_string(ScreenHeight) +
+        " (" + std::to_string(logicalWidth / model::TileMap::TileWidth) + " cols x " +
+        std::to_string(model::TileMap::Rows) + " rows)" +
+        "  scale " + std::to_string(scale) + "x" +
+        "  bars " + std::to_string(offsetX) + "," + std::to_string(offsetY)
+    );
 
     // Recover graphics context: window recreation destroys all VRAM objects.
     view::AssetManager::instance().reloadAll();
@@ -257,6 +264,9 @@ void AppEngine::processInput() {
                 cycleDisplayMode();
                 // cycleDisplayMode calls SettingsManager::apply() which triggers the subscription,
                 // setting applyDisplayPending = true.
+            }
+            if (key->code == sf::Keyboard::Key::F5) {
+                view::ui::UIConfigManager::instance().load();
             }
         }
         states.handleEvent(*event);

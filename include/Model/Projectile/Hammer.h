@@ -12,7 +12,14 @@ class Hammer : public Projectile {
 public:
     Hammer(Vector2 position, Entity* owner, int direction);
 
+    void update(float deltaTime) override;
+
     bool usesTileCollision() const override { return false; }
+
+    // Seconds this hammer has been in the air. The renderer turns it into a spin frame;
+    // the model keeps the clock rather than the view because two hammers thrown a moment
+    // apart must not spin in lockstep, and only the model knows when each was created.
+    float getFlightTime() const { return flightTime; }
 
 private:
     static constexpr float ThrowSpeedX = 45.0f;
@@ -23,6 +30,8 @@ private:
     // roughly four tiles up and travels close to four across, which is the lazy overhand
     // throw the original has. Composes with the world's gravity like any other character.
     static constexpr float ArcGravityScale = 0.4f;
+
+    float flightTime = 0.0f;
 };
 
 }

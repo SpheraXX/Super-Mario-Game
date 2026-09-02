@@ -4,8 +4,8 @@
 
 namespace model {
 
-Pipe::Pipe(Vector2 position, Vector2 size, std::size_t sourceColumn)
-    : Entity(position, size), sourceColumn_(sourceColumn) {
+Pipe::Pipe(Vector2 position, Vector2 size, std::size_t sourceColumn, Orientation orientation)
+    : Entity(position, size), sourceColumn_(sourceColumn), orientation_(orientation) {
     hitbox = Hitbox({0.0f, 0.0f}, size.x, size.y, false, CollisionLayer::Environment);
 }
 
@@ -15,6 +15,10 @@ bool Pipe::isSolid() const {
 
 std::size_t Pipe::getSourceColumn() const {
     return sourceColumn_;
+}
+
+Pipe::Orientation Pipe::getOrientation() const {
+    return orientation_;
 }
 
 }

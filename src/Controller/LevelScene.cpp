@@ -4,16 +4,20 @@
 #include "Model/Core/LogManager.h"
 #include "Model/Save/SaveData.h"
 #include "Model/Block/BrickBlock.h"
+#include "Model/Block/BrickShard.h"
 #include "Model/Block/CoinBlock.h"
 #include "Model/Character.h"
 #include "Model/Core/GameManager.h"
+#include "Model/Core/VerticalSlide.h"
 #include "Model/Enemy/Bowser.h"
+#include "Model/Enemy/CheepCheep.h"
 #include "Model/Enemy/EnemyFactory.h"
 #include "Model/Enemy/HammerBro.h"
 #include "Model/Enemy/Lakitu.h"
 #include "Model/Enemy/PiranhaPlant.h"
 #include "Model/Enemy/Spiny.h"
 #include "Model/Item/Coin.h"
+#include "Model/Item/MapCoin.h"
 #include "Model/Item/FireFlower.h"
 #include "Model/Item/Mushroom.h"
 #include "Model/Item/Starman.h"
@@ -23,21 +27,35 @@
 #include "Model/Projectile/SpinyEgg.h"
 #include "Model/Enemy/Goomba.h"
 #include "Model/Enemy/Koopa.h"
+#include "Model/Level/ChainTrigger.h"
+#include "Model/Level/FirebarBall.h"
 #include "Model/Level/FlagPole.h"
+#include "Model/Level/LavaBubble.h"
+#include "Model/Level/LevelGoal.h"
 #include "Model/Level/Pipe.h"
+#include "Model/Level/Slider.h"
+#include "Model/NPC/MushroomRetainer.h"
 #include "Model/Player/Luigi.h"
 #include "Model/Player/Mario.h"
 #include "Model/Player/Player.h"
 #include "Model/World/WorldSet.h"
 #include "View/Base/RenderContext.h"
 #include "View/Block/BrickBlockRenderer.h"
+#include "View/Block/BrickShardRenderer.h"
 #include "View/Block/CoinBlockRenderer.h"
 #include "View/Base/AtlasFrameRenderer.h"
+#include "View/Base/MiscFrameRenderer.h"
+#include "View/Enemy/HammerRenderer.h"
+#include "View/Level/ChainTriggerRenderer.h"
+#include "View/Level/FirebarBallRenderer.h"
+#include "View/Level/FlagPoleRenderer.h"
 #include "View/Enemy/FireballRenderer.h"
 #include "View/Item/ItemFrameRenderer.h"
+#include "View/Item/MapCoinRenderer.h"
 #include "View/Enemy/GoombaRenderer.h"
 #include "View/Enemy/KoopaRenderer.h"
-#include "View/Level/FlagPoleRenderer.h"
+#include "View/Level/LevelGoalRenderer.h"
+#include "View/Level/SliderRenderer.h"
 #include "View/Player/PlayerRenderer.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -70,7 +88,9 @@ LevelScene::LevelScene()
     entityRenderers->registerRenderer<model::Koopa, view::KoopaRenderer>();
     entityRenderers->registerRenderer<model::CoinBlock, view::CoinBlockRenderer>();
     entityRenderers->registerRenderer<model::BrickBlock, view::BrickBlockRenderer>();
-    entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
+    entityRenderers->registerRenderer<model::BrickShard, view::BrickShardRenderer>();
+    entityRenderers->registerRenderer<model::LevelGoal, view::LevelGoalRenderer>();
+    entityRenderers->registerRenderer<model::Slider, view::SliderRenderer>();
 
     // Pipes are NOT registered: they are terrain, drawn per cell by the tile renderer
     // ('P'/'Q'/'p'/'q' cells). A warp pipe spawns a model::Pipe entity for the portal
@@ -88,6 +108,10 @@ LevelScene::LevelScene()
     // The coin comes off the main Mario sheet instead, which needs its backdrop keyed out.
     entityRenderers->registerRenderer<model::Coin, view::ItemFrameRenderer<model::Coin>>(
         view::atlas::Coin, view::atlas::MarioAssetSheet, view::atlas::MarioAssetColorKey);
+    // The placed coin needs its own renderer rather than the fixed-frame template, because
+    // it cycles. The registry dispatches on exact typeid, so it needs its own entry even
+    // though it shares both the sheet and the artwork with the block flourish above.
+    entityRenderers->registerRenderer<model::MapCoin, view::MapCoinRenderer>();
 
     // Everything below has a single pose and shares the generic atlas renderer; the frames
     // themselves are named in View/Enemy/EnemyAtlas.h.
@@ -101,8 +125,9 @@ LevelScene::LevelScene()
                                       view::AtlasFrameRenderer<model::Bowser>>(view::atlas::Bowser);
     entityRenderers->registerRenderer<model::PiranhaPlant,
                                       view::AtlasFrameRenderer<model::PiranhaPlant>>(view::atlas::PiranhaPlant);
-    entityRenderers->registerRenderer<model::Hammer,
-                                      view::AtlasFrameRenderer<model::Hammer>>(view::atlas::Hammer);
+    // The hammer spins through four poses off misc.png, so it needs a renderer of its own
+    // rather than the fixed-frame template the rest of this block uses.
+    entityRenderers->registerRenderer<model::Hammer, view::HammerRenderer>();
     entityRenderers->registerRenderer<model::SpinyEgg,
                                       view::AtlasFrameRenderer<model::SpinyEgg>>(view::atlas::SpinyEgg);
     entityRenderers->registerRenderer<model::Fireball,
@@ -110,6 +135,22 @@ LevelScene::LevelScene()
     // Mario's fireball is its own animated ball (4 rolling frames), unlike Bowser's flat
     // breath above, so it needs its own renderer.
     entityRenderers->registerRenderer<model::MarioFireball, view::FireballRenderer>();
+
+    // Castle furniture and the water level's fish, all off misc.png (see MiscAtlas.h).
+    // The firebar's flame picks its pose from its own sweep angle, so it needs a renderer;
+    // the rest are single-frame and share the misc-sheet template.
+    entityRenderers->registerRenderer<model::FirebarBall, view::FirebarBallRenderer>();
+    entityRenderers->registerRenderer<model::LavaBubble,
+                                      view::MiscFrameRenderer<model::LavaBubble>>(
+        view::atlas::LavaBubble);
+    entityRenderers->registerRenderer<model::CheepCheep,
+                                      view::MiscFrameRenderer<model::CheepCheep>>(
+        view::atlas::CheepCheep[0]);
+    entityRenderers->registerRenderer<model::MushroomRetainer,
+                                      view::MiscFrameRenderer<model::MushroomRetainer>>(
+        view::atlas::MushroomRetainer);
+    entityRenderers->registerRenderer<model::ChainTrigger, view::ChainTriggerRenderer>();
+    entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
 }
 
 bool LevelScene::loadLevel(const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave) {
@@ -205,10 +246,33 @@ void LevelScene::beginPipeTransition(const model::Portal& portal) {
     pendingPortal = portal;
     timer.pause();
     timerPausedByPipe = true;
-    // Sink the whole body below the pipe's mouth: findEntryPortal proved the feet rest on
-    // the cap, so one body height down hides the player fully behind the pipe shaft.
-    const float capTop = playerPtr->getPosition().y + playerPtr->getSize().y;
-    playerPtr->beginPipeSlide(capTop + playerPtr->getSize().y);
+
+    // Which axis to sink along depends on the pipe findEntryPortal matched, not the
+    // portal itself (a Portal is just a column binding). The destination leg further
+    // down in advancePipeTransition always rises vertically onto the arrival cap,
+    // regardless of the source's orientation -- only entry has a horizontal variant.
+    model::Pipe::Orientation orientation = model::Pipe::Orientation::Vertical;
+    for (const auto& e : entities) {
+        auto* pipe = dynamic_cast<model::Pipe*>(e.get());
+        if (pipe && pipe->getSourceColumn() == portal.sourceColumn) {
+            orientation = pipe->getOrientation();
+            break;
+        }
+    }
+
+    if (orientation == model::Pipe::Orientation::Horizontal) {
+        // Sink rightward: findEntryPortal proved the player's right edge rests on the
+        // pipe's left face, so one body width further hides him fully inside it.
+        const float rightEdge = playerPtr->getPosition().x + playerPtr->getSize().x;
+        playerPtr->beginPipeSlide(rightEdge + playerPtr->getSize().x,
+                                  model::VerticalSlide::Axis::Horizontal);
+    } else {
+        // Sink the whole body below the pipe's mouth: findEntryPortal proved the feet
+        // rest on the cap, so one body height down hides the player fully behind the
+        // pipe shaft.
+        const float capTop = playerPtr->getPosition().y + playerPtr->getSize().y;
+        playerPtr->beginPipeSlide(capTop + playerPtr->getSize().y);
+    }
     pipePhase = PipePhase::SlideIn;
 }
 
@@ -295,7 +359,7 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
     if (!keptPlayer) {
         playerPtr = nullptr;  // full restart: a fresh player spawns below
     }
-    completion.clear();
+    goalPtr = nullptr;
 
     for (std::size_t row = 0; row < rows; ++row) {
         for (std::size_t column = 0; column < columns; ++column) {
@@ -333,10 +397,69 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
                     entities.push_back(std::move(coinBlock));
                     break;
                 }
+                case model::TileMap::CoinSymbol:
+                    entities.push_back(std::make_unique<model::MapCoin>(position));
+                    break;
                 case '#':
                 case 'B':
                     entities.push_back(std::make_unique<model::BrickBlock>(position, size));
                     break;
+                case model::TileMap::HorizontalPipeSymbol: {
+                    // Unlike a standing pipe, this footprint has no per-cell terrain
+                    // equivalent (see TileMap::HorizontalPipeSymbol) -- the entity is its
+                    // only source of collision, so it is spawned unconditionally, portal
+                    // or not, exactly as the comment on Pipe::Orientation promises.
+                    // 'position' is this cell's own top-left, which is also the box's
+                    // top-left: the anchor is the topmost-on-screen, leftmost cell of the
+                    // 4x2 footprint (see TileMap::HorizontalPipeSymbol).
+                    const model::Vector2 pipeSize{4.0f * size.x, 2.0f * size.y};
+                    entities.push_back(std::make_unique<model::Pipe>(
+                        position, pipeSize, column, model::Pipe::Orientation::Horizontal));
+                    break;
+                }
+                case model::TileMap::FirebarSymbol: {
+                    // The marker cell is both the mount (solid terrain, drawn by the tile
+                    // renderer) and the pivot, so the bar turns about the cell's CENTRE.
+                    // The bar is a line of independent flames rather than one entity —
+                    // see Model/Level/FirebarBall.h for why a rotating arm cannot be one.
+                    constexpr int Links = 4;
+                    constexpr float LinkStep = 8.0f;
+                    constexpr float SpinSpeed = 2.0f;  // radians/second
+                    const model::Vector2 pivot{position.x + size.x * 0.5f,
+                                               position.y + size.y * 0.5f};
+                    for (int link = 1; link <= Links; ++link) {
+                        entities.push_back(std::make_unique<model::FirebarBall>(
+                            pivot, LinkStep * static_cast<float>(link), SpinSpeed, 0.0f));
+                    }
+                    break;
+                }
+                case model::TileMap::LavaBubbleSymbol: {
+                    constexpr float RiseHeight = 5.0f * 16.0f;  // five tiles out of the pool
+                    constexpr float LeapSeconds = 1.6f;
+                    constexpr float RestSeconds = 1.0f;
+                    entities.push_back(std::make_unique<model::LavaBubble>(
+                        position, RiseHeight, LeapSeconds, RestSeconds));
+                    break;
+                }
+                case model::TileMap::ChainTriggerSymbol:
+                    entities.push_back(std::make_unique<model::ChainTrigger>(position, size));
+                    break;
+                case model::TileMap::RetainerSymbol:
+                    entities.push_back(std::make_unique<model::MushroomRetainer>(position));
+                    break;
+                case model::TileMap::GoalSymbol: {
+                    // A trigger several cells tall so a jumping player cannot skip over
+                    // it; the marked cell is the BOTTOM of the column, matching where
+                    // the author stood it (the same anchor a flagpole used to have).
+                    constexpr float GoalHeightTiles = 4.0f;
+                    const model::Vector2 goalSize{size.x, size.y * GoalHeightTiles};
+                    const model::Vector2 goalPos{
+                        position.x, position.y - size.y * (GoalHeightTiles - 1.0f)};
+                    auto goal = std::make_unique<model::LevelGoal>(goalPos, goalSize);
+                    goalPtr = goal.get();
+                    entities.push_back(std::move(goal));
+                    break;
+                }
                 default:
                     break;
             }
@@ -398,6 +521,33 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
         }
     }
 
+    // Sliders: a 2-cell '=' run gives the platform its fixed shape (its art is a constant
+    // 32x8, unlike a pipe's author-chosen height), and the run's leftmost column binds it
+    // to a '; slider=' token for its motion — the same scheme the pipe loop above uses to
+    // bind a Pipe to its Portal.
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t column = 0; column < columns; ++column) {
+            if (map.getTile(row, column) != model::TileMap::SliderSymbol) continue;
+            if (column > 0 && map.getTile(row, column - 1) == model::TileMap::SliderSymbol) {
+                continue;  // the run's second cell; only its leftmost cell starts a slider
+            }
+            for (const auto& spec : level.sliders(currentArea)) {
+                if (spec.sourceColumn != column) continue;
+                const model::Vector2 origin{static_cast<float>(column * tileWidth),
+                                            static_cast<float>((rows - 1 - row) * tileHeight)};
+                const auto axis = spec.axis == model::SliderAxis::Horizontal
+                    ? model::Slider::Axis::Horizontal
+                    : model::Slider::Axis::Vertical;
+                entities.push_back(std::make_unique<model::Slider>(
+                    origin,
+                    model::Vector2{2.0f * static_cast<float>(tileWidth),
+                                  static_cast<float>(tileHeight)},
+                    axis, spec.travelDistance, spec.speed));
+                break;
+            }
+        }
+    }
+
     // Fallback: if the map has no 'M', keep the game playable with a fixed spawn.
     if (!playerPtr) {
         const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
@@ -449,6 +599,8 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
                 enemy = std::make_unique<model::Bowser>(origin);
             } else if (e.type == "PiranhaPlant") {
                 enemy = std::make_unique<model::PiranhaPlant>(origin);
+            } else if (e.type == "CheepCheep") {
+                enemy = std::make_unique<model::CheepCheep>(origin, e.direction);
             }
             if (enemy) {
                 enemy->setPosition({e.posX, e.posY});
@@ -472,6 +624,8 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
                 item = std::make_unique<model::Starman>(origin);
             } else if (it.type == "Coin") {
                 item = std::make_unique<model::Coin>(origin);
+            } else if (it.type == "MapCoin") {
+                item = std::make_unique<model::MapCoin>(origin);
             }
             if (item) {
                 item->setPosition({it.posX, it.posY});
@@ -498,7 +652,6 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
     if (currentArea == level.areaCount() - 1) {
         completion.build(map, entities);
     }
-
     // Every character obeys the current world's physics (gravity/fall/drag, swim), and
     // every entity gets this scene as its spawn channel (model::World).
     const model::WorldTheme& world = model::WorldSet::forType(worldType);
@@ -595,6 +748,8 @@ void LevelScene::captureLevelSaveData(model::LevelSaveData& outLevelSave) const 
                     esd.type = "Bowser";
                 } else if (dynamic_cast<model::PiranhaPlant*>(enemy)) {
                     esd.type = "PiranhaPlant";
+                } else if (dynamic_cast<model::CheepCheep*>(enemy)) {
+                    esd.type = "CheepCheep";
                 } else {
                     esd.type = "Goomba";
                 }
@@ -621,6 +776,8 @@ void LevelScene::captureLevelSaveData(model::LevelSaveData& outLevelSave) const 
                     isd.type = "Starman";
                 } else if (dynamic_cast<model::Coin*>(item)) {
                     isd.type = "Coin";
+                } else if (dynamic_cast<model::MapCoin*>(item)) {
+                    isd.type = "MapCoin";
                 } else {
                     continue;
                 }
@@ -655,6 +812,18 @@ void LevelScene::removeTile(std::size_t row, std::size_t column) {
     map.setTile(row, column, '.');
 }
 
+void LevelScene::removeTilesOfType(char symbol) {
+    // Sweeps the working grid, not the level's pristine copy, so a death restart rebuilds
+    // the area with its bridge intact — the same way a smashed brick comes back.
+    for (std::size_t row = 0; row < map.getRows(); ++row) {
+        for (std::size_t column = 0; column < map.getColumns(); ++column) {
+            if (map.getTile(row, column) == symbol) {
+                map.setTile(row, column, '.');
+            }
+        }
+    }
+}
+
 model::Entity* LevelScene::addEntity(std::unique_ptr<model::Entity> entity) {
     if (!entity) return nullptr;
     model::Entity* raw = entity.get();
@@ -671,9 +840,10 @@ void LevelScene::armDormancy() {
     activationFrontier = cameraX + halfWidth + ActivationMargin;
 
     for (const auto& e : entities) {
-        // The player and the level's fixed furniture are never dormant: a pipe or the
-        // flagpole must collide and draw from the first frame, and dormancy exists to
-        // stop enemies acting off-screen, not to hide terrain.
+        // The player and the level's fixed furniture are never dormant: a pipe, the goal
+        // or a slider must collide and draw (and, for a slider, move) from the first
+        // frame, and dormancy exists to stop enemies acting off-screen, not to hide
+        // terrain.
         if (e.get() == playerPtr || e->isSolid()) {
             e->isDormant = false;
             continue;
@@ -696,14 +866,12 @@ void LevelScene::updateActivation() {
 }
 
 LevelScene::Event LevelScene::update(float deltaTime) {
-    // While the owner's clear cinematic runs, the world is frozen: no timer, no input,
-    // no physics. The cinematic drives the player directly.
     if (cinematicActive) {
         return Event::None;
     }
 
-    // Pipe travel freezes the world the same way: the transition drives the player
-    // directly (slide in, teleport, slide out) and everything else stands still.
+    // Pipe travel freezes the world: the transition drives the player directly
+    // (slide in, teleport, slide out) and everything else stands still.
     if (pipePhase != PipePhase::None) {
         advancePipeTransition(deltaTime);
         return Event::None;
@@ -841,8 +1009,8 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         return Event::RunEnded;
     }
 
-    // Pipe entry: holding Down while standing on a pipe's cap and a portal is bound to
-    // that pipe's column starts the slide-in/out travel to the portal's area.
+    // Pipe entry: holding Down on a vertical pipe's cap, or merely touching a horizontal
+    // one, starts the slide-in/out travel to the portal bound to that pipe's column.
     if (playerPtr) {
         if (const model::Portal* portal =
                 portals.findEntryPortal(*playerPtr, level, currentArea, entities)) {
@@ -852,6 +1020,11 @@ LevelScene::Event LevelScene::update(float deltaTime) {
 
     // Flagpole touch: report the event so the owner starts the scripted clear play.
     if (completion.isTouched() && playerPtr && !playerPtr->isDying()) {
+        return Event::ClearTriggered;
+    }
+
+    // Goal touch: report the event so the owner freezes the scene and shows the overlay.
+    if (goalPtr && goalPtr->isTouched() && playerPtr && !playerPtr->isDying()) {
         return Event::ClearTriggered;
     }
 
@@ -935,6 +1108,14 @@ model::FlagPole* LevelScene::flagPole() const {
     return completion.flagPole();
 }
 
+float LevelScene::castleDoorX() const {
+    return completion.castleDoorX(map);
+}
+
+void LevelScene::setCinematicActive(bool active) {
+    cinematicActive = active;
+}
+
 int LevelScene::getRemainingTime() const {
     return timer.getRemainingSeconds();
 }
@@ -943,16 +1124,8 @@ void LevelScene::pauseTimer() {
     timer.pause();
 }
 
-void LevelScene::setCinematicActive(bool active) {
-    cinematicActive = active;
-}
-
 void LevelScene::toggleHitboxes() {
     showHitboxes = !showHitboxes;
-}
-
-float LevelScene::castleDoorX() const {
-    return completion.castleDoorX(map);
 }
 
 }

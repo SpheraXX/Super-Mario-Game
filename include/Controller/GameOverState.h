@@ -2,8 +2,12 @@
 #define CONTROLLER_GAMEOVERSTATE_H
 
 #include "Controller/GameState.h"
-
 #include <SFML/Graphics/Font.hpp>
+#include <SFML/Graphics/Sprite.hpp>
+#include "View/UI/UIContainer.h"
+#include "View/UI/UILabel.h"
+#include "View/Effect/LerpAnimator.h"
+#include <functional>
 
 namespace controller {
 
@@ -11,17 +15,25 @@ namespace controller {
 // resetting progress for the next run.
 class GameOverState : public GameState {
 public:
+    GameOverState(std::function<void()> onRestartCallback);
+
     void onEnter() override;
+    void onDisplayModeChanged() override;
     void handleEvent(const sf::Event& event) override;
     void update(float deltaTime) override;
     void render(sf::RenderTarget& window) override;
 
 private:
-    sf::Font font;
+    void buildUI();
+
+    std::function<void()> m_onRestartCallback;
+    
+    view::ui::UILabel m_scoreLabel;
+    view::ui::UIContainer m_buttonList;
+    view::effect::LerpAnimator m_slideIn;
+    sf::Sprite m_background;
+    
     bool fontLoaded = false;
-    unsigned int titleSize = 28;
-    unsigned int scoreSize = 13;
-    unsigned int hintSize = 10;
 };
 
 }

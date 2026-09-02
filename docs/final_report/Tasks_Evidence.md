@@ -68,3 +68,8 @@ Below is the detailed breakdown of the tasks performed across the recent develop
 - **Task Description**: Authored the full `Section3_Implementation.md` covering the engine's OOP/MVC architectural design, behavioral design patterns (State, Singleton, Command, Observer, Composite), fixed-timestep game loop, custom UI framework, and data-driven progression systems for the final report.
 - **Hours**: 6
 - **Evidence**: Screenshots of Git commits `b061916` ("docs: add comprehensive Section 3 Implementation chapter...") and `d2b92ff`.
+
+### Task 12: Implement Profile System, Global Save Slots, and CS202 Finalization
+- **Task Description**: Engineered a multi-user `ProfileManager` allowing users to create, select, and delete individual player profiles, backed by JSON-based save slots. Developed the `ProfileMenuState` UI and integrated the `RankingState` to track global high scores. Finalized the CS202 LaTeX report by injecting project-specific OOP and Design Pattern source code references.
+- **Hours**: 8
+- **Evidence**: Screenshot of Git commit `07f95cd` ("feat(profile): implement ProfileManager, RankingState, save slots and finalize CS202 report").

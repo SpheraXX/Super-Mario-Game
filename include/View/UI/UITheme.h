@@ -24,6 +24,13 @@ constexpr sf::Color ColorErrorHovered = sf::Color(180, 80, 80);
 constexpr sf::Color ColorSuccessNormal = sf::Color(50, 150, 200); // Light blue
 constexpr sf::Color ColorSuccessHovered = sf::Color(80, 180, 230);
 
+// Level Status
+constexpr sf::Color ColorLevelPassed = sf::Color(100, 255, 100); // Green
+constexpr sf::Color ColorLevelAvailable = sf::Color(255, 255, 100); // Yellow
+constexpr sf::Color ColorWorldLocked = sf::Color(60, 60, 60); // Dark Gray
+constexpr sf::Color ColorWorldUnfocused = sf::Color(150, 150, 150); // Gray for non-focused world card
+constexpr sf::Color ColorLockedText = sf::Color(255, 100, 100); // Red for LOCKED label
+
 // Background dimming
 constexpr sf::Color ColorOverlay = sf::Color(0, 0, 0, 140);
 constexpr sf::Color ScreenBackground = sf::Color(20, 20, 30);
@@ -72,7 +79,7 @@ namespace layout {
 // Standardized sizes to avoid magic numbers across states
 constexpr float MenuButtonWidth = 120.f;
 constexpr float MenuButtonHeight = 26.f;
-constexpr float MenuButtonGap = 2.f;
+constexpr float MenuButtonGap = -2.f;
 
 constexpr float SmallButtonWidth = 80.f;
 constexpr float SmallButtonHeight = 24.f;
@@ -82,6 +89,23 @@ constexpr float ScreenPadding = 20.f;
 // Popup / Alert sizes
 constexpr float PopupBtnWidthWide = 80.f;
 constexpr float PopupBtnWidthShort = 60.f;
+
+// Profile Input Popup sizes
+constexpr float ProfilePopupInputWidth = 120.f;
+constexpr float ProfilePopupInputHeight = 20.f;
+constexpr float ProfilePopupTitleOffsetY = -40.f;
+constexpr float ProfilePopupInputOffsetY = -10.f;
+constexpr float ProfilePopupBtnOffsetY = 15.f;
+constexpr float ProfilePopupBtnGap = 10.f;
+constexpr float ProfilePopupCursorBlinkTime = 0.5f;
+
+// Ranking sizes
+constexpr float RankingStartYRatio = 0.35f;
+constexpr float RankingRowSpacing = 20.f;
+constexpr float RankingColNoXRatio = 0.25f;
+constexpr float RankingColPlayerXRatio = 0.40f;
+constexpr float RankingColScoreXRatio = 0.60f;
+constexpr float RankingColPassXRatio = 0.75f;
 
 // Options Tab sizes
 constexpr float OptionWidgetWidth = 120.f;
@@ -93,6 +117,9 @@ constexpr float KeyResetOffsetX = 60.f;
 constexpr unsigned int TitleFontSize = 16u;
 constexpr unsigned int ButtonFontSize = 8u;
 constexpr unsigned int SmallFontSize = 6u;
+
+// World Select carousel constants
+constexpr float WorldCardSpacingRatio = 0.28f; // card spacing = screenW * this
 
 // BGA scaling constants
 constexpr float BgaScaleMultiplier =

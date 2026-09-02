@@ -7,6 +7,8 @@
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <vector>
+#include <unordered_set>
+#include <string>
 
 namespace controller {
 
@@ -24,11 +26,13 @@ public:
 private:
     void updateCarousel();
     void updateCardLayout();
-    void buildUI();
+    void rebuildLockedState(); // Rebuilds m_isUnlocked + m_lockTexts caches
 
     int m_focusIndex = 0;
     std::vector<sf::Sprite> m_worldSprites;
     std::vector<std::string> m_worldIds;
+    std::unordered_set<std::string> m_unlockedWorlds;
+    std::vector<bool> m_isUnlocked;   // pre-computed per-world unlock flag
     
     // Lerp animator for horizontal slide
     view::effect::LerpAnimator m_slideAnimator{0.f, 0.f, 0.3f, view::effect::Easing::OutCubic};

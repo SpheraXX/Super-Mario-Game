@@ -10,7 +10,8 @@ enum class InputAction {
     Run,
     Pause,
     Attack,
-    Crouch
+    Crouch,
+    CycleDisplay
 };
 
 class IInputMapper {

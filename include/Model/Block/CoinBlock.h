@@ -16,6 +16,7 @@ public:
 
     // True while the coin is still inside (closed '?' sprite).
     bool isOpened() const;
+    void setCoinAvailable(bool available) { coinAvailable = available; }
 
     // Bumped from below by the player: collects the reward exactly once. A spent block
     // returns false, so the bump counts for nothing (no bounce, no reaction on top).

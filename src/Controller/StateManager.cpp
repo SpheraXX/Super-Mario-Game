@@ -1,9 +1,9 @@
 #include "Controller/StateManager.h"
+#include "Model/Core/LogManager.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
 
 #include <iostream>
-
 #include <stdexcept>
 
 namespace controller {
@@ -48,6 +48,11 @@ void StateManager::applyPending() {
                 if (!stack.empty()) {
                     stack.back()->onExit();
                     stack.pop_back();
+                    if (!stack.empty()) {
+                        stack.back()->onResume();
+                    }
+                } else {
+                    model::LogManager::instance().warning("Invalid game state: Attempted to pop empty state stack");
                 }
                 break;
 
@@ -55,6 +60,8 @@ void StateManager::applyPending() {
                 if (!stack.empty()) {
                     stack.back()->onExit();
                     stack.pop_back();
+                } else {
+                    model::LogManager::instance().warning("Invalid game state: Replacing state on empty stack");
                 }
                 change.state->manager = this;
                 change.state->context = context;

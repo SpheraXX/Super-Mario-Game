@@ -1,6 +1,8 @@
 #include "Controller/LevelScene.h"
 
 #include "Controller/AppEngine.h"
+#include "Model/Core/LogManager.h"
+#include "Model/Save/SaveData.h"
 #include "Model/Block/BrickBlock.h"
 #include "Model/Block/BrickShard.h"
 #include "Model/Block/CoinBlock.h"
@@ -27,6 +29,7 @@
 #include "Model/Enemy/Koopa.h"
 #include "Model/Level/ChainTrigger.h"
 #include "Model/Level/FirebarBall.h"
+#include "Model/Level/FlagPole.h"
 #include "Model/Level/LavaBubble.h"
 #include "Model/Level/LevelGoal.h"
 #include "Model/Level/Pipe.h"
@@ -35,6 +38,7 @@
 #include "Model/Player/Luigi.h"
 #include "Model/Player/Mario.h"
 #include "Model/Player/Player.h"
+#include "Model/SettingsManager.h"
 #include "Model/World/WorldSet.h"
 #include "View/Base/RenderContext.h"
 #include "View/Block/BrickBlockRenderer.h"
@@ -45,6 +49,7 @@
 #include "View/Enemy/HammerRenderer.h"
 #include "View/Level/ChainTriggerRenderer.h"
 #include "View/Level/FirebarBallRenderer.h"
+#include "View/Level/FlagPoleRenderer.h"
 #include "View/Enemy/FireballRenderer.h"
 #include "View/Item/ItemFrameRenderer.h"
 #include "View/Item/MapCoinRenderer.h"
@@ -146,15 +151,20 @@ LevelScene::LevelScene()
                                       view::MiscFrameRenderer<model::MushroomRetainer>>(
         view::atlas::MushroomRetainer);
     entityRenderers->registerRenderer<model::ChainTrigger, view::ChainTriggerRenderer>();
+    entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
 }
 
-bool LevelScene::loadLevel() {
+bool LevelScene::loadLevel(const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
     auto& game = model::GameManager::instance();
     try {
         level.loadFromFile(game.getCurrentMapPath());
-        loadArea(0);
+        std::size_t targetArea = 0;
+        if (levelSave && levelSave->currentArea < level.areaCount()) {
+            targetArea = levelSave->currentArea;
+        }
+        loadArea(targetArea, /* keepPlayer */ false, levelSave, playerSave, keepPlayerPosition);
     } catch (const std::exception& error) {
-        std::cerr << "LevelScene: failed to load level assets: " << error.what() << '\n';
+        model::LogManager::instance().error(std::string("Failed to load level: ") + error.what());
         mapLoaded = false;
         return false;
     }
@@ -163,12 +173,18 @@ bool LevelScene::loadLevel() {
     game.setLevelName(level.getLevelName());
     game.setNextMapPath(level.getNextMapPath());
 
-    timer.reset(TimerStartSeconds);
-
-    // TEMP diagnostics (removed after playtest).
-    if (mapLoaded && map.getColumns() > 0) {
+    if (levelSave) {
+        timer.reset(levelSave->remainingTime);
     } else {
+        timer.reset(TimerStartSeconds);
     }
+
+    if (playerSave && playerPtr) {
+        playerPtr->restoreState(*playerSave, keepPlayerPosition);
+        armDormancy();
+    }
+
+    model::LogManager::instance().info("Level start: " + game.getLevelName());
     return true;
 }
 
@@ -176,16 +192,43 @@ void LevelScene::setInputMapper(model::IInputMapper* mapper) {
     inputMapper = mapper;
 }
 
+bool LevelScene::hasAuthoredGoal() const {
+    for (std::size_t row = 0; row < map.getRows(); ++row) {
+        for (std::size_t column = 0; column < map.getColumns(); ++column) {
+            if (map.getTile(row, column) == model::TileMap::GoalSymbol) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 // Instantiate the given area: copy its grid into the working map, rebuild the themed
-// renderer, then spawn the area.
-void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer) {
+// renderer, append the completion zone on the FINAL area only, then spawn the area.
+void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
     currentArea = areaIndex;
     portals.clear();  // every visit to an area reactivates all its pipes
     worldType = level.areaWorld(areaIndex);
     map = level.areaMap(areaIndex);
+    // Only append the legacy flagpole/castle zone when the author didn't place their own
+    // goal marker -- see hasAuthoredGoal's comment in the header for why coexistence is
+    // a bug, not a feature.
+    if (currentArea == level.areaCount() - 1 && !hasAuthoredGoal()) {
+        map.padRight(LevelCompletion::LevelPaddingTiles);
+    }
+
+    // Apply removed / broken tiles if restoring this area
+    if (levelSave && levelSave->currentArea == currentArea) {
+        for (const auto& tile : levelSave->removedTiles) {
+            if (tile.row < map.getRows() && tile.col < map.getColumns()) {
+                map.setTile(tile.row, tile.col, '.');
+            }
+        }
+    }
+
     renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png", worldType);
     mapLoaded = true;
-    resetLevel(keepPlayer);
+    resetLevel(keepPlayer, levelSave, playerSave, keepPlayerPosition);
 }
 
 void LevelScene::teleportToPortal(const model::Portal& portal) {
@@ -309,7 +352,45 @@ void LevelScene::restartLevel() {
     loadArea(0);
 }
 
-void LevelScene::resetLevel(bool keepPlayer) {
+void LevelScene::switchCharacter(bool toLuigi) {
+    if (!playerPtr || playerPtr->isLuigi() == toLuigi) {
+        return;
+    }
+
+    // Snapshot exactly the fields PlayState::captureSaveData() persists for the player,
+    // so the new character picks up position/velocity/facing/size/power unchanged --
+    // the same restoreState() a death-respawn already uses.
+    model::PlayerSaveData snapshot;
+    snapshot.posX = playerPtr->getPosition().x;
+    snapshot.posY = playerPtr->getPosition().y;
+    snapshot.velX = playerPtr->getVelocity().x;
+    snapshot.velY = playerPtr->getVelocity().y;
+    snapshot.isBig = playerPtr->isBig();
+    snapshot.starDuration = playerPtr->getStarDuration();
+    snapshot.facingDirection = playerPtr->getDirection();
+    snapshot.power = playerPtr->isStar() ? "Star" : (playerPtr->isFire() ? "Fire" : "None");
+
+    const auto it = std::find_if(entities.begin(), entities.end(),
+        [this](const std::unique_ptr<model::Entity>& e) { return e.get() == playerPtr; });
+    if (it == entities.end()) {
+        return;
+    }
+    entities.erase(it);
+    playerPtr = nullptr;
+
+    std::unique_ptr<model::Player> fresh;
+    if (toLuigi) {
+        fresh = std::make_unique<model::Luigi>(model::Vector2{snapshot.posX, snapshot.posY});
+    } else {
+        fresh = std::make_unique<model::Mario>(model::Vector2{snapshot.posX, snapshot.posY});
+    }
+    fresh->restoreState(snapshot, /*keepPosition=*/true);
+    fresh->setWorld(model::WorldSet::forType(worldType));
+
+    playerPtr = static_cast<model::Player*>(addEntity(std::move(fresh)));
+}
+
+void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
     const std::size_t tileWidth = model::TileMap::TileWidth;
     const std::size_t tileHeight = model::TileMap::TileHeight;
     const std::size_t rows = map.getRows();
@@ -329,9 +410,14 @@ void LevelScene::resetLevel(bool keepPlayer) {
 
     entities.clear();
     if (!keptPlayer) {
-        playerPtr = nullptr;  // full restart: a fresh Mario spawns below
+        playerPtr = nullptr;  // full restart: a fresh player spawns below
     }
     goalPtr = nullptr;
+
+    // A save's own character always wins on resume; a brand-new spawn (no save at all)
+    // uses whichever character is currently selected in Options.
+    const bool wantLuigi = playerSave ? playerSave->isLuigi
+                                      : model::SettingsManager::instance().get().luigiSelected;
 
     for (std::size_t row = 0; row < rows; ++row) {
         for (std::size_t column = 0; column < columns; ++column) {
@@ -344,14 +430,31 @@ void LevelScene::resetLevel(bool keepPlayer) {
             switch (symbol) {
                 case 'M':
                     if (!playerPtr) {
-                        auto mario = std::make_unique<model::Mario>(position);
-                        playerPtr = mario.get();
-                        entities.push_back(std::move(mario));
+                        std::unique_ptr<model::Player> player;
+                        if (wantLuigi) {
+                            player = std::make_unique<model::Luigi>(position);
+                        } else {
+                            player = std::make_unique<model::Mario>(position);
+                        }
+                        playerPtr = player.get();
+                        entities.push_back(std::move(player));
                     }
                     break;
-                case 'C':
-                    entities.push_back(std::make_unique<model::CoinBlock>(position, size));
+                case 'C': {
+                    auto coinBlock = std::make_unique<model::CoinBlock>(position, size);
+                    if (levelSave && levelSave->currentArea == currentArea) {
+                        for (const auto& cbData : levelSave->coinBlocks) {
+                            if (std::abs(cbData.posX - position.x) < 1.0f && std::abs(cbData.posY - position.y) < 1.0f) {
+                                if (cbData.opened) {
+                                    coinBlock->setCoinAvailable(false);
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    entities.push_back(std::move(coinBlock));
                     break;
+                }
                 case model::TileMap::CoinSymbol:
                     entities.push_back(std::make_unique<model::MapCoin>(position));
                     break;
@@ -506,10 +609,16 @@ void LevelScene::resetLevel(bool keepPlayer) {
     // Fallback: if the map has no 'M', keep the game playable with a fixed spawn.
     if (!playerPtr) {
         const float groundY = static_cast<float>((rows - 2) * tileHeight - tileHeight);
-        auto mario = std::make_unique<model::Mario>(
-            model::Vector2{static_cast<float>(2 * tileWidth), groundY});
-        playerPtr = mario.get();
-        entities.push_back(std::move(mario));
+        std::unique_ptr<model::Player> player;
+        if (wantLuigi) {
+            player = std::make_unique<model::Luigi>(
+                model::Vector2{static_cast<float>(2 * tileWidth), groundY});
+        } else {
+            player = std::make_unique<model::Mario>(
+                model::Vector2{static_cast<float>(2 * tileWidth), groundY});
+        }
+        playerPtr = player.get();
+        entities.push_back(std::move(player));
     }
 
     // An area change keeps Mario: put him back ahead of pipes and enemies (matching the
@@ -517,22 +626,93 @@ void LevelScene::resetLevel(bool keepPlayer) {
     if (keptPlayer) {
         playerPtr = static_cast<model::Player*>(keptPlayer.get());
         entities.push_back(std::move(keptPlayer));
+    } else {
+        model::LogManager::instance().info("Player spawn");
     }
 
-    // Enemies placed as digit markers (EnemyFactory ids). These are stripped to empty
-    // tiles at load, so they never double as terrain; the factory is the only place an
-    // enemy is constructed for a level.
-    for (const model::SpawnPoint& spawn : map.getSpawnPoints()) {
-        const model::Vector2 origin = model::TileMap::tileOrigin(spawn.row, spawn.column);
-        if (auto enemy = model::EnemyFactory::create(spawn.id, origin)) {
-            enemy->setMap(&map);  // for ledge detection
-            entities.push_back(std::move(enemy));
+    // Enemies & Items: If restored from snapshot, spawn exact living enemies and items
+    if (levelSave && levelSave->hasEntitiesSnapshot && levelSave->currentArea == currentArea) {
+        for (const auto& e : levelSave->enemies) {
+            std::unique_ptr<model::Enemy> enemy;
+            const model::Vector2 origin{e.posX, e.posY};
+            if (e.type == "Goomba") {
+                enemy = std::make_unique<model::Goomba>(origin);
+            } else if (e.type == "Koopa") {
+                auto koopa = std::make_unique<model::Koopa>(origin, e.isWinged);
+                if (e.state == "ShellSpinning") {
+                    koopa->setState(model::KoopaState::ShellSpinning);
+                } else if (e.state == "ShellIdle") {
+                    koopa->setState(model::KoopaState::ShellIdle);
+                } else {
+                    koopa->setState(model::KoopaState::Walking);
+                }
+                enemy = std::move(koopa);
+            } else if (e.type == "HammerBro") {
+                enemy = std::make_unique<model::HammerBro>(origin);
+            } else if (e.type == "Lakitu") {
+                enemy = std::make_unique<model::Lakitu>(origin);
+            } else if (e.type == "Spiny") {
+                enemy = std::make_unique<model::Spiny>(origin);
+            } else if (e.type == "Bowser") {
+                enemy = std::make_unique<model::Bowser>(origin);
+            } else if (e.type == "PiranhaPlant") {
+                enemy = std::make_unique<model::PiranhaPlant>(origin);
+            } else if (e.type == "CheepCheep") {
+                enemy = std::make_unique<model::CheepCheep>(origin, e.direction);
+            }
+            if (enemy) {
+                enemy->setPosition({e.posX, e.posY});
+                enemy->setVelocity({e.velX, e.velY});
+                enemy->setFacingRight(e.facingRight);
+                enemy->setDirection(e.direction);
+                enemy->isDormant = e.isDormant;
+                enemy->setMap(&map);
+                entities.push_back(std::move(enemy));
+            }
+        }
+
+        for (const auto& it : levelSave->items) {
+            std::unique_ptr<model::Item> item;
+            const model::Vector2 origin{it.posX, it.posY};
+            if (it.type == "Mushroom") {
+                item = std::make_unique<model::Mushroom>(origin, it.direction);
+            } else if (it.type == "FireFlower") {
+                item = std::make_unique<model::FireFlower>(origin);
+            } else if (it.type == "Starman") {
+                item = std::make_unique<model::Starman>(origin);
+            } else if (it.type == "Coin") {
+                item = std::make_unique<model::Coin>(origin);
+            } else if (it.type == "MapCoin") {
+                item = std::make_unique<model::MapCoin>(origin);
+            }
+            if (item) {
+                item->setPosition({it.posX, it.posY});
+                item->setVelocity({it.velX, it.velY});
+                item->setDirection(it.direction);
+                item->isDormant = false;
+                entities.push_back(std::move(item));
+            }
+        }
+    } else {
+        // Enemies placed as digit markers (EnemyFactory ids). These are stripped to empty
+        // tiles at load, so they never double as terrain; the factory is the only place an
+        // enemy is constructed for a level.
+        for (const model::SpawnPoint& spawn : map.getSpawnPoints()) {
+            const model::Vector2 origin = model::TileMap::tileOrigin(spawn.row, spawn.column);
+            if (auto enemy = model::EnemyFactory::create(spawn.id, origin)) {
+                enemy->setMap(&map);  // for ledge detection
+                entities.push_back(std::move(enemy));
+            }
         }
     }
 
+    // Level completion zone, in the padded columns: flagpole, then the goal castle.
+    // Skipped when the area already has its own author-placed goal (see loadArea).
+    if (currentArea == level.areaCount() - 1 && !hasAuthoredGoal()) {
+        completion.build(map, entities);
+    }
     // Every character obeys the current world's physics (gravity/fall/drag, swim), and
-    // every entity gets this scene as its spawn channel (model::World) so emitters can
-    // put projectiles and rewards into the level without knowing a controller exists.
+    // every entity gets this scene as its spawn channel (model::World).
     const model::WorldTheme& world = model::WorldSet::forType(worldType);
     for (const auto& e : entities) {
         e->setWorld(this);
@@ -544,6 +724,129 @@ void LevelScene::resetLevel(bool keepPlayer) {
     // Everything ahead of the camera starts asleep; the player is always awake.
     armDormancy();
 
+    if (levelSave && levelSave->hasEntitiesSnapshot && levelSave->currentArea == currentArea) {
+        std::size_t enemyIdx = 0;
+        for (const auto& e : entities) {
+            if (dynamic_cast<model::Enemy*>(e.get())) {
+                if (enemyIdx < levelSave->enemies.size()) {
+                    e->isDormant = levelSave->enemies[enemyIdx].isDormant;
+                    enemyIdx++;
+                }
+            }
+        }
+    }
+}
+
+void LevelScene::captureLevelSaveData(model::LevelSaveData& outLevelSave) const {
+    outLevelSave.currentArea = currentArea;
+    outLevelSave.remainingTime = timer.getRemaining();
+
+    // 1. Removed / broken tiles: compare working map with original map of this area
+    outLevelSave.removedTiles.clear();
+    const auto& originalMap = level.areaMap(currentArea);
+    const std::size_t rows = map.getRows();
+    const std::size_t cols = std::min(map.getColumns(), originalMap.getColumns());
+    for (std::size_t r = 0; r < rows; ++r) {
+        for (std::size_t c = 0; c < cols; ++c) {
+            char orig = originalMap.getTile(r, c);
+            char curr = map.getTile(r, c);
+            if ((orig == '#' || orig == 'B' || orig == 'C') && curr == '.') {
+                outLevelSave.removedTiles.push_back({r, c});
+            }
+        }
+    }
+
+    outLevelSave.coinBlocks.clear();
+    outLevelSave.enemies.clear();
+    outLevelSave.items.clear();
+
+    for (const auto& e : entities) {
+        if (!e) continue;
+
+        // CoinBlock
+        if (auto* cb = dynamic_cast<model::CoinBlock*>(e.get())) {
+            model::BlockSaveData bsd;
+            bsd.posX = cb->getPosition().x;
+            bsd.posY = cb->getPosition().y;
+            bsd.opened = cb->isOpened();
+            outLevelSave.coinBlocks.push_back(bsd);
+            continue;
+        }
+
+        // Enemy: save living ones
+        if (auto* enemy = dynamic_cast<model::Enemy*>(e.get())) {
+            if (enemy->isActive && enemy->isAlive() && !enemy->isDying()) {
+                model::EnemySaveData esd;
+                esd.posX = enemy->getPosition().x;
+                esd.posY = enemy->getPosition().y;
+                esd.velX = enemy->getVelocity().x;
+                esd.velY = enemy->getVelocity().y;
+                esd.isDormant = enemy->isDormant;
+                esd.facingRight = enemy->isFacingRight();
+                esd.direction = enemy->getDirection();
+
+                if (auto* koopa = dynamic_cast<model::Koopa*>(enemy)) {
+                    esd.type = "Koopa";
+                    esd.isWinged = koopa->isWinged();
+                    if (koopa->getState() == model::KoopaState::ShellSpinning) {
+                        esd.state = "ShellSpinning";
+                    } else if (koopa->getState() == model::KoopaState::ShellIdle) {
+                        esd.state = "ShellIdle";
+                    } else {
+                        esd.state = "Walking";
+                    }
+                } else if (dynamic_cast<model::Goomba*>(enemy)) {
+                    esd.type = "Goomba";
+                } else if (dynamic_cast<model::HammerBro*>(enemy)) {
+                    esd.type = "HammerBro";
+                } else if (dynamic_cast<model::Lakitu*>(enemy)) {
+                    esd.type = "Lakitu";
+                } else if (dynamic_cast<model::Spiny*>(enemy)) {
+                    esd.type = "Spiny";
+                } else if (dynamic_cast<model::Bowser*>(enemy)) {
+                    esd.type = "Bowser";
+                } else if (dynamic_cast<model::PiranhaPlant*>(enemy)) {
+                    esd.type = "PiranhaPlant";
+                } else if (dynamic_cast<model::CheepCheep*>(enemy)) {
+                    esd.type = "CheepCheep";
+                } else {
+                    esd.type = "Goomba";
+                }
+                outLevelSave.enemies.push_back(esd);
+            }
+            continue;
+        }
+
+        // Item: active collectibles
+        if (auto* item = dynamic_cast<model::Item*>(e.get())) {
+            if (item->isActive && item->isAlive() && !item->isDying()) {
+                model::ItemSaveData isd;
+                isd.posX = item->getPosition().x;
+                isd.posY = item->getPosition().y;
+                isd.velX = item->getVelocity().x;
+                isd.velY = item->getVelocity().y;
+                isd.direction = item->getDirection();
+
+                if (dynamic_cast<model::Mushroom*>(item)) {
+                    isd.type = "Mushroom";
+                } else if (dynamic_cast<model::FireFlower*>(item)) {
+                    isd.type = "FireFlower";
+                } else if (dynamic_cast<model::Starman*>(item)) {
+                    isd.type = "Starman";
+                } else if (dynamic_cast<model::Coin*>(item)) {
+                    isd.type = "Coin";
+                } else if (dynamic_cast<model::MapCoin*>(item)) {
+                    isd.type = "MapCoin";
+                } else {
+                    continue;
+                }
+                outLevelSave.items.push_back(isd);
+            }
+            continue;
+        }
+    }
+
+    outLevelSave.hasEntitiesSnapshot = true;
 }
 
 void LevelScene::spawn(std::unique_ptr<model::Entity> entity) {
@@ -622,6 +925,10 @@ void LevelScene::updateActivation() {
 }
 
 LevelScene::Event LevelScene::update(float deltaTime) {
+    if (cinematicActive) {
+        return Event::None;
+    }
+
     // Pipe travel freezes the world: the transition drives the player directly
     // (slide in, teleport, slide out) and everything else stands still.
     if (pipePhase != PipePhase::None) {
@@ -770,6 +1077,11 @@ LevelScene::Event LevelScene::update(float deltaTime) {
         }
     }
 
+    // Flagpole touch: report the event so the owner starts the scripted clear play.
+    if (completion.isTouched() && playerPtr && !playerPtr->isDying()) {
+        return Event::ClearTriggered;
+    }
+
     // Goal touch: report the event so the owner freezes the scene and shows the overlay.
     if (goalPtr && goalPtr->isTouched() && playerPtr && !playerPtr->isDying()) {
         return Event::ClearTriggered;
@@ -849,6 +1161,18 @@ void LevelScene::render(sf::RenderTarget& window) {
 
 model::Player* LevelScene::player() const {
     return playerPtr;
+}
+
+model::FlagPole* LevelScene::flagPole() const {
+    return completion.flagPole();
+}
+
+float LevelScene::castleDoorX() const {
+    return completion.castleDoorX(map);
+}
+
+void LevelScene::setCinematicActive(bool active) {
+    cinematicActive = active;
 }
 
 int LevelScene::getRemainingTime() const {

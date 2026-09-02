@@ -6,5 +6,33 @@
     "game_over": {
         "file": "09. Game Over Theme",
         "loop": false
+    },
+    "overworld": {
+        "file": "01. Ground Theme",
+        "loop": true
+    },
+    "underground": {
+        "file": "02. Underground Theme",
+        "loop": true
+    },
+    "underwater": {
+        "file": "03. Underwater Theme",
+        "loop": true
+    },
+    "castle": {
+        "file": "04. Castle Theme",
+        "loop": true
+    },
+    "level_complete": {
+        "file": "06. Level Complete Theme",
+        "loop": false
+    },
+    "lost_a_life": {
+        "file": "08. Lost A Life Theme",
+        "loop": false
+    },
+    "starman": {
+        "file": "05. Invincibility Theme",
+        "loop": true
     }
 }

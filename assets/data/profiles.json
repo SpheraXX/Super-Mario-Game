@@ -1,0 +1,29 @@
+{
+    "active_profile_index": 0,
+    "slots": [
+        {
+            "is_empty": true,
+            "name": "EMPTY",
+            "passed_levels": 2,
+            "total_score": 0
+        },
+        {
+            "is_empty": true,
+            "name": "EMPTY",
+            "passed_levels": 0,
+            "total_score": 0
+        },
+        {
+            "is_empty": true,
+            "name": "EMPTY",
+            "passed_levels": 0,
+            "total_score": 0
+        },
+        {
+            "is_empty": true,
+            "name": "EMPTY",
+            "passed_levels": 0,
+            "total_score": 0
+        }
+    ]
+}

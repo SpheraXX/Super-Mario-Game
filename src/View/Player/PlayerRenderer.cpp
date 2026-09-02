@@ -17,15 +17,19 @@ namespace {
 // which mirrors them when the player walks left):
 //   y  0-31  big Mario        y 48-79  big fire Mario
 //   y 32-47  Mario            y 80-95  fire Mario
-//   y 96-127 big Luigi        y128-143 Luigi            (unused: Luigi borrows Mario's art)
-//   y144-175 big star Mario   y176-191 star Mario
-// The bands below y192 are leftovers; nothing references them.
+//   y 96-127 big Luigi        y144-175 big star (shared: no distinct fire/star Luigi art)
+//   y128-143 Luigi            y176-191 star (shared)
+// The bands below y192 are leftovers; nothing references them. Luigi has real green
+// artwork only for the plain (non-fire, non-star) form -- fire/star Luigi falls back to
+// Mario's rows for those states, since no distinct art exists for them.
 constexpr int MarioRow = 32;
 constexpr int BigMarioRow = 0;
 constexpr int FireRow = 80;
 constexpr int BigFireRow = 48;
 constexpr int StarRow = 176;
 constexpr int BigStarRow = 144;
+constexpr int LuigiRow = 128;
+constexpr int BigLuigiRow = 96;
 
 // Source frame heights. A small pose is a 16x16 cell; a big pose is 16x32.
 constexpr int SmallFrameHeight = 16;
@@ -122,12 +126,13 @@ void PlayerRenderer::renderTyped(sf::RenderTarget& window, const model::Player& 
     // Death: both sizes show the small dead pose. There is no big dead frame — the big cell
     // above it is the sitting pose, and a dying Mario is not sitting. That sprite is one
     // tile tall, so it is drawn into a 32x32 box anchored at the bottom of the (still
-    // full-size) body rather than stretched over it. It always comes from the plain Mario
-    // row: a fire/star death is still the classic sprite.
+    // full-size) body rather than stretched over it. Comes from the plain Mario/Luigi row
+    // (whichever character this is) even for a fire/star death, since neither has a
+    // distinct fire/star death pose.
     if (player.getAnimState() == model::AnimState::Die) {
         const float offsetY = player.getSize().y - SmallDrawSize;
         drawCharacterFrame(window, player,
-                           {{DieFrameX, MarioRow}, {16, SmallFrameHeight}},
+                           {{DieFrameX, player.isLuigi() ? LuigiRow : MarioRow}, {16, SmallFrameHeight}},
                            {player.getSize().x, SmallDrawSize}, {0.0f, offsetY});
         return;
     }
@@ -138,13 +143,15 @@ void PlayerRenderer::renderTyped(sf::RenderTarget& window, const model::Player& 
     // over a grown box is exactly what stretched the sprite before the big row was wired up.
     const bool big = player.getSize().y > SmallDrawSize;
 
-    // The band: Luigi borrows Mario's art, fire has its own rows, and a starred player
-    // alternates between its base band and the star band (fire + star alternates fire rows
-    // and star rows). The pose columns are the same in every band.
+    // The band: fire/star have their own rows (shared between characters -- no distinct
+    // fire/star Luigi art exists), otherwise Mario and Luigi each draw their own plain
+    // row. A starred player alternates between its base band and the star band. The pose
+    // columns are the same in every band.
     const int row = starFrameActive(player)
         ? (big ? BigStarRow : StarRow)
         : (player.isFire() ? (big ? BigFireRow : FireRow)
-                           : (big ? BigMarioRow : MarioRow));
+                           : (player.isLuigi() ? (big ? BigLuigiRow : LuigiRow)
+                                                : (big ? BigMarioRow : MarioRow)));
     drawCharacterFrame(window, player,
                        {{frameXFor(player), row},
                         {16, big ? BigFrameHeight : SmallFrameHeight}});

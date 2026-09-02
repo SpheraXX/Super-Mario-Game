@@ -43,7 +43,7 @@ public:
         return raw;
     }
 
-    void clear();
+    virtual void clear();
     bool empty() const { return children.empty(); }
 
     // ── UIElement overrides ──────────────────────────────────────────────────

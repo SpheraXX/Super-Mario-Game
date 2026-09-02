@@ -1,6 +1,7 @@
 #include "Model/Enemy/Enemy.h"
 
 #include "Model/Core/GameManager.h"
+#include "Model/Core/LogManager.h"
 #include "Model/Core/World.h"
 #include "Model/Map/TileMap.h"
 #include "Model/Projectile/Projectile.h"
@@ -80,6 +81,7 @@ void Enemy::stompedBy(Entity& player) {
         return;
     }
     stompLockout = StompLockoutTime;
+    if (auto audio = GameManager::instance().getAudioDelegate()) audio->playSound("17. Squish");
     onStomped(player);
 }
 
@@ -95,7 +97,7 @@ bool Enemy::acceptsPlayerContact() const {
 
 void Enemy::onStomped(Entity& /* player */) {
     isStomped = true;
-    despawnTimer = 1.0f; // Default 1 second before despawning after stomped
+    despawnTimer = DefaultSquishDuration;
     // The body freezes on the spot: no walk speed, no drift. Subclasses that shrink
     // (Goomba) or change shape (Koopa's shell) still adjust velocity in their own
     // onStomped, but every squished enemy stops moving here.
@@ -106,10 +108,12 @@ void Enemy::onStomped(Entity& /* player */) {
 void Enemy::onHit(Entity& /* source */) {
     // Knocked out (e.g. by a spinning shell): pop up and fall away.
     beginDying(true);
+    if (auto audio = GameManager::instance().getAudioDelegate()) audio->playSound("13. Kick");
     awardScore();
 }
 
 void Enemy::awardScore() const {
+    LogManager::instance().info("Enemy defeated");
     GameManager::instance().addScore(getScoreValue());
 }
 

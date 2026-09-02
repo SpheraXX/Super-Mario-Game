@@ -11,6 +11,8 @@
 #include "Model/Enemy/Spiny.h"
 #include "Model/Map/TileMap.h"
 
+#include "Model/Core/LogManager.h"
+
 #include <iostream>
 
 namespace model {
@@ -52,7 +54,7 @@ std::unique_ptr<Enemy> EnemyFactory::create(int id, Vector2 tileOrigin) {
         case CheepCheep:      return make<model::CheepCheep>(tileOrigin);
 
         default:
-            std::cerr << "EnemyFactory: unknown enemy id " << id << " in map; skipping.\n";
+            model::LogManager::instance().warning("EnemyFactory: unknown enemy id " + std::to_string(id) + " in map; skipping.");
             return nullptr;
     }
 }

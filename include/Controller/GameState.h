@@ -35,6 +35,13 @@ public:
     virtual void update(float deltaTime) = 0;
     virtual void render(sf::RenderTarget& window) = 0;
 
+    // Called when the AppEngine changes window size, fullscreen, or resolution.
+    // Derived states should override this to recalculate UI positions.
+    virtual void onDisplayModeChanged() {}
+
+    // Called when the state becomes the active state again after the state above it is popped.
+    virtual void onResume() {}
+
     // When true, the state directly below this one is still rendered underneath
     // (used for overlay screens such as a future PauseState).
     virtual bool isTransparent() const { return false; }

@@ -23,6 +23,7 @@ void UILabel::render(sf::RenderTarget& target) {
 
     sf::Text sfText(*fontPtr, str, charSize);
     sfText.setFillColor(color);
+    sfText.setLineSpacing(lineSpacing);
 
     const sf::FloatRect bounds = sfText.getLocalBounds();
     float x = pos.x;

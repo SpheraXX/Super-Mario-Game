@@ -24,8 +24,7 @@ protected:
                      const RenderContext& ctx) const override;
 
 private:
-    sf::Texture texture;
-    bool textureLoaded;
+    const sf::Texture* texturePtr;
 };
 
 }

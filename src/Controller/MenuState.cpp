@@ -6,6 +6,8 @@
 #include "Model/Core/GameManager.h"
 #include "View/AssetManager.h"
 #include "View/TextUtils.h"
+#include "Model/SettingsManager.h"
+#include "Controller/InputMapper.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RenderTarget.hpp>
@@ -24,22 +26,19 @@ void MenuState::onEnter() {
         const float fitWidth = static_cast<float>(AppEngine::screenWidth()) * 0.94f;
         titleSize = view::text::fitCharacterSize(font, "SUPER MARIO", fitWidth, 28);
         startHintSize = view::text::fitCharacterSize(font, "Press ENTER or SPACE to Start", fitWidth, 12);
-        quitHintSize = view::text::fitCharacterSize(font, "Press ESC to Quit", fitWidth, 10);
+        
+        std::string backKeyName = InputMapper::getKeyName(model::SettingsManager::instance().get().keyPause);
+        std::string quitStr = "Press " + backKeyName + " to Quit";
+        quitHintSize = view::text::fitCharacterSize(font, quitStr, fitWidth, 10);
     }
 }
 
 void MenuState::handleEvent(const sf::Event& event) {
     if (const auto* key = event.getIf<sf::Event::KeyPressed>()) {
-        switch (key->code) {
-            case sf::Keyboard::Key::Enter:
-            case sf::Keyboard::Key::Space:
-                manager->replaceState(std::make_unique<PlayState>());
-                break;
-            case sf::Keyboard::Key::Escape:
-                manager->clear(); // empties the stack -> AppEngine loop exits
-                break;
-            default:
-                break;
+        if (key->code == sf::Keyboard::Key::Enter || key->code == sf::Keyboard::Key::Space) {
+            manager->replaceState(std::make_unique<PlayState>());
+        } else if (static_cast<int>(key->code) == model::SettingsManager::instance().get().keyPause) {
+            manager->clear(); // empties the stack -> AppEngine loop exits
         }
     }
 }
@@ -66,7 +65,9 @@ void MenuState::render(sf::RenderTarget& window) {
     startHint.setFillColor(sf::Color::White);
     view::text::drawCentered(window, startHint, centerX, centerY * 0.55f);
 
-    sf::Text quitHint(font, "Press ESC to Quit", quitHintSize);
+    std::string backKeyName = InputMapper::getKeyName(model::SettingsManager::instance().get().keyPause);
+    std::string quitStr = "Press " + backKeyName + " to Quit";
+    sf::Text quitHint(font, quitStr, quitHintSize);
     quitHint.setFillColor(sf::Color(200, 200, 200));
     view::text::drawCentered(window, quitHint, centerX, centerY * 0.65f);
 }

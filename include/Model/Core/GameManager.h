@@ -1,7 +1,9 @@
 #ifndef MODEL_GAMEMANAGER_H
 #define MODEL_GAMEMANAGER_H
 
+#include "Model/Core/IAudioDelegate.h"
 #include <string>
+#include <memory>
 
 namespace model {
 
@@ -16,14 +18,17 @@ public:
     GameManager& operator=(const GameManager&) = delete;
 
     int getScore() const;
+    void setScore(int points);
     void addScore(int points);
 
     int getLives() const;
+    void setLives(int count);
     void loseLife();
     void addLife();
     bool isGameOver() const;
 
     int getCoins() const;
+    void setCoins(int count);
     // Every CoinsPerLife coins collected grants a life and the tally rolls back. The count
     // parameter lets a single pickup be worth more than one coin; the default keeps every
     // existing call site compiling unchanged.
@@ -50,7 +55,17 @@ public:
     // Restore starting values for a brand new game.
     void reset();
 
-    static constexpr int StartingLives = 10;
+    // Whether the live session is playing a player-authored map (assets/maps/custom/)
+    // rather than a campaign level. NOT cleared by reset(): a Game Over's "Try Again"
+    // calls reset() and then needs to know whether to restart the custom map instead
+    // of falling back to the campaign's default map (see PlayState's restart callback).
+    bool isCustomMapSession() const;
+    void setCustomMapSession(bool value);
+
+    void setAudioDelegate(std::unique_ptr<IAudioDelegate> delegate);
+    IAudioDelegate* getAudioDelegate() const;
+
+    static constexpr int StartingLives = 3;
     static constexpr int FirstLevel = 1;
     static constexpr int CoinsPerLife = 100;
     // The map the game boots into (AppEngine starts directly in PlayState).
@@ -58,6 +73,8 @@ public:
 
 private:
     GameManager() = default;
+
+    std::unique_ptr<IAudioDelegate> m_audioDelegate;
 
     int score = 0;
     int lives = StartingLives;
@@ -67,6 +84,7 @@ private:
     std::string currentMapPath = DefaultMapPath;
     std::string nextMapPath;
     std::string levelName;
+    bool customMapSession = false;
 };
 
 }

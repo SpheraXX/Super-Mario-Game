@@ -13,12 +13,20 @@ int GameManager::getScore() const {
     return score;
 }
 
+void GameManager::setScore(int points) {
+    score = points;
+}
+
 void GameManager::addScore(int points) {
     score += points;
 }
 
 int GameManager::getLives() const {
     return lives;
+}
+
+void GameManager::setLives(int count) {
+    lives = count;
 }
 
 void GameManager::loseLife() {
@@ -37,6 +45,10 @@ bool GameManager::isGameOver() const {
 
 int GameManager::getCoins() const {
     return coins;
+}
+
+void GameManager::setCoins(int count) {
+    coins = count;
 }
 
 void GameManager::addCoin(int count) {
@@ -102,6 +114,23 @@ void GameManager::reset() {
     currentMapPath = DefaultMapPath;
     nextMapPath.clear();
     levelName.clear();
+    // customMapSession is deliberately NOT cleared here — see the header comment.
+}
+
+bool GameManager::isCustomMapSession() const {
+    return customMapSession;
+}
+
+void GameManager::setCustomMapSession(bool value) {
+    customMapSession = value;
+}
+
+void GameManager::setAudioDelegate(std::unique_ptr<IAudioDelegate> delegate) {
+    m_audioDelegate = std::move(delegate);
+}
+
+IAudioDelegate* GameManager::getAudioDelegate() const {
+    return m_audioDelegate.get();
 }
 
 }

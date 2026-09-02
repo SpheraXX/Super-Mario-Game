@@ -139,6 +139,11 @@ public:
     // so this is the one place that flip is written down.
     static Vector2 tileOrigin(std::size_t row, std::size_t column);
 
+    // Append empty columns for the procedural level-completion zone (flagpole +
+    // castle). Every new column mirrors the leftmost column's ground symbol ('G') so
+    // the floor strip carries across the bonus area; everything else pads as air.
+    void padRight(std::size_t extraColumns);
+
     // Rewrite one cell (used by the controller to paint the castle into the grid).
     void setTile(std::size_t row, std::size_t column, char symbol);
 

@@ -1,6 +1,7 @@
 #ifndef CONTROLLER_LEVELSCENE_H
 #define CONTROLLER_LEVELSCENE_H
 
+#include "Controller/LevelCompletion.h"
 #include "Controller/PortalSystem.h"
 #include "Model/Core/CollisionManager.h"
 #include "Model/Core/LevelTimer.h"
@@ -19,10 +20,13 @@
 #include <vector>
 
 namespace model {
+class FlagPole;
 class LevelGoal;
 class Player;
 class Portal;
 class IInputMapper;
+struct LevelSaveData;
+struct PlayerSaveData;
 }
 
 namespace controller {
@@ -32,11 +36,10 @@ namespace controller {
 // multi-area level into itself (loadArea/resetLevel/teleportToPortal).
 //
 // update() runs one frame of normal play and reports what happened through an Event so
-// the owning state can react without touching the scene's internals: the level goal was
-// touched (ClearTriggered — the owner freezes the scene and shows the completion overlay)
+// the owning state can react without touching the scene's internals: the level goal or
+// flagpole was touched (ClearTriggered — the owner triggers the clear flow/overlay)
 // or the player's death fall finished (RunEnded — the owner decides restart vs. game
-// over). The scene has no cinematic of its own: freezing it after ClearTriggered is just
-// the owner no longer calling update().
+// over).
 // Also the concrete model::World the level's entities see: that is how a Hammer Bro gets a
 // hammer into the world, or a coin block its reward, without either knowing a controller
 // exists. The scene is the right home for it (rather than PlayState) because it already owns
@@ -46,30 +49,45 @@ class LevelScene : public model::World {
 public:
     enum class Event {
         None,            // ordinary frame
-        ClearTriggered,  // the level goal was touched; the owner shows the completion overlay
+        ClearTriggered,  // the level goal or flagpole was touched; the owner shows the completion overlay
         RunEnded,        // the player's death fall finished; the owner decides restart/game over
     };
 
     LevelScene();
 
     // Load the map at GameManager::instance().getCurrentMapPath(), publish its metadata
-    // where the HUD/completion flow reads it, instantiate area 0 and restart the timer.
+    // where the HUD/completion flow reads it, instantiate area 0 (or saved area) and restart/restore the timer.
     // Returns false (leaving the scene safely empty) when the assets cannot be loaded;
     // the owner logs the failure. Re-entrant: every playthrough builds a fresh scene.
-    bool loadLevel();
+    bool loadLevel(const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr, bool keepPlayerPosition = true);
 
     // Non-owning accessor the owner reads for input and the HUD.
     void setInputMapper(model::IInputMapper* mapper);
 
     // Non-owning accessors the owner reads for input, the clear play and the HUD.
     model::Player* player() const;
+    model::FlagPole* flagPole() const;
 
-    // HUD time (whole seconds as shown) and the timer pause used on level clear.
+    std::size_t getCurrentArea() const { return currentArea; }
+
+    // HUD time (whole seconds as shown) and the timer pause used by the clear play.
     int getRemainingTime() const;
+    float getTimerRemaining() const { return timer.getRemaining(); }
     void pauseTimer();
+
+    // Freezes update() while the clear cinematic runs; the owner calls this when the
+    // sequence starts and clears it when the sequence is over.
+    void setCinematicActive(bool active);
+    bool isCinematicActive() const { return cinematicActive; }
 
     // Debug: toggle the collision-box overlay (H key).
     void toggleHitboxes();
+
+    // The world type (overworld / underground / underwater / castle) of the currently loaded area.
+    model::WorldType getWorldType() const { return worldType; }
+
+    // X position of the painted castle's door — the walk target of the clear play.
+    float castleDoorX() const;
 
     Event update(float deltaTime);
     void render(sf::RenderTarget& window);
@@ -83,19 +101,37 @@ public:
     void removeTile(std::size_t row, std::size_t column) override;
     void removeTilesOfType(char symbol) override;
 
+    void captureLevelSaveData(model::LevelSaveData& outLevelSave) const;
+
     // Rebuild the whole entity list from the working grid: called by loadArea and by
-    // the owner to restart the level after a death. With keepPlayer=true the current
-    // player is preserved across an area change (Mario keeps his size and power-ups);
-    // a death restart keeps the default and spawns a fresh Mario.
-    void resetLevel(bool keepPlayer = false);
+    // the owner to restart the level after a death. Idempotent (see the castle paint).
+    // With keepPlayer=true the current player is preserved across an area change
+    // (Mario keeps his size and power-ups); a death restart keeps the default and
+    // spawns a fresh Mario.
+    void resetLevel(bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr, bool keepPlayerPosition = true);
 
     // Restart the whole run from the FIRST area: a death in any later area rebuilds the
     // level from the beginning (fresh Mario, portals reactivated). Nothing else resets —
     // score, coins and the timer keep their state like a plain resetLevel does.
     void restartLevel();
 
+    // Live character swap: replaces the current player entity with a freshly-built
+    // Mario/Luigi at the same position, carrying over velocity/facing/size/power exactly
+    // as a death-respawn restore does. Called by PlayState::onResume when the Character
+    // option was changed while this level was paused. No-op if already the requested
+    // character, or if there is no live player. Must be called outside update()'s entity
+    // loop (see addEntity's contract).
+    void switchCharacter(bool toLuigi);
+
 private:
-    void loadArea(std::size_t areaIndex, bool keepPlayer = false);
+    void loadArea(std::size_t areaIndex, bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr, bool keepPlayerPosition = true);
+    // True when the currently loaded area's grid already carries an author-placed goal
+    // marker (TileMap::GoalSymbol). Such areas skip the legacy padded flagpole/castle
+    // zone entirely (see loadArea/resetLevel) -- appending it unconditionally alongside
+    // an author's own, earlier goal used to snap the player forward onto the unrelated
+    // legacy flagpole/castle the instant the real goal was touched, which read as the
+    // level suddenly restarting and auto-playing itself to the end.
+    bool hasAuthoredGoal() const;
     void teleportToPortal(const model::Portal& portal);
     // Pipe travel: SlideIn -> (teleport) -> SlideOut, with the world frozen the whole way.
     // beginPipeTransition snapshots the portal and pauses the timer; advancePipeTransition
@@ -119,13 +155,16 @@ private:
     model::Level level;
     std::size_t currentArea = 0;
 
-    // Working copy of the current area's grid.
+    // Working copy of the current area's grid (final area gets the completion zone).
     model::TileMap map;
     std::unique_ptr<view::TileMapRenderer> renderer;
     bool mapLoaded = false;
 
     // Warp pipes: entry detection, one-way inert columns and re-emergence placement.
     PortalSystem portals;
+
+    // Goal zone: flagpole + painted castle in the padded columns of the final area.
+    LevelCompletion completion;
 
     // The author-placed end-of-level marker (TileMap::GoalSymbol); non-owning, spawned by
     // resetLevel like every other entity. Null on a map that places none.
@@ -158,7 +197,8 @@ private:
 
     model::WorldType worldType = model::WorldType::Overworld;
     view::HitboxRenderer hitboxRenderer;
-    bool showHitboxes = true;
+    bool showHitboxes = false;
+    bool cinematicActive = false;
 
     model::LevelTimer timer;
 };

@@ -62,18 +62,21 @@ bool CoinBlock::onBlockHit(const BlockHitEvent& event) {
             auto mushroom = std::make_unique<Mushroom>(getPosition(), bumpDirection);
             mushroom->beginEmergence(getPosition(), getSize());
             world->spawn(std::move(mushroom));
+            if (auto audio = GameManager::instance().getAudioDelegate()) audio->playSound("11. Item");
         }
     } else if (roll < MushroomChance + FlowerChance) {
         if (world) {
             auto flower = std::make_unique<FireFlower>(getPosition());
             flower->beginEmergence(getPosition(), getSize());
             world->spawn(std::move(flower));
+            if (auto audio = GameManager::instance().getAudioDelegate()) audio->playSound("11. Item");
         }
     } else if (roll < MushroomChance + FlowerChance + StarmanChance) {
         if (world) {
             auto starman = std::make_unique<Starman>(getPosition());
             starman->beginEmergence(getPosition(), getSize());
             world->spawn(std::move(starman));
+            if (auto audio = GameManager::instance().getAudioDelegate()) audio->playSound("11. Item");
         }
     } else {
         // Plain coin. Credited here and now rather than when the sprite is touched — the
@@ -82,6 +85,7 @@ bool CoinBlock::onBlockHit(const BlockHitEvent& event) {
         // own cell and disappears the moment it falls back to its starting height.
         GameManager::instance().addCoin();
         GameManager::instance().addScore(CoinScore);
+        if (auto audio = GameManager::instance().getAudioDelegate()) audio->playSound("07. Coin");
         if (world) world->spawn(std::make_unique<Coin>(getPosition()));
     }
     return true;

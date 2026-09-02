@@ -7,9 +7,18 @@
 #include "View/UI/UIScrollView.h"
 #include "View/UI/UILabel.h"
 #include "View/UI/UIButton.h"
+#include "View/UI/UICycleButton.h"
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Sprite.hpp>
 #include <SFML/System/Clock.hpp>
 #include <array>
+#include <algorithm>
+
+namespace view {
+namespace ui {
+class UIKeyIcon;
+}
+}
 
 namespace controller {
 
@@ -20,8 +29,11 @@ public:
     void update(float dt) override;
     void render(sf::RenderTarget& target) override;
     void handleEvent(const sf::Event& event) override;
+    void onDisplayModeChanged() override;
+    void onResume() override;
 
 private:
+    void relayout(float screenW);
     void switchTab(int index);
     void applySettings();
     void resetSettings();
@@ -41,12 +53,16 @@ private:
                 const std::string& label, std::unique_ptr<view::ui::UIElement> widget,
                 float& cursorY);
 
+    void addVolumeRow(view::ui::UIScrollView& panel, const sf::Font& font,
+                     const std::string& label, int initialValue,
+                     std::function<void(int)> onChange, float& cursorY);
+
     model::Settings draft;
 
-    sf::RectangleShape background;
+    sf::Sprite bgaSprite;
 
     view::ui::UILabel     titleLabel;
-    view::ui::UIContainer tabBar;
+    view::ui::UIScrollView tabBar;
     
     std::array<view::ui::UIScrollView, 4> tabPanels;
     int currentTab = 0;
@@ -55,15 +71,17 @@ private:
 
     sf::Clock soundThrottleClock;
 
-    std::array<view::ui::UIButton*, 10> keyButtons = {nullptr};
+    std::array<view::ui::UIButton*, 12> keyButtons = {nullptr};
+    std::array<view::ui::UIKeyIcon*, 12> keyIcons = {nullptr};
     int waitingForKeyIndex = -1;
     int pendingPreviousKey = -1;
+    
+    view::ui::UICycleButton* resolutionBtn = nullptr;
 
     struct UIContext {
         view::ui::UIButton* applyBtn = nullptr;
+        view::ui::UIButton* resetBtn = nullptr;
         view::ui::UIButton* doneBtn = nullptr;
-        bool forceApply = false;
-        bool forceDone = false;
     } uiCtx;
 };
 

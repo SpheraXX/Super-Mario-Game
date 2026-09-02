@@ -7,6 +7,9 @@
 #include "View/UI/UIButton.h"
 
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Sprite.hpp>
+#include "View/Effect/LerpAnimator.h"
+#include "View/Effect/MetalShineEffect.h"
 
 #include <memory>
 
@@ -20,8 +23,11 @@ namespace controller {
 // via lambda callbacks assigned to each UIButton (see .cpp).
 class MainMenuState : public GameState {
 public:
+    MainMenuState();
     void onEnter() override;
     void onExit()  override {}
+    void onResume() override;
+    void onDisplayModeChanged() override;
 
     void handleEvent(const sf::Event& event) override;
     void update(float deltaTime) override;
@@ -31,11 +37,16 @@ private:
     // Builds the button list and injects Command callbacks.
     void buildUI();
 
-    // Background fill.
-    sf::RectangleShape backdrop;
+    // Background image
+    sf::Sprite bgaSprite;
 
-    // Title label (above the button list).
-    view::ui::UILabel titleLabel;
+    // Title image (replaces text).
+    sf::Sprite titleSprite;
+    
+    // Animation properties
+    view::effect::LerpAnimator m_menuSlideIn;
+    view::effect::MetalShineEffect m_titleShine;
+    float baseTitleY = 0.0f;
 
     // The button stack (Vertical UIContainer).
     view::ui::UIContainer menuList;

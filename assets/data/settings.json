@@ -1,20 +1,26 @@
 {
     "controls": {
-        "jump": 22,
-        "moveLeft": 0,
-        "moveRight": 3,
+        "cycleDisplay": 86,
+        "jump": 73,
+        "moveLeft": 71,
+        "moveRight": 72,
         "pause": 36,
-        "run": 23,
+        "run": 38,
         "slot": 0
+    },
+    "gameplay": {
+        "luigiSelected": false
     },
     "graphics": {
         "fullscreen": false,
-        "logicalWidth": 384,
-        "quality": "low"
+        "quality": 2,
+        "ratio": 0,
+        "resolutionIndex": 0,
+        "vsync": true
     },
     "language": "en",
     "sound": {
-        "masterVolume": 100,
+        "masterVolume": 55,
         "musicVolume": 80,
         "sfxVolume": 100
     }

@@ -13,21 +13,26 @@ public:
     UIScrollView() = default;
 
     void setBounds(const sf::FloatRect& boundsRect);
+    void setContentWidth(float width);
     void setContentHeight(float height);
+    void clear() override;
 
     void render(sf::RenderTarget& target) override;
     bool handleEvent(const sf::Event& event) override;
 
 private:
     sf::FloatRect bounds;
+    float contentWidth = 0.f;
     float contentHeight = 0.f;
+    float scrollX = 0.f;
     float scrollY = 0.f;
     bool isMouseInside = false;
     
-    // Visual scrollbar
-    sf::RectangleShape scrollbarThumb;
+    // Visual scrollbars
+    sf::RectangleShape scrollbarThumbY;
+    sf::RectangleShape scrollbarThumbX;
 
-    void applyScroll(float deltaY);
+    void applyScroll(float deltaX, float deltaY);
     void updateScrollbarVisuals();
 };
 

@@ -91,6 +91,20 @@ Vector2 TileMap::tileOrigin(std::size_t row, std::size_t column) {
             static_cast<float>(Rows - 1 - row) * TileHeight};
 }
 
+void TileMap::padRight(std::size_t extraColumns) {
+    if (extraColumns == 0 || columns == 0) {
+        return;
+    }
+
+    for (std::size_t row = 0; row < Rows; ++row) {
+        const char edge = tiles[row][0];
+        // Mirror only the ground symbol from the leftmost column; everything else
+        // becomes air so no spawn symbols or scenery leak into the bonus zone.
+        tiles[row].resize(columns + extraColumns, edge == 'G' ? 'G' : '.');
+    }
+    columns += extraColumns;
+}
+
 void TileMap::setTile(std::size_t row, std::size_t column, char symbol) {
     tiles.at(row).at(column) = symbol;
 }

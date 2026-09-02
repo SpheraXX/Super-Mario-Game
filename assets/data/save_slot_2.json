@@ -1,0 +1,32 @@
+{
+    "version": 1,
+    "score": 0,
+    "lives": 5,
+    "coins": 0,
+    "unlocked_worlds": [],
+    "level_progress": {},
+    "high_scores": {},
+    "level": {
+        "currentLevel": 1,
+        "mapPath": "assets/maps/lv1_1.map",
+        "levelName": "1-1",
+        "currentArea": 0,
+        "remainingTime": 400.0,
+        "hasEntitiesSnapshot": false,
+        "removedTiles": [],
+        "coinBlocks": [],
+        "enemies": [],
+        "items": []
+    },
+    "player": {
+        "posX": 16.0,
+        "posY": 32.0,
+        "velX": 0.0,
+        "velY": 0.0,
+        "isBig": false,
+        "power": "None",
+        "starDuration": 0.0,
+        "facingDirection": 1,
+        "isLuigi": false
+    }
+}

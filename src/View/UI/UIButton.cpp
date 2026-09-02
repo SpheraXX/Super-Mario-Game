@@ -1,4 +1,6 @@
 #include "View/UI/UIButton.h"
+#include "View/UI/SolidButtonSkin.h"
+#include "View/UI/NineSliceButtonSkin.h"
 
 #include <SFML/Graphics/RenderTarget.hpp>
 #include <SFML/Graphics/Text.hpp>
@@ -15,18 +17,34 @@ UIButton::UIButton(const sf::Font& font, const std::string& label,
     : fontPtr(&font), labelStr(label), charSize(cs) {
     pos  = position;
     size = sz;
-    background.setPosition(pos);
-    background.setSize(size);
-    background.setFillColor(colorNormal);
+    
+    // Default to Elegant UI NineSlice skin
+    skin = std::make_unique<NineSliceButtonSkin>("elegant_panel");
+    skin->setPosition(pos.x, pos.y);
+    skin->setSize(size.x, size.y);
+    skin->setColors(sf::Color::White, sf::Color::White);
+}
+
+void UIButton::setSkin(std::unique_ptr<IButtonSkin> newSkin) {
+    skin = std::move(newSkin);
+    if (skin) {
+        skin->setPosition(pos.x, pos.y);
+        skin->setSize(size.x, size.y);
+        skin->updateState(isHovered, enabled);
+    }
+}
+
+void UIButton::setMaskMode(bool enable) {
+    if (skin) skin->setKeepTransparentWhenDisabled(enable);
 }
 
 void UIButton::setLabel(const std::string& text) { labelStr = text; }
 
 void UIButton::setColors(sf::Color normal, sf::Color hovered, sf::Color text) {
-    colorNormal  = normal;
-    colorHovered = hovered;
-    colorText    = text;
-    background.setFillColor(isHovered ? colorHovered : colorNormal);
+    colorText = text;
+    if (skin) {
+        skin->setColors(normal, hovered);
+    }
 }
 
 void UIButton::setFont(const sf::Font& font, unsigned int cs) {
@@ -34,22 +52,25 @@ void UIButton::setFont(const sf::Font& font, unsigned int cs) {
     charSize = cs;
 }
 
-// ── UIElement overrides ──────────────────────────────────────────────────
 void UIButton::setPosition(float x, float y) {
     UIElement::setPosition(x, y);
-    background.setPosition(pos);
+    if (skin) skin->setPosition(x, y);
 }
 
 void UIButton::setSize(float w, float h) {
     UIElement::setSize(w, h);
-    background.setSize(size);
+    if (skin) skin->setSize(w, h);
 }
 
-// ── IClickable ────────────────────────────────────────────────────────────────
+void UIButton::setEnabled(bool e) {
+    UIElement::setEnabled(e);
+    if (skin) skin->updateState(isHovered, enabled);
+}
 
 void UIButton::onHover(bool hovered) {
+    if (!enabled) return;
     isHovered = hovered;
-    background.setFillColor(hovered ? colorHovered : colorNormal);
+    if (skin) skin->updateState(isHovered, enabled);
 }
 
 void UIButton::onClick() {
@@ -61,32 +82,39 @@ void UIButton::onMouseLeave() {
 }
 
 void UIButton::update(float deltaTime) {
-    (void)deltaTime;
-    // No scale animation currently.
+    if (skin) skin->update(deltaTime);
 }
 
 bool UIButton::handleEvent(const sf::Event& event) {
     if (!visible) return false;
 
-    // Fix Bug: Sticky Hover on MouseLeft
     if (event.is<sf::Event::MouseLeft>()) {
         onHover(false);
         return false;
     }
 
+    // Helper lambda to check if mouse is inside the visual bounds (ignoring transparent shadows)
+    auto isInsideHitbox = [this](const sf::Vector2f& lp) {
+        constexpr float Px = 4.f; // X padding
+        constexpr float Py = 4.f; // Y padding
+        return lp.x >= pos.x + Px && lp.x <= pos.x + size.x - Px &&
+               lp.y >= pos.y + Py && lp.y <= pos.y + size.y - Py;
+    };
+
     if (const auto* moved = event.getIf<sf::Event::MouseMoved>()) {
-        // Transform from window pixels to logical game coordinates before hit-test.
         const sf::Vector2f lp = transformCoordinate(moved->position);
-        bool inside = contains(lp.x, lp.y);
+        bool inside = isInsideHitbox(lp);
         onHover(inside);
-        return inside; // Fix Bug: Event Penetration (Consume if inside)
+        return inside; 
     }
 
     if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (pressed->button == sf::Mouse::Button::Left) {
             const sf::Vector2f lp = transformCoordinate(pressed->position);
-            if (contains(lp.x, lp.y)) {
-                onClick();
+            if (isInsideHitbox(lp)) {
+                if (enabled) {
+                    onClick();
+                }
                 return true;
             }
         }
@@ -98,18 +126,21 @@ bool UIButton::handleEvent(const sf::Event& event) {
 void UIButton::render(sf::RenderTarget& target) {
     if (!visible) return;
 
-    target.draw(background);
+    if (skin) skin->render(target);
 
     if (!fontPtr || labelStr.empty()) return;
 
-    // Build sf::Text at render-time (SFML 3: no default ctor).
     sf::Text sfText(*fontPtr, labelStr, charSize);
-    sfText.setFillColor(colorText);
+    
+    if (enabled) {
+        sfText.setFillColor(colorText);
+    } else {
+        sfText.setFillColor(theme::ColorTextDisabled);
+    }
 
-    const sf::FloatRect bg  = background.getGlobalBounds();
     const sf::FloatRect lb  = sfText.getLocalBounds();
-    const float tx = std::floor(bg.position.x + (bg.size.x - lb.size.x) / 2.f - lb.position.x);
-    const float ty = std::floor(bg.position.y + (bg.size.y - lb.size.y) / 2.f - lb.position.y);
+    const float tx = std::floor(pos.x + (size.x - lb.size.x) / 2.f - lb.position.x);
+    const float ty = std::floor(pos.y + (size.y - lb.size.y) / 2.f - lb.position.y);
     sfText.setPosition({tx, ty});
 
     target.draw(sfText);

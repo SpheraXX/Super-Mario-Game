@@ -14,8 +14,9 @@ public:
     void onTileCollision(char tile, CollisionType side) override;
 
 private:
-    float squishTimer;
     static constexpr float WalkSpeed = 25.0f;
+    // Goomba's squish is brief: the flattened sprite is only shown for half a second.
+    static constexpr float SquishDuration = 0.5f;
 };
 
 }

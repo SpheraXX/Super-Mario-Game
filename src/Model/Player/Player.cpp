@@ -1,8 +1,10 @@
 #include "Model/Player/Player.h"
+#include "Model/Save/SaveData.h"
 
+#include "Model/Core/GameManager.h"
+#include "Model/Core/LogManager.h"
 #include "Model/Core/World.h"
 #include "Model/Projectile/MarioFireball.h"
-#include "Model/Core/GameManager.h"
 
 #include <cmath>
 #include <string>
@@ -131,6 +133,10 @@ void Player::handleInput(float deltaTime, const InputSnapshot& input) {
         jumpHoldTime = 0.0f;
         jumpBufferTime = 0.0f;
         coyoteTime = 0.0f;
+        
+        if (auto audio = model::GameManager::instance().getAudioDelegate()) {
+            audio->playSound(isBig() ? "03. Big Jump" : "12. Jump");
+        }
     }
 
     // Continuous jump: holding the key adds upward acceleration on top of gravity for as
@@ -168,12 +174,17 @@ void Player::handleInput(float deltaTime, const InputSnapshot& input) {
         const Vector2 origin{pos.x + (getDirection() > 0 ? getSize().x : -MarioFireball::Width),
                              pos.y + getSize().y * 0.3f};
         world->spawn(std::make_unique<MarioFireball>(origin, this, getDirection()));
+        
+        if (auto audio = model::GameManager::instance().getAudioDelegate()) {
+            audio->playSound("09. Fire Ball");
+        }
     }
 
     jumpHeld = jumpPressed;
 }
 
 void Player::applyPowerUp(PlayerPowerUp type) {
+    bool consumed = false;
     switch (type) {
         // Mushroom touches ONLY the size axis: it grows a small player no matter what
         // power she carries (small fire, small star...), and is pure points once big.
@@ -181,6 +192,7 @@ void Player::applyPowerUp(PlayerPowerUp type) {
             if (!big) {
                 big = true;
                 syncPowerSize();
+                consumed = true;
             } else {
                 addScore(1000);
             }
@@ -194,6 +206,7 @@ void Player::applyPowerUp(PlayerPowerUp type) {
             } else {
                 power = PlayerPower::Fire;
                 starDuration = 0.0f;
+                consumed = true;
             }
             break;
 
@@ -205,8 +218,36 @@ void Player::applyPowerUp(PlayerPowerUp type) {
             } else {
                 power = PlayerPower::Star;
                 starDuration = StarDuration;
+                consumed = true;
             }
             break;
+    }
+    
+    if (consumed) {
+        if (auto audio = model::GameManager::instance().getAudioDelegate()) {
+            audio->playSound("15. Powerup");
+        }
+    }
+}
+
+void Player::restoreState(const PlayerSaveData& data, bool keepPosition) {
+    if (keepPosition) {
+        setPosition({data.posX, data.posY});
+        setVelocity({data.velX, data.velY});
+        setFacingRight(data.facingDirection >= 0);
+    }
+    big = data.isBig;
+    syncPowerSize();
+
+    if (data.power == "Fire") {
+        power = PlayerPower::Fire;
+        starDuration = 0.0f;
+    } else if (data.power == "Star") {
+        power = PlayerPower::Star;
+        starDuration = data.starDuration > 0.0f ? data.starDuration : StarDuration;
+    } else {
+        power = PlayerPower::None;
+        starDuration = 0.0f;
     }
 }
 
@@ -237,8 +278,14 @@ void Player::takeDamage(int amount) {
 void Player::die(bool bounce) {
     if (!alive || isDying()) return;
     pipeSlide.reset();  // a death mid-slide (debug key) drops the animation state
+    LogManager::instance().info("Player death");
     model::GameManager::instance().loseLife();
     beginDying(bounce);
+    
+    if (auto audio = model::GameManager::instance().getAudioDelegate()) {
+        audio->stopMusic();
+        audio->playMusic("lost_a_life");
+    }
 }
 
 bool Player::isPipeSliding() const {
@@ -336,6 +383,9 @@ void Player::addScore(int points) {
 
 void Player::addCoin() {
     model::GameManager::instance().addCoin();
+    if (auto audio = model::GameManager::instance().getAudioDelegate()) {
+        audio->playSound("07. Coin");
+    }
 }
 
 void Player::addLife() {

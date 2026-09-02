@@ -1,0 +1,35 @@
+Fill in the TBDs (to-be-determined), copying code verbatim from the source. Do not change any other text.
+
+\subsection{Design patterns}
+
+\subsubsection{State Pattern}
+The State pattern governs macro-level screen navigation via \texttt{StateManager} and the \texttt{GameState} abstract base class (\texttt{MenuState}, \texttt{PlayState}, \texttt{GameOverState}, \texttt{OptionsState}). On a micro level, the pattern is applied via the \texttt{PlayerState} interface, allowing player characters to seamlessly transition between \texttt{SmallState}, \texttt{SuperState}, \texttt{FireState}, and \texttt{StarState} without complex conditional checks inside \texttt{Player}.
+
+Specifically, this pattern is expressed in the following piece(s) of code, extracted from the project source: \textbf{TBDTBDTBD}
+
+\subsubsection{Singleton Pattern}
+Centralized engine singletons guarantee single-instance instantiation and global access by explicitly deleting copy constructors and assignment operators:
+\begin{itemize}
+\item \texttt{GameManager}: Acts as the persistent ledger for score tracking, coin counters, remaining lives, and level progression across state changes.
+\item \texttt{AssetManager}: Handles centralized caching for textures, fonts, and audio buffers to eliminate redundant asset loading.
+\item \texttt{SaveManager}: Manages JSON serialization and deserialization for game progress persistence.
+\end{itemize}
+
+Specifically, this pattern is expressed in the following piece(s) of code, extracted from the project source: \textbf{TBDTBDTBD}
+
+\newpage
+
+\subsubsection{Command Pattern}
+The Command pattern decouples user interface triggers from underlying execution logic within the GUI framework. Interactive widgets, such as \texttt{UIButton}, store encapsulated callbacks to \texttt{std::function<void()>}, to trigger state transitions or trigger actions without hard-coupling UI controls to concrete controllers.
+
+Specifically, this pattern is expressed in the following piece(s) of code, extracted from the project source: \textbf{TBDTBDTBD}
+
+\subsubsection{Observer Pattern}
+The Observer pattern drives a reactive configuration architecture managed by \texttt{SettingsManager}. When settings (such as audio volume or key bindings) are modified, \texttt{SettingsManager} broadcasts updates to subscribed listeners like \texttt{AudioManager} and \texttt{AppEngine}, allowing real-time reconfiguration without restarting the application.
+
+Specifically, this pattern is expressed in the following piece(s) of code, extracted from the project source: \textbf{TBDTBDTBD}
+
+\subsubsection{Composite Pattern}
+The custom Graphical User Interface framework relies on the Composite pattern. \texttt{UIContainer} implements the \texttt{UIElement} interface while maintaining an internal dynamic array of pointers \texttt{std::vector<std::unique\_ptr>} as a child container, enabling recursive spatial positioning, event propagation, and auto-layout computations.
+
+Specifically, this pattern is expressed in the following piece(s) of code, extracted from the project source: \textbf{TBDTBDTBD}

@@ -7,11 +7,19 @@ namespace model {
 
 enum class Language { English, Vietnamese };
 enum class GraphicsQuality { Low, Medium, High };
+enum class AspectRatio { Ratio4x3, Ratio16x9 };
 
 struct Settings {
-    bool             fullscreen    = false;
-    int              logicalWidth  = 384;   
-    GraphicsQuality  quality       = GraphicsQuality::Low;
+    bool             fullscreen       = false;
+    AspectRatio      ratio            = AspectRatio::Ratio4x3;
+    int              resolutionIndex  = 0;
+    GraphicsQuality  quality          = GraphicsQuality::Medium;
+    bool             vsync            = true;
+    // Which character a fresh spawn uses (Mario if false). A save file's own
+    // PlayerSaveData::isLuigi always wins over this when resuming an existing save; this
+    // field only decides brand-new spawns and drives PlayState's live mid-level swap when
+    // changed from the Options screen (see PlayState::onResume, LevelScene::switchCharacter).
+    bool             luigiSelected    = false;
 
     int  masterVolume  = 100;  
     int  musicVolume   = 80;
@@ -29,19 +37,22 @@ struct Settings {
     int keyCrouch     = -1;
     int keyInteract   = -1;
     int keyInventory  = -1;
+    int keyCycleDisplay = -1;
 
     int controlSlot   = 0;
 
     bool operator==(const Settings& o) const {
-        return fullscreen == o.fullscreen && logicalWidth == o.logicalWidth &&
-               quality == o.quality && masterVolume == o.masterVolume &&
+        return fullscreen == o.fullscreen && ratio == o.ratio &&
+               resolutionIndex == o.resolutionIndex &&
+               quality == o.quality && vsync == o.vsync &&
+               luigiSelected == o.luigiSelected && masterVolume == o.masterVolume &&
                musicVolume == o.musicVolume && sfxVolume == o.sfxVolume &&
                language == o.language && keyMoveLeft == o.keyMoveLeft &&
                keyMoveRight == o.keyMoveRight && keyJump == o.keyJump &&
                keyRun == o.keyRun && keyPause == o.keyPause &&
                keyDash == o.keyDash && keyAttack == o.keyAttack &&
                keyCrouch == o.keyCrouch && keyInteract == o.keyInteract &&
-               keyInventory == o.keyInventory &&
+               keyInventory == o.keyInventory && keyCycleDisplay == o.keyCycleDisplay &&
                controlSlot == o.controlSlot;
     }
     bool operator!=(const Settings& o) const {

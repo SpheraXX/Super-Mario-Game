@@ -4,6 +4,8 @@
 #include "Controller/StateManager.h"
 #include "Controller/AudioManager.h"
 #include "Controller/InputMapper.h"
+#include "Controller/GameState.h"
+#include "Model/SettingsManager.h"
 #include "Model/Map/TileMap.h"
 
 #include <SFML/Graphics/RenderTexture.hpp>
@@ -18,7 +20,7 @@ namespace controller {
 // Top-level application object: owns the window and the state stack, and runs the core
 // game loop (process input -> fixed-step update -> render) until the window closes or the
 // state stack empties.
-class AppEngine {
+class AppEngine : public model::ISettingsObserver {
 public:
     AppEngine();
     void run();
@@ -44,17 +46,22 @@ public:
     //
     // logicalWidth must be >= ScreenHeight (the width >= height assumption): the HUD and
     // the camera are laid out for a frame at least as wide as it is tall.
-    struct DisplayOption {
-        unsigned int logicalWidth;  // world units across
-        unsigned int scale;         // integer magnification
+    // Native logical widths for supported aspect ratios
+    static constexpr unsigned int LogicalWidth4x3 = 320;
+    static constexpr unsigned int LogicalWidth16x9 = 398;
+
+    struct ResolutionOption {
+        unsigned int width;
+        unsigned int height;
     };
-    static constexpr DisplayOption SizeOptions[] = {
-        {384, 2},  //  768 x 512  — 24 columns
-        {448, 3},  // 1344 x 768  — 28 columns
-        {480, 4},  // 1920 x 1024 — 30 columns
+    static constexpr ResolutionOption Ratio4x3Options[] = {
+        {800, 600},
+        {1024, 768}
     };
-    static constexpr std::size_t SizeOptionCount =
-        sizeof(SizeOptions) / sizeof(SizeOptions[0]);
+    static constexpr ResolutionOption Ratio16x9Options[] = {
+        {1280, 720},
+        {1920, 1080}
+    };
 
     // Convert a window-space point (raw SFML mouse position in physical pixels) to the
     // logical coordinate frame that all game objects and UI elements use.
@@ -69,8 +76,24 @@ private:
     // (Re)create the window, the offscreen target and both views for the current
     // selection. Runs once at start-up and again whenever the size is cycled.
     void applyDisplayMode();
-    // Advance the selection: the windowed sizes in order, then fullscreen, then back.
     void cycleDisplayMode();
+
+    void onSettingsChanged(const model::Settings& settings) override;
+
+    sf::RenderWindow window;
+    sf::RenderTexture scene;
+    sf::View sceneView;     // views the offscreen target
+    sf::View presentView;   // maps the target onto the window
+
+    AudioManager audioManager;
+    InputMapper  inputMapper;
+
+    GameContext gameContext;
+    StateManager states;
+
+    // Cached display settings from the last applyDisplayMode() call.
+    // Used to skip window recreation when only non-display settings change.
+    model::Settings lastGraphicsSettings;
 
     // Physics/update run at a fixed rate so collision (Issue 3) stays deterministic.
     static constexpr float TimeStep = 1.0f / 60.0f;
@@ -78,21 +101,6 @@ private:
     // Height of the window chrome (title bar + borders), so a windowed size that would
     // otherwise exactly fill the desktop still leaves its whole client area on screen.
     static constexpr unsigned int WindowChrome = 64;
-
-    sf::RenderWindow window;
-    
-    AudioManager audioManager;
-    InputMapper inputMapper;
-    GameContext gameContext;
-    StateManager states;
-
-    // Current selection. `fullscreen` overrides the index rather than being a fourth entry
-    // in SizeOptions, because its logical width is measured off the display, not listed.
-    std::size_t sizeIndex = 0;
-    bool fullscreen = false;
-    // Set when F2 is seen and acted on after the event queue is drained: recreating the
-    // window in the middle of polling it would pull the queue out from under the loop.
-    bool displayChangePending = false;
 
     // Logical width of the current mode (ScreenHeight is fixed). Static so the HUD, the
     // menus and the level camera can reach it the same way they already reached
@@ -102,17 +110,9 @@ private:
     // so windowToLogical() can work without a reference to the AppEngine instance.
     static float displayOffsetX;
     static float displayOffsetY;
-    static unsigned int displayScale;
+    static float displayScale;
 
     static unsigned int logicalWidth;
-
-    // Everything is drawn into this offscreen target at the logical resolution, then blitted
-    // to the window once. Compositing at 1:1 keeps every tile on an exact pixel (no seams)
-    // and lets the camera move in whole logical pixels (even scroll); the single scaled blit
-    // afterwards cannot introduce seams between tiles the way scaling each sprite would.
-    sf::RenderTexture scene;
-    sf::View sceneView;    // inside the offscreen target: the whole logical frame
-    sf::View presentView;  // blitting to the window: centred, integer-scaled, letterboxed
 };
 
 }

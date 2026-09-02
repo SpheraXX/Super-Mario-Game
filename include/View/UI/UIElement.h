@@ -69,6 +69,9 @@ public:
     bool isVisible() const           { return visible; }
     void setVisible(bool v)          { visible = v; }
 
+    bool isEnabled() const           { return enabled; }
+    virtual void setEnabled(bool e)  { enabled = e; }
+
 protected:
     // Check if a window-space point is inside this element's bounding box.
     bool contains(float x, float y) const {
@@ -79,6 +82,7 @@ protected:
     sf::Vector2f pos  = {0.f, 0.f};
     sf::Vector2f size = {0.f, 0.f};
     bool visible      = true;
+    bool enabled      = true;
 };
 
 }  // namespace ui

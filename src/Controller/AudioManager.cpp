@@ -1,4 +1,5 @@
 #include "Controller/AudioManager.h"
+#include "Model/Core/LogManager.h"
 #include "ext/json.hpp"
 #include <iostream>
 #include <fstream>
@@ -14,7 +15,7 @@ AudioManager::AudioManager() {
 void AudioManager::initDatabase() {
     std::ifstream f("assets/audio/audio_meta.json");
     if (!f.is_open()) {
-        std::cerr << "Could not open audio_meta.json. Falling back to defaults." << std::endl;
+        model::LogManager::instance().warning("[AudioManager] Missing optional asset: audio_meta.json. Falling back to defaults");
         musicDB["menu"] = {"01. Ground Theme", true};
         musicDB["game_over"] = {"09. Game Over Theme", false};
         return;
@@ -30,7 +31,7 @@ void AudioManager::initDatabase() {
             musicDB[el.key()] = meta;
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error parsing audio_meta.json: " << e.what() << std::endl;
+        model::LogManager::instance().error(std::string("[AudioManager] Failed to load sound: ") + e.what());
     }
 }
 
@@ -67,7 +68,7 @@ void AudioManager::playMusic(const std::string& trackId) {
     
     auto it = musicDB.find(trackId);
     if (it == musicDB.end()) {
-        std::cerr << "Music track ID not found in database: " << trackId << std::endl;
+        model::LogManager::instance().warning("[AudioManager] Missing optional asset: music track '" + trackId + "' not found");
         return;
     }
 
@@ -78,7 +79,7 @@ void AudioManager::playMusic(const std::string& trackId) {
         applyMusicVolume();
         currentMusic.play();
     } else {
-        std::cerr << "Failed to load music: " << path << std::endl;
+        model::LogManager::instance().error("[AudioManager] Failed to load sound: " + path);
     }
 }
 
@@ -98,7 +99,7 @@ void AudioManager::playSound(const std::string& name) {
             soundBuffers[name] = buffer;
             it = soundBuffers.find(name);
         } else {
-            std::cerr << "Failed to load SFX: " << path << std::endl;
+            model::LogManager::instance().error("[AudioManager] Failed to load sound: " + path);
             return;
         }
     }

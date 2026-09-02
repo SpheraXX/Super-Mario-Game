@@ -55,6 +55,13 @@ public:
     // Restore starting values for a brand new game.
     void reset();
 
+    // Whether the live session is playing a player-authored map (assets/maps/custom/)
+    // rather than a campaign level. NOT cleared by reset(): a Game Over's "Try Again"
+    // calls reset() and then needs to know whether to restart the custom map instead
+    // of falling back to the campaign's default map (see PlayState's restart callback).
+    bool isCustomMapSession() const;
+    void setCustomMapSession(bool value);
+
     void setAudioDelegate(std::unique_ptr<IAudioDelegate> delegate);
     IAudioDelegate* getAudioDelegate() const;
 
@@ -77,6 +84,7 @@ private:
     std::string currentMapPath = DefaultMapPath;
     std::string nextMapPath;
     std::string levelName;
+    bool customMapSession = false;
 };
 
 }

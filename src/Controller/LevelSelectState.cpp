@@ -122,6 +122,7 @@ void LevelSelectState::buildUI() {
 
             model::GameManager::instance().setCurrentMapPath(mapPath);
             model::GameManager::instance().setLevelName(levelId);
+            model::GameManager::instance().setCustomMapSession(false);
 
             auto playState = std::make_unique<PlayState>();
             auto loadState = std::make_unique<LoadingState>(

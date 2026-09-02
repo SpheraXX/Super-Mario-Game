@@ -114,6 +114,15 @@ void GameManager::reset() {
     currentMapPath = DefaultMapPath;
     nextMapPath.clear();
     levelName.clear();
+    // customMapSession is deliberately NOT cleared here — see the header comment.
+}
+
+bool GameManager::isCustomMapSession() const {
+    return customMapSession;
+}
+
+void GameManager::setCustomMapSession(bool value) {
+    customMapSession = value;
 }
 
 void GameManager::setAudioDelegate(std::unique_ptr<IAudioDelegate> delegate) {

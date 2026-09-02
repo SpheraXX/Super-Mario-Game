@@ -5,6 +5,7 @@
 // stays decoupled from gameplay internals.
 #include "Controller/AppEngine.h"
 #include "Controller/CreditsState.h"
+#include "Controller/CustomMapHubState.h"
 #include "Controller/IAudioManager.h"
 #include "Controller/OptionsState.h"
 #include "Controller/PlayState.h"
@@ -137,6 +138,10 @@ void MainMenuState::buildUI() {
 
   makeBtn("CREDITS", [this]() {
     manager->pushState(std::make_unique<CreditsState>());
+  });
+
+  makeBtn("CUSTOM MAP", [this]() {
+    manager->pushState(std::make_unique<CustomMapHubState>());
   });
 
   makeBtn("EXIT", [this]() { manager->clear(); });

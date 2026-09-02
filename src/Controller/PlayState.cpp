@@ -162,7 +162,19 @@ void PlayState::update(float deltaTime) {
         if (deathDelayTimer <= 0.0f) {
             if (model::GameManager::instance().isGameOver()) {
                 auto restartCb = [m = this->manager]() {
-                    model::GameManager::instance().reset();
+                    auto& gm = model::GameManager::instance();
+                    // reset() always sends currentMapPath back to the campaign's default
+                    // map (arcade-style "game over sends you back to World 1") -- correct
+                    // for campaign play, but a custom map should restart itself instead.
+                    const bool wasCustom = gm.isCustomMapSession();
+                    const std::string customPath = gm.getCurrentMapPath();
+                    const std::string customName = gm.getLevelName();
+                    gm.reset();
+                    if (wasCustom) {
+                        gm.setCurrentMapPath(customPath);
+                        gm.setLevelName(customName);
+                        gm.setCustomMapSession(true);
+                    }
                     m->replaceState(std::make_unique<PlayState>());
                 };
                 manager->replaceState(std::make_unique<GameOverState>(std::move(restartCb)));

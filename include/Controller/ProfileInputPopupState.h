@@ -6,6 +6,7 @@
 #include "View/UI/UILabel.h"
 #include "View/UI/UIContainer.h"
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <cstddef>
 #include <functional>
 #include <string>
 
@@ -13,7 +14,8 @@ namespace controller {
 
 class ProfileInputPopupState : public GameState {
 public:
-    ProfileInputPopupState(const std::string& initialName, std::function<void(const std::string&)> onConfirm);
+    ProfileInputPopupState(const std::string& initialName, std::function<void(const std::string&)> onConfirm,
+                           const std::string& title = "ENTER PROFILE NAME", std::size_t maxLength = 8);
 
     void onEnter() override;
     void update(float dt) override;
@@ -30,6 +32,8 @@ private:
     
     std::string currentText;
     std::function<void(const std::string&)> onConfirmCallback;
+    std::string titleText;
+    std::size_t maxLength;
     
     sf::RectangleShape overlay;
     sf::RectangleShape inputBox;

@@ -8,9 +8,10 @@
 
 namespace controller {
 
-ProfileInputPopupState::ProfileInputPopupState(const std::string& initialName, std::function<void(const std::string&)> onConfirm)
-    : currentText(initialName), onConfirmCallback(std::move(onConfirm)) {
-    
+ProfileInputPopupState::ProfileInputPopupState(const std::string& initialName, std::function<void(const std::string&)> onConfirm,
+                                                const std::string& title, std::size_t maxLength)
+    : currentText(initialName), onConfirmCallback(std::move(onConfirm)), titleText(title), maxLength(maxLength) {
+
     if (currentText == "EMPTY") {
         currentText = "";
     }
@@ -32,7 +33,7 @@ void ProfileInputPopupState::relayout(float W, float H) {
 
     const sf::Font& font = view::AssetManager::instance().getUiFont();
     
-    titleLabel = view::ui::UILabel(font, "ENTER PROFILE NAME", view::ui::layout::TitleFontSize);
+    titleLabel = view::ui::UILabel(font, titleText, view::ui::layout::TitleFontSize);
     titleLabel.setColor(sf::Color::Yellow);
     titleLabel.setSize(W, 0.f);
     titleLabel.setPosition(0.f, H / 2.f + view::ui::layout::ProfilePopupTitleOffsetY);
@@ -108,7 +109,7 @@ void ProfileInputPopupState::handleEvent(const sf::Event& event) {
         char32_t uc = textEv->unicode;
         if (uc < 128) {
             char c = static_cast<char>(uc);
-            if ((std::isalnum(c) || c == ' ') && currentText.size() < 8) {
+            if ((std::isalnum(c) || c == ' ') && currentText.size() < maxLength) {
                 currentText += std::toupper(c);
                 showCursor = true;
                 blinkTimer = 0.f;

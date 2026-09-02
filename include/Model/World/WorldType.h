@@ -22,6 +22,15 @@ inline WorldType worldTypeFromString(const std::string& value) {
     return WorldType::Overworld;
 }
 
+inline std::string worldTypeToString(WorldType type) {
+    switch (type) {
+        case WorldType::Underground: return "underground";
+        case WorldType::Underwater:  return "underwater";
+        case WorldType::Castle:      return "castle";
+        case WorldType::Overworld:   default: return "overworld";
+    }
+}
+
 }
 
 #endif

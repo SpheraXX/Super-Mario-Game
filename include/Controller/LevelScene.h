@@ -59,7 +59,7 @@ public:
     // where the HUD/completion flow reads it, instantiate area 0 (or saved area) and restart/restore the timer.
     // Returns false (leaving the scene safely empty) when the assets cannot be loaded;
     // the owner logs the failure. Re-entrant: every playthrough builds a fresh scene.
-    bool loadLevel(const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr);
+    bool loadLevel(const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr, bool keepPlayerPosition = true);
 
     // Non-owning accessor the owner reads for input and the HUD.
     void setInputMapper(model::IInputMapper* mapper);
@@ -108,7 +108,7 @@ public:
     // With keepPlayer=true the current player is preserved across an area change
     // (Mario keeps his size and power-ups); a death restart keeps the default and
     // spawns a fresh Mario.
-    void resetLevel(bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr);
+    void resetLevel(bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr, bool keepPlayerPosition = true);
 
     // Restart the whole run from the FIRST area: a death in any later area rebuilds the
     // level from the beginning (fresh Mario, portals reactivated). Nothing else resets —
@@ -116,7 +116,7 @@ public:
     void restartLevel();
 
 private:
-    void loadArea(std::size_t areaIndex, bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr);
+    void loadArea(std::size_t areaIndex, bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr, bool keepPlayerPosition = true);
     void teleportToPortal(const model::Portal& portal);
     // Pipe travel: SlideIn -> (teleport) -> SlideOut, with the world frozen the whole way.
     // beginPipeTransition snapshots the portal and pauses the timer; advancePipeTransition

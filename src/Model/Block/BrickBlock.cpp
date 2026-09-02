@@ -43,9 +43,16 @@ bool BrickBlock::onBlockHit(const BlockHitEvent& event) {
                                                            ShardLaunch[quadrant]));
             }
         }
+        if (auto audio = GameManager::instance().getAudioDelegate()) {
+            audio->playSound("05. Break");
+        }
         eraseFromMap();
         isActive = false;
         return true;
+    }
+    
+    if (auto audio = GameManager::instance().getAudioDelegate()) {
+        audio->playSound("06. Bump");
     }
     startBounce();
     return true;

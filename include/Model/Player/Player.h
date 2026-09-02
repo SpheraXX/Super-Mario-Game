@@ -50,7 +50,7 @@ public:
     void applyPowerUp(PlayerPowerUp type);
 
     // Restores player position, size, power state, and direction from save data.
-    void restoreState(const PlayerSaveData& data);
+    void restoreState(const PlayerSaveData& data, bool keepPosition = true);
 
     // Remaining star invincibility, or -1 when not starred. The view flashes the sprite
     // off this, so the flashing and the invincibility always end together.

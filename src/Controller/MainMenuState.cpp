@@ -9,6 +9,7 @@
 #include "Controller/OptionsState.h"
 #include "Controller/PlayState.h"
 #include "Controller/StateManager.h"
+#include "Controller/ProfileMenuState.h"
 #include "Controller/WarningPopupState.h"
 #include "Controller/WorldSelectState.h"
 #include "Model/Core/GameManager.h"
@@ -102,12 +103,16 @@ void MainMenuState::buildUI() {
           [this]() {
             model::GameSaveData save;
             if (model::SaveManager::instance().load(save)) {
+              auto& game = model::GameManager::instance();
+              game.setScore(save.score);
+              game.setLives(save.lives);
+              game.setCoins(save.coins);
               manager->clear();
-              manager->pushState(std::make_unique<PlayState>(save));
+              manager->pushState(std::make_unique<WorldSelectState>());
             } else {
               model::GameManager::instance().reset();
               manager->clear();
-              manager->pushState(std::make_unique<PlayState>());
+              manager->pushState(std::make_unique<WorldSelectState>());
             }
           },
           [this]() {
@@ -127,7 +132,7 @@ void MainMenuState::buildUI() {
           [this]() { manager->pushState(std::make_unique<OptionsState>()); });
 
   makeBtn("PROFILE", [this]() {
-    // TODO: push ProfileState when Phase 3 is ready.
+    manager->pushState(std::make_unique<ProfileMenuState>());
   });
 
   makeBtn("CREDITS", [this]() {

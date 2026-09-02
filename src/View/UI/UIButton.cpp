@@ -93,9 +93,17 @@ bool UIButton::handleEvent(const sf::Event& event) {
         return false;
     }
 
+    // Helper lambda to check if mouse is inside the visual bounds (ignoring transparent shadows)
+    auto isInsideHitbox = [this](const sf::Vector2f& lp) {
+        constexpr float Px = 4.f; // X padding
+        constexpr float Py = 4.f; // Y padding
+        return lp.x >= pos.x + Px && lp.x <= pos.x + size.x - Px &&
+               lp.y >= pos.y + Py && lp.y <= pos.y + size.y - Py;
+    };
+
     if (const auto* moved = event.getIf<sf::Event::MouseMoved>()) {
         const sf::Vector2f lp = transformCoordinate(moved->position);
-        bool inside = contains(lp.x, lp.y);
+        bool inside = isInsideHitbox(lp);
         onHover(inside);
         return inside; 
     }
@@ -103,7 +111,7 @@ bool UIButton::handleEvent(const sf::Event& event) {
     if (const auto* pressed = event.getIf<sf::Event::MouseButtonPressed>()) {
         if (pressed->button == sf::Mouse::Button::Left) {
             const sf::Vector2f lp = transformCoordinate(pressed->position);
-            if (contains(lp.x, lp.y)) {
+            if (isInsideHitbox(lp)) {
                 if (enabled) {
                     onClick();
                 }

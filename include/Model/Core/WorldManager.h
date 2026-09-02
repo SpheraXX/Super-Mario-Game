@@ -14,6 +14,7 @@ public:
     void load(const std::string& filepath = "assets/data/worlds.json");
     const std::vector<WorldData>& getWorlds() const;
     const WorldData* getWorld(const std::string& id) const;
+    std::string getWorldIdFromMapPath(const std::string& mapPath) const;
 
 private:
     WorldManager() = default;

@@ -1,6 +1,7 @@
 #include "Model/Item/MapCoin.h"
 
 #include "Model/Core/GameManager.h"
+#include "Model/Player/Player.h"
 
 namespace model {
 
@@ -19,13 +20,19 @@ void MapCoin::updateBehavior(float deltaTime) {
     animationClock += deltaTime;
 }
 
-void MapCoin::onCollect(Entity& /* collector */) {
+void MapCoin::onCollect(Entity& collector) {
     // Guard against a second credit: the player can still overlap the coin on the frame
     // after it was taken, and Item::onCollision fires for every overlapping frame.
     if (!isActive) {
         return;
     }
-    GameManager::instance().addCoin();
+    
+    if (auto* player = dynamic_cast<Player*>(&collector)) {
+        player->addCoin();
+    } else {
+        GameManager::instance().addCoin();
+    }
+    
     GameManager::instance().addScore(CoinScore);
     isActive = false;
 }

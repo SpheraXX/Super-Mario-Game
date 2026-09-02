@@ -1,7 +1,9 @@
 #ifndef MODEL_GAMEMANAGER_H
 #define MODEL_GAMEMANAGER_H
 
+#include "Model/Core/IAudioDelegate.h"
 #include <string>
+#include <memory>
 
 namespace model {
 
@@ -53,6 +55,9 @@ public:
     // Restore starting values for a brand new game.
     void reset();
 
+    void setAudioDelegate(std::unique_ptr<IAudioDelegate> delegate);
+    IAudioDelegate* getAudioDelegate() const;
+
     static constexpr int StartingLives = 3;
     static constexpr int FirstLevel = 1;
     static constexpr int CoinsPerLife = 100;
@@ -61,6 +66,8 @@ public:
 
 private:
     GameManager() = default;
+
+    std::unique_ptr<IAudioDelegate> m_audioDelegate;
 
     int score = 0;
     int lives = StartingLives;

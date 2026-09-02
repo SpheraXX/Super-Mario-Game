@@ -33,12 +33,14 @@ void WorldManager::load(const std::string& filepath) {
                 wd.title = w.value("title", "");
                 wd.previewImage = w.value("preview_image", "");
                 wd.bgaImage = w.value("bga_image", "");
+                wd.musicTrack = w.value("music_track", "overworld");
 
                 if (w.contains("levels") && w["levels"].is_array()) {
                     for (const auto& l : w["levels"]) {
                         LevelData ld;
                         ld.id = l.value("id", "");
                         ld.mapPath = l.value("map_path", "");
+                        ld.unlockRequires = l.value("unlock_requires", "");
                         wd.levels.push_back(ld);
                     }
                 }
@@ -62,6 +64,17 @@ const WorldData* WorldManager::getWorld(const std::string& id) const {
         }
     }
     return nullptr;
+}
+
+std::string WorldManager::getWorldIdFromMapPath(const std::string& mapPath) const {
+    for (const auto& w : m_worlds) {
+        for (const auto& l : w.levels) {
+            if (l.mapPath == mapPath) {
+                return w.id;
+            }
+        }
+    }
+    return "";
 }
 
 } // namespace model

@@ -13,12 +13,12 @@ public:
     SaveManager(const SaveManager&) = delete;
     SaveManager& operator=(const SaveManager&) = delete;
 
-    static constexpr const char* DefaultSavePath = "assets/data/savegame.json";
+    std::string getActiveSavePath() const;
 
-    bool hasSaveFile(const std::string& path = DefaultSavePath) const;
-    bool save(const GameSaveData& data, const std::string& path = DefaultSavePath) const;
-    bool load(GameSaveData& outData, const std::string& path = DefaultSavePath) const;
-    bool deleteSave(const std::string& path = DefaultSavePath) const;
+    bool hasSaveFile(const std::string& path = "") const;
+    bool save(const GameSaveData& data, const std::string& path = "") const;
+    bool load(GameSaveData& outData, const std::string& path = "") const;
+    bool deleteSave(const std::string& path = "") const;
 
 private:
     SaveManager() = default;

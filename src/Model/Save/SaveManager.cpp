@@ -1,4 +1,5 @@
 #include "Model/Save/SaveManager.h"
+#include "Model/Save/ProfileManager.h"
 #include "Model/Core/LogManager.h"
 #include "ext/json.hpp"
 
@@ -15,22 +16,30 @@ SaveManager& SaveManager::instance() {
     return singleton;
 }
 
+std::string SaveManager::getActiveSavePath() const {
+    int activeIndex = ProfileManager::instance().getActiveProfileIndex();
+    return "assets/data/save_slot_" + std::to_string(activeIndex) + ".json";
+}
+
 bool SaveManager::hasSaveFile(const std::string& path) const {
+    std::string actualPath = path.empty() ? getActiveSavePath() : path;
     std::error_code ec;
-    return std::filesystem::exists(path, ec) && std::filesystem::is_regular_file(path, ec);
+    return std::filesystem::exists(actualPath, ec) && std::filesystem::is_regular_file(actualPath, ec);
 }
 
 bool SaveManager::deleteSave(const std::string& path) const {
+    std::string actualPath = path.empty() ? getActiveSavePath() : path;
     std::error_code ec;
-    if (std::filesystem::exists(path, ec)) {
-        return std::filesystem::remove(path, ec);
+    if (std::filesystem::exists(actualPath, ec)) {
+        return std::filesystem::remove(actualPath, ec);
     }
     return true;
 }
 
 bool SaveManager::save(const GameSaveData& data, const std::string& path) const {
+    std::string actualPath = path.empty() ? getActiveSavePath() : path;
     try {
-        std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+        std::filesystem::create_directories(std::filesystem::path(actualPath).parent_path());
 
         json j;
         j["version"] = data.version;
@@ -40,6 +49,7 @@ bool SaveManager::save(const GameSaveData& data, const std::string& path) const 
 
         j["unlocked_worlds"] = data.unlocked_worlds;
         j["level_progress"] = data.level_progress;
+        j["high_scores"] = data.high_scores;
 
         // Level data
         j["level"]["currentLevel"]        = data.level.currentLevel;
@@ -107,14 +117,14 @@ bool SaveManager::save(const GameSaveData& data, const std::string& path) const 
         j["player"]["facingDirection"] = data.player.facingDirection;
         j["player"]["isLuigi"]         = data.player.isLuigi;
 
-        std::ofstream file(path);
+        std::ofstream file(actualPath);
         if (!file.is_open()) {
-            LogManager::instance().error("[SaveManager] Failed to write save file: " + path);
+            LogManager::instance().error("[SaveManager] Failed to write save file: " + actualPath);
             return false;
         }
 
         file << j.dump(4);
-        LogManager::instance().info("[SaveManager] Game saved to: " + path);
+        LogManager::instance().info("[SaveManager] Game saved to: " + actualPath);
         return true;
     } catch (const std::exception& e) {
         LogManager::instance().error(std::string("[SaveManager] Error saving game: ") + e.what());
@@ -123,15 +133,16 @@ bool SaveManager::save(const GameSaveData& data, const std::string& path) const 
 }
 
 bool SaveManager::load(GameSaveData& outData, const std::string& path) const {
-    if (!hasSaveFile(path)) {
-        LogManager::instance().warning("[SaveManager] Save file not found: " + path);
+    std::string actualPath = path.empty() ? getActiveSavePath() : path;
+    if (!hasSaveFile(actualPath)) {
+        LogManager::instance().warning("[SaveManager] Save file not found: " + actualPath);
         return false;
     }
 
     try {
-        std::ifstream file(path);
+        std::ifstream file(actualPath);
         if (!file.is_open()) {
-            LogManager::instance().error("[SaveManager] Failed to read save file: " + path);
+            LogManager::instance().error("[SaveManager] Failed to read save file: " + actualPath);
             return false;
         }
 
@@ -148,6 +159,9 @@ bool SaveManager::load(GameSaveData& outData, const std::string& path) const {
         }
         if (j.contains("level_progress") && j["level_progress"].is_object()) {
             outData.level_progress = j["level_progress"].get<std::unordered_map<std::string, std::string>>();
+        }
+        if (j.contains("high_scores") && j["high_scores"].is_object()) {
+            outData.high_scores = j["high_scores"].get<std::unordered_map<std::string, int>>();
         }
 
         if (j.contains("level") && j["level"].is_object()) {
@@ -227,7 +241,7 @@ bool SaveManager::load(GameSaveData& outData, const std::string& path) const {
             outData.player.isLuigi         = ply.value("isLuigi", false);
         }
 
-        LogManager::instance().info("[SaveManager] Game loaded from: " + path);
+        LogManager::instance().info("[SaveManager] Game loaded from: " + actualPath);
         return true;
     } catch (const std::exception& e) {
         LogManager::instance().error(std::string("[SaveManager] JSON parse error while loading save: ") + e.what());

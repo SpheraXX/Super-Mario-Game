@@ -59,8 +59,21 @@ public:
     // Essential for recovering from Graphics Context Loss (e.g., toggling Fullscreen).
     void reloadAll();
 
+    // Background (BGA) images are drawn as a full-screen sprite scaled from a several
+    // -hundred-pixel source down to the tiny pixel-art logical canvas and back up again;
+    // unlike tile/sprite art, smoothing that resample hides blockiness instead of adding
+    // it to a intentionally-crisp pixel. Controlled by Settings::quality (see
+    // AppEngine::onSettingsChanged); every "bga_"-named texture already cached is
+    // restyled immediately, and any loaded afterwards picks up the current setting.
+    // Low = off (matches every other texture's nearest-neighbor filtering).
+    void setBackgroundSmoothing(bool smooth);
+
 private:
     AssetManager();
+
+    static bool isBackgroundAsset(const std::string& filePath);
+
+    bool backgroundSmoothing = false;
 
     sf::Font uiFont;
     bool uiFontLoaded;

@@ -83,7 +83,7 @@ const sf::Texture& AssetManager::getTexture(const std::string& filePath, std::op
         return fallbackTexture;
     }
 
-    tex.setSmooth(false);
+    tex.setSmooth(isBackgroundAsset(filePath) && backgroundSmoothing);
 
     TextureData data;
     data.texture = std::move(tex);
@@ -122,6 +122,22 @@ void AssetManager::clearUnused(const std::vector<std::string>& keepList) {
     }
 }
 
+bool AssetManager::isBackgroundAsset(const std::string& filePath) {
+    // Every full-screen backdrop in assets/images/ follows this naming convention
+    // (bga_mainmenu.png, bga_options.png, bga_castle.jpg, worlds.json's per-world
+    // "bga_image" entries, ...).
+    return filePath.find("bga_") != std::string::npos;
+}
+
+void AssetManager::setBackgroundSmoothing(bool smooth) {
+    backgroundSmoothing = smooth;
+    for (auto& [key, data] : textures) {
+        if (isBackgroundAsset(data.filePath)) {
+            data.texture.setSmooth(smooth);
+        }
+    }
+}
+
 void AssetManager::reloadAll() {
     model::LogManager::instance().info("[AssetManager] Reloading all assets (Context Lost Recovery)...");
 
@@ -142,7 +158,7 @@ void AssetManager::reloadAll() {
                 img.createMaskFromColor(data.colorKey.value());
             }
             if (data.texture.loadFromImage(img)) {
-                data.texture.setSmooth(false);
+                data.texture.setSmooth(isBackgroundAsset(data.filePath) && backgroundSmoothing);
             }
         }
     }

@@ -77,6 +77,10 @@ void AppEngine::onSettingsChanged(const model::Settings& s) {
     audioManager.setMusicVolume(static_cast<float>(s.musicVolume));
     audioManager.setSFXVolume(static_cast<float>(s.sfxVolume));
 
+    // Quality only ever controls background-image smoothing (see AssetManager) --
+    // gameplay/UI pixel art stays nearest-neighbor at every quality level.
+    view::AssetManager::instance().setBackgroundSmoothing(s.quality != model::GraphicsQuality::Low);
+
     // Only recreate the window (and reload all VRAM assets) when display-relevant
     // settings actually changed. Volume/key changes must NOT trigger this path.
     const bool displayChanged = (s.fullscreen      != lastGraphicsSettings.fullscreen      ||

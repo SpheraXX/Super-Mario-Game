@@ -13,7 +13,7 @@ struct Settings {
     bool             fullscreen       = false;
     AspectRatio      ratio            = AspectRatio::Ratio4x3;
     int              resolutionIndex  = 0;
-    GraphicsQuality  quality          = GraphicsQuality::Low;
+    GraphicsQuality  quality          = GraphicsQuality::Medium;
     bool             vsync            = true;
 
     int  masterVolume  = 100;  

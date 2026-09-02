@@ -28,20 +28,27 @@ void CustomMapHubState::onEnter() {
     onDisplayModeChanged();
 }
 
+namespace {
+// Wider/taller than the standard menu button: "CREATE NEW MAP"/"PLAY CUSTOM MAP" don't
+// fit the shared MenuButtonWidth/Height without clipping.
+constexpr float ButtonWidth = view::ui::layout::MenuButtonWidth * 1.7f;
+constexpr float ButtonHeight = view::ui::layout::MenuButtonHeight + 6.f;
+}
+
 void CustomMapHubState::buildUI() {
     const sf::Font& font = view::AssetManager::instance().getUiFont();
     const float W = static_cast<float>(AppEngine::screenWidth());
 
     m_buttons = view::ui::UIContainer(view::ui::UIContainer::Layout::Vertical,
                                       view::ui::layout::MenuButtonGap);
-    const float listX = (W - view::ui::layout::MenuButtonWidth) / 2.f;
+    const float listX = (W - ButtonWidth) / 2.f;
     m_buttons.setPosition(listX, 0.f);
-    m_buttons.setSize(view::ui::layout::MenuButtonWidth, 0.f);
+    m_buttons.setSize(ButtonWidth, 0.f);
 
     auto makeBtn = [&](const std::string& label, std::function<void()> cmd) {
         auto btn = std::make_unique<view::ui::UIButton>(
             font, label, view::ui::layout::ButtonFontSize, sf::Vector2f{0.f, 0.f},
-            sf::Vector2f{view::ui::layout::MenuButtonWidth, view::ui::layout::MenuButtonHeight});
+            sf::Vector2f{ButtonWidth, ButtonHeight});
         btn->setOnClick(std::move(cmd));
         m_buttons.add(std::move(btn));
     };
@@ -72,7 +79,7 @@ void CustomMapHubState::onDisplayModeChanged() {
                             static_cast<float>(tex.getSize().y) / 2.f});
     m_background.setPosition({W / 2.f, H / 2.f});
 
-    const float listX = (W - view::ui::layout::MenuButtonWidth) / 2.f;
+    const float listX = (W - ButtonWidth) / 2.f;
     m_buttons.setPosition(listX, H * 0.4f);
     m_buttons.relayout();
 }

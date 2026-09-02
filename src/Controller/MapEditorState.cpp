@@ -77,16 +77,16 @@ void MapEditorState::onEnter() {
 
     m_modeToggle = view::ui::UICycleButton(font, "MODE", {"PUT", "ERASE"}, 0,
                                            sf::Vector2f{0.f, 0.f},
-                                           sf::Vector2f{view::ui::layout::SmallButtonWidth, ToolbarHeight});
+                                           sf::Vector2f{ToolbarButtonWidth, ToolbarHeight});
 
     m_saveButton = view::ui::UIButton(font, "SAVE", view::ui::layout::ButtonFontSize,
                                       sf::Vector2f{0.f, 0.f},
-                                      sf::Vector2f{view::ui::layout::SmallButtonWidth, ToolbarHeight});
+                                      sf::Vector2f{ToolbarButtonWidth, ToolbarHeight});
     m_saveButton.setOnClick([this]() { trySave(); });
 
     m_backButton = view::ui::UIButton(font, "BACK", view::ui::layout::ButtonFontSize,
                                       sf::Vector2f{0.f, 0.f},
-                                      sf::Vector2f{view::ui::layout::SmallButtonWidth, ToolbarHeight});
+                                      sf::Vector2f{ToolbarButtonWidth, ToolbarHeight});
     m_backButton.setOnClick([this]() {
         manager->replaceState(std::make_unique<CustomMapHubState>());
     });
@@ -156,8 +156,6 @@ void MapEditorState::buildIcons() {
     put('T', marioScenery, {{264, 656}, {16, 32}});
     put('w', marioScenery, {{sceneryX + Pitch, sceneryY}, {16, 16}});
     put('m', marioScenery, {{sceneryX + 2 * Pitch, sceneryY + 2 * Pitch}, {16, 16}});
-    put('A', marioScenery, {{40, 696}, {48, 32}});
-    put('H', marioScenery, {{24, 728}, {80, 48}});
     put('P', marioScenery, {{119, 196}, {16, 16}});
     put('Q', marioScenery, {{136, 196}, {16, 16}});
     put('p', marioScenery, {{119, 213}, {16, 16}});
@@ -199,7 +197,7 @@ void MapEditorState::buildPalette() {
     for (const auto& def : kPalette) {
         auto btn = std::make_unique<view::ui::UIButton>(
             font, def.label, view::ui::layout::SmallFontSize,
-            sf::Vector2f{0.f, cursorY}, sf::Vector2f{PaletteWidth - 6.f, PaletteButtonHeight});
+            sf::Vector2f{0.f, cursorY}, sf::Vector2f{PaletteWidth - 10.f, PaletteButtonHeight});
         view::ui::UIButton* added = m_palette.add(std::move(btn));
         const char symbol = def.symbol;
         added->setOnClick([this, symbol, added]() { selectPaletteEntry(symbol, added); });
@@ -218,15 +216,17 @@ void MapEditorState::layoutUI() {
     const float screenW = static_cast<float>(AppEngine::screenWidth());
     const float screenH = static_cast<float>(AppEngine::ScreenHeight);
 
-    m_palette.setPosition(screenW - PaletteWidth, 0.f);
-    m_palette.setBounds(sf::FloatRect({screenW - PaletteWidth, 0.f}, {PaletteWidth, screenH - ToolbarHeight}));
+    // Toolbar sits at the TOP (not the bottom): the bottom rows are the map's default
+    // floor, and a bottom-anchored toolbar made that ground row unreachable for editing.
+    m_palette.setPosition(screenW - PaletteWidth, ToolbarHeight);
+    m_palette.setBounds(sf::FloatRect({screenW - PaletteWidth, ToolbarHeight}, {PaletteWidth, screenH - ToolbarHeight}));
 
-    m_modeToggle.setPosition(2.f, screenH - ToolbarHeight);
-    m_saveButton.setPosition(view::ui::layout::SmallButtonWidth + 4.f, screenH - ToolbarHeight);
-    m_backButton.setPosition(2.f * view::ui::layout::SmallButtonWidth + 6.f, screenH - ToolbarHeight);
+    m_modeToggle.setPosition(2.f, 0.f);
+    m_saveButton.setPosition(ToolbarButtonWidth + 4.f, 0.f);
+    m_backButton.setPosition(2.f * ToolbarButtonWidth + 6.f, 0.f);
 
-    m_statusLabel.setPosition(3.f * view::ui::layout::SmallButtonWidth + 10.f, screenH - ToolbarHeight + 3.f);
-    m_statusLabel.setSize(screenW - PaletteWidth - (3.f * view::ui::layout::SmallButtonWidth + 10.f), ToolbarHeight);
+    m_statusLabel.setPosition(3.f * ToolbarButtonWidth + 10.f, 4.f);
+    m_statusLabel.setSize(screenW - PaletteWidth - (3.f * ToolbarButtonWidth + 10.f), ToolbarHeight);
 
     clampScroll();
 }
@@ -260,9 +260,9 @@ bool MapEditorState::resolveCell(sf::Vector2i windowPos, std::size_t& outRow, st
     const float screenH = static_cast<float>(AppEngine::ScreenHeight);
     const float screenW = static_cast<float>(AppEngine::screenWidth());
 
-    // Exclude the toolbar (bottom strip) and palette (right strip) screen-space regions:
+    // Exclude the toolbar (top strip) and palette (right strip) screen-space regions:
     // both sit on top of the grid, so a point over either is never a grid cell.
-    if (logical.y < 0.f || logical.y >= screenH - ToolbarHeight) {
+    if (logical.y < ToolbarHeight || logical.y >= screenH) {
         return false;
     }
     if (logical.x >= screenW - PaletteWidth) {
@@ -381,7 +381,6 @@ void MapEditorState::update(float deltaTime) {
 }
 
 void MapEditorState::renderEntityMarkers(sf::RenderTarget& target) const {
-    const sf::Font& font = view::AssetManager::instance().getUiFont();
     const float screenW = static_cast<float>(AppEngine::screenWidth());
 
     const std::size_t firstColumn = static_cast<std::size_t>(m_scrollX / model::TileMap::TileWidth);
@@ -396,20 +395,18 @@ void MapEditorState::renderEntityMarkers(sf::RenderTarget& target) const {
                 continue;
             }
 
+            const auto found = m_icons.find(symbol);
+            if (found == m_icons.end() || !found->second.texture) {
+                continue;
+            }
+
             const float x = static_cast<float>(column * model::TileMap::TileWidth);
             const float y = static_cast<float>((model::TileMap::Rows - 1 - row) * model::TileMap::TileHeight);
 
-            sf::RectangleShape marker(sf::Vector2f{14.f, 14.f});
-            marker.setPosition({x + 1.f, y + 1.f});
-            marker.setFillColor(sf::Color(0, 0, 0, 170));
-            marker.setOutlineColor(symbol == 'M' || symbol == 'E' ? sf::Color::Green : sf::Color::Yellow);
-            marker.setOutlineThickness(1.f);
-            target.draw(marker);
-
-            sf::Text label(font, std::string(1, symbol), 10u);
-            label.setFillColor(sf::Color::White);
-            label.setPosition({x + 3.f, y + 1.f});
-            target.draw(label);
+            sf::Sprite sprite(*found->second.texture);
+            sprite.setTextureRect(found->second.rect);
+            sprite.setPosition({x, y});
+            target.draw(sprite);
         }
     }
 }
@@ -457,12 +454,12 @@ void MapEditorState::render(sf::RenderTarget& target) {
     target.setView(baseView);
 
     sf::RectangleShape toolbarBg(sf::Vector2f{screenW, ToolbarHeight});
-    toolbarBg.setPosition({0.f, screenH - ToolbarHeight});
+    toolbarBg.setPosition({0.f, 0.f});
     toolbarBg.setFillColor(sf::Color(10, 10, 20, 220));
     target.draw(toolbarBg);
 
     sf::RectangleShape paletteBg(sf::Vector2f{PaletteWidth, screenH - ToolbarHeight});
-    paletteBg.setPosition({screenW - PaletteWidth, 0.f});
+    paletteBg.setPosition({screenW - PaletteWidth, ToolbarHeight});
     paletteBg.setFillColor(sf::Color(10, 10, 20, 220));
     target.draw(paletteBg);
 

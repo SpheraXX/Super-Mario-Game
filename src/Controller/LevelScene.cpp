@@ -191,6 +191,17 @@ void LevelScene::setInputMapper(model::IInputMapper* mapper) {
     inputMapper = mapper;
 }
 
+bool LevelScene::hasAuthoredGoal() const {
+    for (std::size_t row = 0; row < map.getRows(); ++row) {
+        for (std::size_t column = 0; column < map.getColumns(); ++column) {
+            if (map.getTile(row, column) == model::TileMap::GoalSymbol) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 // Instantiate the given area: copy its grid into the working map, rebuild the themed
 // renderer, append the completion zone on the FINAL area only, then spawn the area.
 void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
@@ -198,7 +209,10 @@ void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer, const model::L
     portals.clear();  // every visit to an area reactivates all its pipes
     worldType = level.areaWorld(areaIndex);
     map = level.areaMap(areaIndex);
-    if (currentArea == level.areaCount() - 1) {
+    // Only append the legacy flagpole/castle zone when the author didn't place their own
+    // goal marker -- see hasAuthoredGoal's comment in the header for why coexistence is
+    // a bug, not a feature.
+    if (currentArea == level.areaCount() - 1 && !hasAuthoredGoal()) {
         map.padRight(LevelCompletion::LevelPaddingTiles);
     }
 
@@ -649,7 +663,8 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
     }
 
     // Level completion zone, in the padded columns: flagpole, then the goal castle.
-    if (currentArea == level.areaCount() - 1) {
+    // Skipped when the area already has its own author-placed goal (see loadArea).
+    if (currentArea == level.areaCount() - 1 && !hasAuthoredGoal()) {
         completion.build(map, entities);
     }
     // Every character obeys the current world's physics (gravity/fall/drag, swim), and

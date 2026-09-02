@@ -18,6 +18,13 @@
 
 namespace controller {
 
+namespace {
+// Wider/taller than the standard menu button: "UNDERGROUND"/"UNDERWATER" are longer than
+// the single short words MenuButtonWidth/Height were originally sized for.
+constexpr float ButtonWidth = view::ui::layout::MenuButtonWidth * 1.35f;
+constexpr float ButtonHeight = view::ui::layout::MenuButtonHeight + 6.f;
+}
+
 CustomMapWorldPickState::CustomMapWorldPickState()
     : m_background(view::AssetManager::instance().getTexture("assets/images/bga_mainmenu.png")) {
     m_background.setColor(view::ui::theme::BgaDimMenu);
@@ -34,14 +41,14 @@ void CustomMapWorldPickState::buildUI() {
 
     m_buttons = view::ui::UIContainer(view::ui::UIContainer::Layout::Vertical,
                                       view::ui::layout::MenuButtonGap);
-    const float listX = (W - view::ui::layout::MenuButtonWidth) / 2.f;
+    const float listX = (W - ButtonWidth) / 2.f;
     m_buttons.setPosition(listX, 0.f);
-    m_buttons.setSize(view::ui::layout::MenuButtonWidth, 0.f);
+    m_buttons.setSize(ButtonWidth, 0.f);
 
     auto makeBtn = [&](const std::string& label, model::WorldType world) {
         auto btn = std::make_unique<view::ui::UIButton>(
             font, label, view::ui::layout::ButtonFontSize, sf::Vector2f{0.f, 0.f},
-            sf::Vector2f{view::ui::layout::MenuButtonWidth, view::ui::layout::MenuButtonHeight});
+            sf::Vector2f{ButtonWidth, ButtonHeight});
         btn->setOnClick([this, world]() {
             manager->replaceState(std::make_unique<MapEditorState>(world));
         });
@@ -55,7 +62,7 @@ void CustomMapWorldPickState::buildUI() {
 
     auto backBtn = std::make_unique<view::ui::UIButton>(
         font, "BACK", view::ui::layout::ButtonFontSize, sf::Vector2f{0.f, 0.f},
-        sf::Vector2f{view::ui::layout::MenuButtonWidth, view::ui::layout::MenuButtonHeight});
+        sf::Vector2f{ButtonWidth, ButtonHeight});
     backBtn->setOnClick([this]() {
         manager->replaceState(std::make_unique<CustomMapHubState>());
     });
@@ -75,7 +82,7 @@ void CustomMapWorldPickState::onDisplayModeChanged() {
                             static_cast<float>(tex.getSize().y) / 2.f});
     m_background.setPosition({W / 2.f, H / 2.f});
 
-    const float listX = (W - view::ui::layout::MenuButtonWidth) / 2.f;
+    const float listX = (W - ButtonWidth) / 2.f;
     m_buttons.setPosition(listX, H * 0.3f);
     m_buttons.relayout();
 }

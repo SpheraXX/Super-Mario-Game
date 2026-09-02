@@ -117,6 +117,13 @@ public:
 
 private:
     void loadArea(std::size_t areaIndex, bool keepPlayer = false, const model::LevelSaveData* levelSave = nullptr, const model::PlayerSaveData* playerSave = nullptr, bool keepPlayerPosition = true);
+    // True when the currently loaded area's grid already carries an author-placed goal
+    // marker (TileMap::GoalSymbol). Such areas skip the legacy padded flagpole/castle
+    // zone entirely (see loadArea/resetLevel) -- appending it unconditionally alongside
+    // an author's own, earlier goal used to snap the player forward onto the unrelated
+    // legacy flagpole/castle the instant the real goal was touched, which read as the
+    // level suddenly restarting and auto-playing itself to the end.
+    bool hasAuthoredGoal() const;
     void teleportToPortal(const model::Portal& portal);
     // Pipe travel: SlideIn -> (teleport) -> SlideOut, with the world frozen the whole way.
     // beginPipeTransition snapshots the portal and pauses the timer; advancePipeTransition

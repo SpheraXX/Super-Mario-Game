@@ -1,39 +1,275 @@
 {
-    "coins": 0,
+    "coins": 13,
     "high_scores": {
-        "MAP1": 0,
-        "SS": 0
+        "1-1": 0
     },
     "level": {
-        "coinBlocks": [],
+        "coinBlocks": [
+            {
+                "opened": false,
+                "posX": 256.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 336.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 368.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1248.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1696.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1744.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1792.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 2720.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 352.0,
+                "posY": 96.0
+            },
+            {
+                "opened": false,
+                "posX": 1504.0,
+                "posY": 96.0
+            },
+            {
+                "opened": false,
+                "posX": 1744.0,
+                "posY": 96.0
+            },
+            {
+                "opened": false,
+                "posX": 2064.0,
+                "posY": 96.0
+            },
+            {
+                "opened": false,
+                "posX": 2080.0,
+                "posY": 96.0
+            }
+        ],
         "currentArea": 0,
         "currentLevel": 1,
-        "enemies": [],
+        "enemies": [
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 189.50152587890625,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 702.0824584960938,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 881.7555541992188,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 850.0873413085938,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1427.7652587890625,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1485.9324951171875,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1758.3175048828125,
+                "posY": 201.0,
+                "state": "Walking",
+                "type": "Koopa",
+                "velX": -20.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1837.9324951171875,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1885.9324951171875,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1949.913818359375,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 2705.84619140625,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 2673.756591796875,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1255.9158935546875,
+                "posY": 144.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1379.4132080078125,
+                "posY": 80.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            }
+        ],
         "hasEntitiesSnapshot": true,
         "items": [],
         "levelName": "1-1",
         "mapPath": "assets/maps/lv1_1.map",
-        "nextMapPath": "",
-        "remainingTime": 397.000732421875,
+        "nextMapPath": "assets/maps/lv2_1.map",
+        "remainingTime": 380.7713623046875,
         "removedTiles": []
     },
     "level_progress": {
-        "MAP1": "pass",
-        "SS": "pass"
+        "1-1": "pass",
+        "1-2": "available"
     },
     "lives": 3,
     "player": {
         "facingDirection": 1,
         "isBig": false,
         "isLuigi": false,
-        "posX": 213.1666717529297,
+        "posX": 3156.5,
         "posY": 208.0,
         "power": "None",
         "starDuration": 0.0,
         "velX": 90.0,
         "velY": 0.0
     },
-    "score": 8980,
-    "unlocked_worlds": [],
+    "score": 11410,
+    "unlocked_worlds": [
+        "world_1"
+    ],
     "version": 1
 }

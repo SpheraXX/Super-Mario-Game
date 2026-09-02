@@ -1,60 +1,122 @@
 {
-    "coins": 90,
+    "coins": 3,
     "high_scores": {
-        "1-1": 50000,
-        "1-2": 60000,
-        "2-1": 70000,
-        "3-1": 70000
+        "1-1": 0
     },
     "level": {
         "coinBlocks": [
             {
-                "opened": true,
-                "posX": 160.0,
+                "opened": false,
+                "posX": 848.0,
                 "posY": 160.0
             },
             {
-                "opened": true,
-                "posX": 176.0,
+                "opened": false,
+                "posX": 864.0,
                 "posY": 160.0
             },
             {
-                "opened": true,
-                "posX": 192.0,
+                "opened": false,
+                "posX": 880.0,
                 "posY": 160.0
             },
             {
-                "opened": true,
-                "posX": 208.0,
+                "opened": false,
+                "posX": 896.0,
                 "posY": 160.0
             },
             {
-                "opened": true,
-                "posX": 224.0,
+                "opened": false,
+                "posX": 912.0,
                 "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1264.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1280.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1296.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1312.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1360.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1376.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 1392.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 2720.0,
+                "posY": 160.0
+            },
+            {
+                "opened": false,
+                "posX": 848.0,
+                "posY": 96.0
+            },
+            {
+                "opened": false,
+                "posX": 864.0,
+                "posY": 96.0
+            },
+            {
+                "opened": false,
+                "posX": 880.0,
+                "posY": 96.0
+            },
+            {
+                "opened": true,
+                "posX": 896.0,
+                "posY": 96.0
+            },
+            {
+                "opened": false,
+                "posX": 912.0,
+                "posY": 96.0
             }
         ],
-        "currentArea": 1,
-        "currentLevel": 1,
+        "currentArea": 0,
+        "currentLevel": 2,
         "enemies": [
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 185.25030517578125,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
             {
                 "direction": -1,
                 "facingRight": false,
                 "isDormant": false,
                 "isWinged": false,
-                "posX": 452.9173278808594,
-                "posY": 208.0,
-                "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
-                "velY": 0.0
-            },
-            {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 672.0,
+                "posX": 400.66424560546875,
                 "posY": 201.0,
                 "state": "Walking",
                 "type": "Koopa",
@@ -64,33 +126,81 @@
             {
                 "direction": -1,
                 "facingRight": false,
-                "isDormant": true,
+                "isDormant": false,
                 "isWinged": false,
-                "posX": 704.0,
+                "posX": 1103.00634765625,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1043.42724609375,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 2170.3447265625,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 2319.000244140625,
                 "posY": 201.0,
                 "state": "Walking",
                 "type": "Koopa",
-                "velX": -20.0,
+                "velX": 20.0,
                 "velY": 0.0
             },
             {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
                 "isWinged": false,
-                "posX": 976.0,
+                "posX": 2771.7236328125,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": 25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 2593.3056640625,
                 "posY": 201.0,
                 "state": "Walking",
                 "type": "Koopa",
-                "velX": -20.0,
+                "velX": 20.0,
                 "velY": 0.0
             },
             {
                 "direction": -1,
                 "facingRight": false,
-                "isDormant": true,
+                "isDormant": false,
                 "isWinged": false,
-                "posX": 1056.0,
+                "posX": 2876.054443359375,
                 "posY": 208.0,
                 "state": "Walking",
                 "type": "Goomba",
@@ -98,308 +208,105 @@
                 "velY": 0.0
             },
             {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
                 "isWinged": false,
-                "posX": 1104.0,
-                "posY": 208.0,
+                "posX": 2824.0,
+                "posY": 175.2333221435547,
                 "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
+                "type": "PiranhaPlant",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 744.0,
+                "posY": 137.0,
+                "state": "Walking",
+                "type": "PiranhaPlant",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 1192.0,
+                "posY": 160.0,
+                "state": "Walking",
+                "type": "PiranhaPlant",
+                "velX": 0.0,
                 "velY": 0.0
             },
             {
                 "direction": -1,
                 "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 1184.0,
-                "posY": 208.0,
-                "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
-                "velY": 0.0
-            },
-            {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 1424.0,
-                "posY": 208.0,
-                "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
-                "velY": 0.0
-            },
-            {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 1456.0,
-                "posY": 208.0,
-                "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
-                "velY": 0.0
-            },
-            {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 1504.0,
-                "posY": 208.0,
-                "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
-                "velY": 0.0
-            },
-            {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 1792.0,
-                "posY": 208.0,
-                "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
-                "velY": 0.0
-            },
-            {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 2352.0,
-                "posY": 201.0,
+                "isDormant": false,
+                "isWinged": true,
+                "posX": 1504.496826171875,
+                "posY": 117.16669464111328,
                 "state": "Walking",
                 "type": "Koopa",
-                "velX": -20.0,
-                "velY": 0.0
+                "velX": -25.0,
+                "velY": -35.0
             },
             {
                 "direction": -1,
                 "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 2384.0,
-                "posY": 201.0,
+                "isDormant": false,
+                "isWinged": true,
+                "posX": 1916.4185791015625,
+                "posY": 111.91667175292969,
                 "state": "Walking",
                 "type": "Koopa",
-                "velX": -20.0,
-                "velY": 0.0
+                "velX": -25.0,
+                "velY": -35.0
             },
             {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
+                "direction": 1,
+                "facingRight": true,
+                "isDormant": false,
                 "isWinged": false,
-                "posX": 2144.0,
-                "posY": 176.0,
+                "posX": 2492.085693359375,
+                "posY": 208.0,
                 "state": "Walking",
                 "type": "Goomba",
-                "velX": -25.0,
-                "velY": 0.0
-            },
-            {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 1232.0,
-                "posY": 144.0,
-                "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
-                "velY": 0.0
-            },
-            {
-                "direction": -1,
-                "facingRight": false,
-                "isDormant": true,
-                "isWinged": false,
-                "posX": 2176.0,
-                "posY": 144.0,
-                "state": "Walking",
-                "type": "Goomba",
-                "velX": -25.0,
+                "velX": 25.0,
                 "velY": 0.0
             }
         ],
         "hasEntitiesSnapshot": true,
-        "items": [
-            {
-                "direction": 1,
-                "posX": 640.0,
-                "posY": 144.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 720.0,
-                "posY": 144.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 928.0,
-                "posY": 144.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 944.0,
-                "posY": 144.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 960.0,
-                "posY": 144.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 976.0,
-                "posY": 144.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 1088.0,
-                "posY": 144.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 656.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 672.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 688.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 704.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 1344.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 1360.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 1376.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 1392.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 1408.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            },
-            {
-                "direction": 1,
-                "posX": 1424.0,
-                "posY": 96.0,
-                "type": "MapCoin",
-                "velX": 0.0,
-                "velY": 0.0
-            }
-        ],
-        "levelName": "2-1",
-        "mapPath": "assets/maps/lv1_2.map",
-        "nextMapPath": "assets/maps/lv2_2.map",
-        "remainingTime": 377.75543212890625,
+        "items": [],
+        "levelName": "1-2",
+        "mapPath": "assets/maps/lv2_1.map",
+        "nextMapPath": "assets/maps/lv1_2.map",
+        "remainingTime": 295.74212646484375,
         "removedTiles": []
     },
     "level_progress": {
         "1-1": "pass",
-        "1-2": "pass",
-        "2-1": "pass",
-        "3-1": "pass",
-        "4-1": "available"
+        "1-2": "available"
     },
-    "lives": 99,
+    "lives": 2,
     "player": {
-        "facingDirection": -1,
-        "isBig": true,
+        "facingDirection": 1,
+        "isBig": false,
         "isLuigi": false,
-        "posX": 141.72219848632813,
-        "posY": 192.0,
-        "power": "Fire",
+        "posX": 3028.0,
+        "posY": 208.0,
+        "power": "None",
         "starDuration": 0.0,
         "velX": 0.0,
         "velY": 0.0
     },
-    "score": 3300,
+    "score": 9990,
     "unlocked_worlds": [
-        "world_1",
-        "world_2",
-        "world_3",
-        "world_4"
+        "world_1"
     ],
     "version": 1
 }

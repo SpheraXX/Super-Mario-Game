@@ -1,0 +1,29 @@
+{
+    "active_profile_index": 2,
+    "slots": [
+        {
+            "is_empty": false,
+            "name": "PRO MARIO",
+            "passed_levels": 4,
+            "total_score": 250000
+        },
+        {
+            "is_empty": false,
+            "name": "MID LUIGI",
+            "passed_levels": 3,
+            "total_score": 62000
+        },
+        {
+            "is_empty": false,
+            "name": "NEW PEACH",
+            "passed_levels": 0,
+            "total_score": 0
+        },
+        {
+            "is_empty": true,
+            "name": "EMPTY",
+            "passed_levels": 0,
+            "total_score": 0
+        }
+    ]
+}

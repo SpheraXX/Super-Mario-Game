@@ -1,0 +1,355 @@
+{
+    "coins": 87,
+    "high_scores": {
+        "1-1": 50000,
+        "1-2": 60000,
+        "2-1": 70000,
+        "3-1": 70000
+    },
+    "level": {
+        "coinBlocks": [],
+        "currentArea": 1,
+        "currentLevel": 1,
+        "enemies": [
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 2240.0,
+                "posY": 160.0,
+                "state": "Walking",
+                "type": "CheepCheep",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 880.0,
+                "posY": 144.0,
+                "state": "Walking",
+                "type": "CheepCheep",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 2800.0,
+                "posY": 144.0,
+                "state": "Walking",
+                "type": "CheepCheep",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 1600.0,
+                "posY": 128.0,
+                "state": "Walking",
+                "type": "CheepCheep",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": false,
+                "isWinged": false,
+                "posX": 377.10205078125,
+                "posY": 112.0,
+                "state": "Walking",
+                "type": "CheepCheep",
+                "velX": -29.400001525878906,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 2528.0,
+                "posY": 112.0,
+                "state": "Walking",
+                "type": "CheepCheep",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 1280.0,
+                "posY": 96.0,
+                "state": "Walking",
+                "type": "CheepCheep",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 1920.0,
+                "posY": 80.0,
+                "state": "Walking",
+                "type": "CheepCheep",
+                "velX": 0.0,
+                "velY": 0.0
+            }
+        ],
+        "hasEntitiesSnapshot": true,
+        "items": [
+            {
+                "direction": 1,
+                "posX": 576.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 592.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 608.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2144.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2160.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2176.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2544.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2560.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2576.0,
+                "posY": 208.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1616.0,
+                "posY": 192.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1632.0,
+                "posY": 192.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1648.0,
+                "posY": 192.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2128.0,
+                "posY": 192.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2192.0,
+                "posY": 192.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1072.0,
+                "posY": 176.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1088.0,
+                "posY": 176.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1104.0,
+                "posY": 176.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2544.0,
+                "posY": 160.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2560.0,
+                "posY": 160.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 2576.0,
+                "posY": 160.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1808.0,
+                "posY": 112.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1824.0,
+                "posY": 112.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 1840.0,
+                "posY": 112.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 432.0,
+                "posY": 96.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 448.0,
+                "posY": 96.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            },
+            {
+                "direction": 1,
+                "posX": 464.0,
+                "posY": 96.0,
+                "type": "MapCoin",
+                "velX": 0.0,
+                "velY": 0.0
+            }
+        ],
+        "levelName": "3-1",
+        "mapPath": "assets/maps/lv2_2.map",
+        "nextMapPath": "assets/maps/lv1_4.map",
+        "remainingTime": 392.601806640625,
+        "removedTiles": []
+    },
+    "level_progress": {
+        "1-1": "pass",
+        "1-2": "pass",
+        "2-1": "pass",
+        "3-1": "pass",
+        "4-1": "available"
+    },
+    "lives": 99,
+    "player": {
+        "facingDirection": -1,
+        "isBig": true,
+        "isLuigi": false,
+        "posX": 166.12860107421875,
+        "posY": 192.0,
+        "power": "Fire",
+        "starDuration": 0.0,
+        "velX": 0.0,
+        "velY": 0.0
+    },
+    "score": 500,
+    "unlocked_worlds": [
+        "world_1",
+        "world_2",
+        "world_3",
+        "world_4"
+    ],
+    "version": 1
+}

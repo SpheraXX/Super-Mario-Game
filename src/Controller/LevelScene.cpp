@@ -375,8 +375,6 @@ void LevelScene::switchCharacter(bool toLuigi) {
     if (it == entities.end()) {
         return;
     }
-    entities.erase(it);
-    playerPtr = nullptr;
 
     std::unique_ptr<model::Player> fresh;
     if (toLuigi) {
@@ -385,9 +383,21 @@ void LevelScene::switchCharacter(bool toLuigi) {
         fresh = std::make_unique<model::Mario>(model::Vector2{snapshot.posX, snapshot.posY});
     }
     fresh->restoreState(snapshot, /*keepPosition=*/true);
+    // Character::setWorld(const WorldTheme&) name-hides Entity::setWorld(World*), so the
+    // level-service wiring has to go through the Entity-typed pointer explicitly.
+    static_cast<model::Entity*>(fresh.get())->setWorld(this);
     fresh->setWorld(model::WorldSet::forType(worldType));
+    fresh->isDormant = false;
+    fresh->isActive = true;
 
-    playerPtr = static_cast<model::Player*>(addEntity(std::move(fresh)));
+    // Replace IN PLACE rather than erase+append: the entity pass in CollisionManager
+    // walks pairs as (i, j>i) and only accumulates its deepest-contact block bump while
+    // the player is the OUTER entity, so the player's index in this list is load-bearing
+    // (resetLevel says the same thing where it re-inserts a kept player: "put him back
+    // ahead of pipes and enemies, matching the original spawn order"). Appending the new
+    // character to the end silently moved the player behind every other entity.
+    playerPtr = fresh.get();
+    *it = std::move(fresh);
 }
 
 void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
@@ -413,6 +423,16 @@ void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSa
         playerPtr = nullptr;  // full restart: a fresh player spawns below
     }
     goalPtr = nullptr;
+    // Same reason goalPtr is dropped here: entities.clear() just destroyed everything the
+    // scene held raw pointers into, and LevelCompletion caches a FlagPole* of its own.
+    // Without this, a level whose FINAL area built the flagpole (so flagPolePtr was set)
+    // and then rebuilt a DIFFERENT area -- walking back through a pipe, or any death
+    // restart -- left flagPolePtr dangling at freed memory. PlayState gates the clear on
+    // `scene->flagPole()`, so that stale non-null pointer sent an authored-goal ('E')
+    // touch down the flagpole-cinematic branch, which then read a dead FlagPole's
+    // position: the world froze behind a cinematic that could never finish instead of
+    // showing the level-complete overlay.
+    completion.clear();
 
     // A save's own character always wins on resume; a brand-new spawn (no save at all)
     // uses whichever character is currently selected in Options.

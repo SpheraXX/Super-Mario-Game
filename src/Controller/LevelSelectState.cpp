@@ -3,6 +3,7 @@
 #include "Controller/WorldSelectState.h"
 #include "Controller/LoadingState.h"
 #include "Controller/PlayState.h"
+#include "Model/Core/GameManager.h"
 #include "Model/Core/WorldManager.h"
 #include "Model/Save/SaveManager.h"
 #include "View/AssetManager.h"
@@ -41,6 +42,18 @@ LevelSelectState::LevelSelectState(std::string worldId)
 }
 
 void LevelSelectState::onEnter() {
+    if (context && context->audio) {
+        // Data-driven: the track ID comes from worlds.json via WorldData::musicTrack.
+        // No if-else per world — adding a new world only needs a JSON change.
+        std::string track = "overworld"; // safe fallback
+        if (const auto* world = model::WorldManager::instance().getWorld(m_worldId)) {
+            if (!world->musicTrack.empty()) {
+                track = world->musicTrack;
+            }
+        }
+        context->audio->playMusic(track);
+    }
+
     buildUI();
     onDisplayModeChanged();
 }
@@ -60,16 +73,17 @@ void LevelSelectState::buildUI() {
     // Load save data once for all levels
     model::GameSaveData saveData;
     // BUG-5 fix: use SaveManager::DefaultSavePath instead of hardcoded "save.json"
-    model::SaveManager::instance().load(saveData, model::SaveManager::DefaultSavePath);
+    model::SaveManager::instance().load(saveData);
 
     m_grid = view::ui::UIContainer(view::ui::UIContainer::Layout::None, 0);
     
     int itemsPerRow = 4;
-    float padding = view::ui::layout::MenuButtonGap;
-    float btnSize = 80.f;
+    float padding = view::ui::layout::MenuButtonGap / 1.5f;
+    float btnSize = 60.f;
     
     int count = 0;
     const sf::Font& font = view::AssetManager::instance().getUiFont();
+    unsigned int levelBtnFontSize = 18;
 
     for (const auto& lvl : world->levels) {
         int row = count / itemsPerRow;
@@ -78,29 +92,36 @@ void LevelSelectState::buildUI() {
         float x = col * (btnSize + padding);
         float y = row * (btnSize + padding);
 
-        auto btn = std::make_unique<view::ui::UIButton>(font, lvl.id, view::ui::layout::ButtonFontSize, sf::Vector2f{x, y}, sf::Vector2f{btnSize, btnSize});
+        auto btn = std::make_unique<view::ui::UIButton>(font, lvl.id, levelBtnFontSize, sf::Vector2f{x, y}, sf::Vector2f{btnSize, btnSize});
         
-        // SOLID-3 fix: use enum instead of magic strings
-        LevelStatus status = LevelStatus::Available; // DEBUG: allow all for now
+        // Task 6 / 6.5 Fix: Check unlockRequires and level_progress
+        LevelStatus status = lvl.unlockRequires.empty() ? LevelStatus::Available : LevelStatus::Locked;
         auto it = saveData.level_progress.find(lvl.id);
         if (it != saveData.level_progress.end()) {
             if (it->second == "pass")        status = LevelStatus::Passed;
-            else if (it->second == "lock")   status = LevelStatus::Locked;
-            else                             status = LevelStatus::Available;
+            else if (it->second == "available") status = LevelStatus::Available;
+            else                             status = LevelStatus::Locked;
         }
 
         if (status == LevelStatus::Locked) {
             btn->setEnabled(false);
+        } else if (status == LevelStatus::Available) {
+            btn->setColors(sf::Color::White, sf::Color::White, view::ui::theme::ColorLevelAvailable);
+        } else if (status == LevelStatus::Passed) {
+            btn->setColors(sf::Color::White, sf::Color::White, view::ui::theme::ColorLevelPassed);
         }
-        // TODO: Apply different visual skin for Passed vs Available when skin system supports it
         
         std::string mapPath = lvl.mapPath;
-        btn->setOnClick([this, mapPath]() {
-            // BUG-5 fix: use SaveManager::DefaultSavePath
+        std::string levelId = lvl.id;
+        btn->setOnClick([this, mapPath, levelId]() {
             model::GameSaveData data;
-            model::SaveManager::instance().load(data, model::SaveManager::DefaultSavePath);
+            model::SaveManager::instance().load(data);
             data.level.mapPath = mapPath;
-            model::SaveManager::instance().save(data, model::SaveManager::DefaultSavePath);
+            data.level.levelName = levelId;
+            model::SaveManager::instance().save(data);
+
+            model::GameManager::instance().setCurrentMapPath(mapPath);
+            model::GameManager::instance().setLevelName(levelId);
 
             auto playState = std::make_unique<PlayState>();
             auto loadState = std::make_unique<LoadingState>(

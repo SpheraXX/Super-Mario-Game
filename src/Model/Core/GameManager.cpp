@@ -116,4 +116,12 @@ void GameManager::reset() {
     levelName.clear();
 }
 
+void GameManager::setAudioDelegate(std::unique_ptr<IAudioDelegate> delegate) {
+    m_audioDelegate = std::move(delegate);
+}
+
+IAudioDelegate* GameManager::getAudioDelegate() const {
+    return m_audioDelegate.get();
+}
+
 }

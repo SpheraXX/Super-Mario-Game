@@ -72,6 +72,10 @@ protected:
 
     static constexpr int DefaultScoreValue = 100;
 
+    // How long the squish sprite is shown before the body despawns. Goomba overrides to
+    // a shorter window (0.5s), Koopa re-uses this default (1s) for the shell collapse.
+    static constexpr float DefaultSquishDuration = 1.0f;
+
     // Ticks the attack cooldown and fires createProjectile() into the world when it elapses.
     // Inert unless a subclass sets attackCooldown.
     void updateAttack(float deltaTime);

@@ -3,8 +3,11 @@
 #include "Controller/StateManager.h"
 #include "Controller/OptionsState.h"
 #include "Controller/MainMenuState.h"
+#include "Controller/LevelSelectState.h"
 #include "Controller/WarningPopupState.h"
 #include "Model/Core/LogManager.h"
+#include "Model/Core/GameManager.h"
+#include "Model/Core/WorldManager.h"
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
 #include "View/UI/UITheme.h"
@@ -54,26 +57,34 @@ PauseState::PauseState(std::function<void()> onSave, std::function<void()> onRes
         if (manager) manager->pushState(std::make_unique<OptionsState>());
     });
 
-    auto btnMainMenu = std::make_unique<view::ui::UIButton>(
-        font, "MAIN MENU", view::ui::layout::ButtonFontSize, sf::Vector2f(0.f, 0.f), sf::Vector2f(view::ui::layout::MenuButtonWidth, view::ui::layout::MenuButtonHeight));
-    btnMainMenu->setOnClick([this]() {
+    auto btnQuit = std::make_unique<view::ui::UIButton>(
+        font, "QUIT", view::ui::layout::ButtonFontSize, sf::Vector2f(0.f, 0.f), sf::Vector2f(view::ui::layout::MenuButtonWidth, view::ui::layout::MenuButtonHeight));
+    btnQuit->setOnClick([this]() {
         if (manager) {
             manager->pushState(std::make_unique<WarningPopupState>(
-                "Save game and return to Main Menu?",
+                "Save and return to Level Select?",
                 WarningPopupState::Type::YesNo,
                 [this]() {
                     if (onSaveCallback) {
                         onSaveCallback();
                     }
                     if (manager) {
+                        std::string mapPath = model::GameManager::instance().getCurrentMapPath();
+                        std::string worldId = model::WorldManager::instance().getWorldIdFromMapPath(mapPath);
+                        if (worldId.empty()) worldId = "world_1";
+
                         manager->clear();
-                        manager->pushState(std::make_unique<MainMenuState>());
+                        manager->pushState(std::make_unique<LevelSelectState>(worldId));
                     }
                 },
                 [this]() {
                     if (manager) {
+                        std::string mapPath = model::GameManager::instance().getCurrentMapPath();
+                        std::string worldId = model::WorldManager::instance().getWorldIdFromMapPath(mapPath);
+                        if (worldId.empty()) worldId = "world_1";
+
                         manager->clear();
-                        manager->pushState(std::make_unique<MainMenuState>());
+                        manager->pushState(std::make_unique<LevelSelectState>(worldId));
                     }
                 },
                 "YES",
@@ -85,7 +96,7 @@ PauseState::PauseState(std::function<void()> onSave, std::function<void()> onRes
     menuContainer.add(std::move(btnResume));
     menuContainer.add(std::move(btnRestart));
     menuContainer.add(std::move(btnOptions));
-    menuContainer.add(std::move(btnMainMenu));
+    menuContainer.add(std::move(btnQuit));
 }
 
 void PauseState::onDisplayModeChanged() {

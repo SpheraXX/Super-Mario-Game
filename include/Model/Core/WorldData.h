@@ -9,6 +9,7 @@ namespace model {
 struct LevelData {
     std::string id;
     std::string mapPath;
+    std::string unlockRequires;
 };
 
 struct WorldData {
@@ -16,6 +17,9 @@ struct WorldData {
     std::string title;
     std::string previewImage;
     std::string bgaImage;
+    // Audio track ID (key in audio_meta.json) to play while browsing this world's level
+    // select screen and during gameplay. Defaults to "overworld" if not specified in JSON.
+    std::string musicTrack;
     std::vector<LevelData> levels;
 };
 

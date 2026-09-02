@@ -153,7 +153,7 @@ LevelScene::LevelScene()
     entityRenderers->registerRenderer<model::FlagPole, view::FlagPoleRenderer>();
 }
 
-bool LevelScene::loadLevel(const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave) {
+bool LevelScene::loadLevel(const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
     auto& game = model::GameManager::instance();
     try {
         level.loadFromFile(game.getCurrentMapPath());
@@ -161,7 +161,7 @@ bool LevelScene::loadLevel(const model::LevelSaveData* levelSave, const model::P
         if (levelSave && levelSave->currentArea < level.areaCount()) {
             targetArea = levelSave->currentArea;
         }
-        loadArea(targetArea, /* keepPlayer */ false, levelSave, playerSave);
+        loadArea(targetArea, /* keepPlayer */ false, levelSave, playerSave, keepPlayerPosition);
     } catch (const std::exception& error) {
         model::LogManager::instance().error(std::string("Failed to load level: ") + error.what());
         mapLoaded = false;
@@ -179,7 +179,7 @@ bool LevelScene::loadLevel(const model::LevelSaveData* levelSave, const model::P
     }
 
     if (playerSave && playerPtr) {
-        playerPtr->restoreState(*playerSave);
+        playerPtr->restoreState(*playerSave, keepPlayerPosition);
         armDormancy();
     }
 
@@ -193,7 +193,7 @@ void LevelScene::setInputMapper(model::IInputMapper* mapper) {
 
 // Instantiate the given area: copy its grid into the working map, rebuild the themed
 // renderer, append the completion zone on the FINAL area only, then spawn the area.
-void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave) {
+void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
     currentArea = areaIndex;
     portals.clear();  // every visit to an area reactivates all its pipes
     worldType = level.areaWorld(areaIndex);
@@ -213,7 +213,7 @@ void LevelScene::loadArea(std::size_t areaIndex, bool keepPlayer, const model::L
 
     renderer = std::make_unique<view::TileMapRenderer>("assets/blocks.png", worldType);
     mapLoaded = true;
-    resetLevel(keepPlayer, levelSave, playerSave);
+    resetLevel(keepPlayer, levelSave, playerSave, keepPlayerPosition);
 }
 
 void LevelScene::teleportToPortal(const model::Portal& portal) {
@@ -337,7 +337,7 @@ void LevelScene::restartLevel() {
     loadArea(0);
 }
 
-void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave) {
+void LevelScene::resetLevel(bool keepPlayer, const model::LevelSaveData* levelSave, const model::PlayerSaveData* playerSave, bool keepPlayerPosition) {
     const std::size_t tileWidth = model::TileMap::TileWidth;
     const std::size_t tileHeight = model::TileMap::TileHeight;
     const std::size_t rows = map.getRows();

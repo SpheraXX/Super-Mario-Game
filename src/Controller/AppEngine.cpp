@@ -5,6 +5,7 @@
 #include "Model/Core/LogManager.h"
 #include "Model/Core/WorldManager.h"
 #include "Model/Map/TileMap.h"
+#include "Model/Core/GameManager.h"
 #include "Model/SettingsManager.h"
 #include "View/AssetManager.h"
 #include "View/UI/UIElement.h"
@@ -22,6 +23,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+
+#include "Controller/AudioDelegateImpl.h"
 
 namespace controller {
 
@@ -45,6 +48,8 @@ AppEngine::AppEngine()
     , inputMapper()
     , gameContext{&audioManager, &inputMapper}
     , states(std::make_unique<IntroState>(), &gameContext) {
+
+    model::GameManager::instance().setAudioDelegate(std::make_unique<AudioDelegateImpl>(&audioManager));
 
     model::SettingsManager::instance().addObserver(this);
 

@@ -5,7 +5,7 @@
         "moveLeft": 71,
         "moveRight": 72,
         "pause": 15,
-        "run": 25,
+        "run": 21,
         "slot": 0
     },
     "graphics": {

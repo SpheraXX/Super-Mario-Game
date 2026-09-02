@@ -1,0 +1,99 @@
+{
+    "coins": 0,
+    "level": {
+        "coinBlocks": [
+            {
+                "opened": false,
+                "posX": 480.0,
+                "posY": 112.0
+            }
+        ],
+        "currentArea": 0,
+        "currentLevel": 1,
+        "enemies": [
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 1712.0,
+                "posY": 201.0,
+                "state": "Walking",
+                "type": "Koopa",
+                "velX": -20.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 1760.0,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 1792.0,
+                "posY": 208.0,
+                "state": "Walking",
+                "type": "Goomba",
+                "velX": -25.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 1824.0,
+                "posY": 201.0,
+                "state": "Walking",
+                "type": "Koopa",
+                "velX": -20.0,
+                "velY": 0.0
+            },
+            {
+                "direction": -1,
+                "facingRight": false,
+                "isDormant": true,
+                "isWinged": false,
+                "posX": 2224.0,
+                "posY": 128.0,
+                "state": "Walking",
+                "type": "Bowser",
+                "velX": -15.0,
+                "velY": 0.0
+            }
+        ],
+        "hasEntitiesSnapshot": true,
+        "items": [],
+        "levelName": "WORLD 1-4",
+        "mapPath": "assets/maps/lv1_4.map",
+        "nextMapPath": "assets/maps/lv2_1.map",
+        "remainingTime": 392.13525390625,
+        "removedTiles": []
+    },
+    "level_progress": {},
+    "lives": 3,
+    "player": {
+        "facingDirection": 1,
+        "isBig": false,
+        "isLuigi": false,
+        "posX": 404.8333435058594,
+        "posY": 32.0,
+        "power": "None",
+        "starDuration": 0.0,
+        "velX": 0.0,
+        "velY": 0.0
+    },
+    "score": 0,
+    "unlocked_worlds": [],
+    "version": 1
+}

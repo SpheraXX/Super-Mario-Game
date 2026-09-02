@@ -2,8 +2,10 @@
 #include "Controller/AppEngine.h"
 #include "Controller/IAudioManager.h"
 #include "Controller/MainMenuState.h"
+#include "Controller/LevelSelectState.h"
 #include "Controller/StateManager.h"
 #include "Model/Core/GameManager.h"
+#include "Model/Core/WorldManager.h"
 #include "View/AssetManager.h"
 #include "View/UI/UIButton.h"
 #include "View/UI/UITheme.h"
@@ -55,8 +57,12 @@ void GameOverState::buildUI() {
       m_onRestartCallback();
   });
 
-  makeBtn("QUIT TO MENU", [this]() {
-    manager->replaceState(std::make_unique<MainMenuState>());
+  makeBtn("QUIT", [this]() {
+    std::string mapPath = model::GameManager::instance().getCurrentMapPath();
+    std::string worldId = model::WorldManager::instance().getWorldIdFromMapPath(mapPath);
+    if (worldId.empty()) worldId = "world_1";
+
+    manager->replaceState(std::make_unique<LevelSelectState>(worldId));
   });
 
   onDisplayModeChanged();

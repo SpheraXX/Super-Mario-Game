@@ -75,6 +75,7 @@ struct GameSaveData {
     
     std::vector<std::string> unlocked_worlds;
     std::unordered_map<std::string, std::string> level_progress;
+    std::unordered_map<std::string, int> high_scores;
     
     LevelSaveData level;
     PlayerSaveData player;

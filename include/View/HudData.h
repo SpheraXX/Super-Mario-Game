@@ -11,6 +11,7 @@ namespace view {
 struct HudData {
     int score = 0;
     int coins = 0;
+    int lives = 0;
     std::string levelName;
     int time = 0;
 };

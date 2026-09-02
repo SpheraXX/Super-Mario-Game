@@ -36,7 +36,7 @@
       "title": "World 4",
       "music_track": "castle",
       "preview_image": "assets/images/banner/castle.png",
-      "bga_image": "assets/images/bga_underground.jpg",
+      "bga_image": "assets/images/bga_castle.jpg",
       "levels": [
         { "id": "4-1", "map_path": "assets/maps/lv1_4.map", "unlock_requires": "3-1" },
         { "id": "4-2", "map_path": "assets/maps/lv2_4.map", "unlock_requires": "4-1" }

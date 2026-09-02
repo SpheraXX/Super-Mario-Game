@@ -51,6 +51,12 @@ Global environmental and configuration data are maintained by the `AudioManager`
 ### 3.4.3 Save & Persistence Management
 The `SaveManager` provides a robust serialization pipeline for the `GameSaveData` structure. It archives not only macroscopic metrics but precise microscopic snapshots of the `PlayState`—including exact `Entity` coordinates, `Enemy` velocity vectors, `Player` power-up forms, and the active/broken status of specific `CoinBlock`s and `BrickBlock`s. This comprehensive snapshot allows features like "Continue Game" or `LevelSelectState` to rebuild exact gameplay environments flawlessly.
 
+### 3.4.4 Profile & Multi-Slot Save Management Framework
+To support multi-user progress tracking and independent career saves, the architecture introduces a dual-layer profile persistence subsystem via `ProfileManager` and slot-bound `SaveManager` routing.
+- **`ProfileManager`**: Acts as a high-level manager encapsulating up to four user profile slots (`PRO MARIO`, `MID LUIGI`, `NEW PEACH`, `EMPTY`). It tracks active profile selections (`active_profile_index`), cumulative total scores, and total completed levels across sessions in a centralized `profiles.json` ledger.
+- **Slot-Based Save Routing**: `SaveManager::getActiveSavePath()` dynamically binds persistence reads and writes to dedicated slot files (`save_slot_0.json` through `save_slot_3.json`). This guarantees complete isolation between profile states while preserving uniform schema serialization.
+- **Stat Synchronization**: Upon clearing a stage in `PlayState::finishClear()`, high-score deltas and first-time level completion flags are computed and synced back to `ProfileManager`. This updates global ranking standings dynamically without disk re-read overhead.
+
 ## 3.5 Utility objects
 
 ### 3.5.1 Tile and Entity collision resolution
@@ -66,6 +72,16 @@ The `TileMapRenderer` caches level geometry by mapping ASCII characters to an `s
 
 ### 3.6.3 Custom UI Framework & DIP Resolution
 A completely bespoke UI framework was engineered to manage complex menu layouts. It abstracts hardware resolutions using Device Independent Pixels (DIP), scaling interactive zones proportionally via a `windowToLogical()` mathematical coordinate translation. Advanced components like `UIScrollView` compute `sf::View` clipping rectangles to mask overflowing content, while `UISlider` and `UICycleButton` calculate absolute positioning automatically using vertical auto-layout padding and pixel snapping.
+
+### 3.6.4 Dynamic Data-Driven World & Level Progression Framework
+To replace hardcoded progression limits with an extensible structural pipeline, level sequence constraints and world metadata are entirely externalized into `assets/data/worlds.json` and managed at runtime via `WorldManager`.
+- **Dependency-Based Level Unlocking**: Each stage record contains an explicit `unlock_requires` attribute (e.g., `"1-2"` requires `"1-1"`). Upon stage completion in `PlayState::updateProgressAndUnlocks()`, the engine evaluates these dependency rules against `GameSaveData::level_progress`, marking dependent levels as `"available"` and appending parent world IDs to `unlocked_worlds`.
+- **Multi-Area World Classification**: Levels composed of multiple sub-areas (such as `Overworld` entrance transitioning into `Underground` or `Underwater` sub-maps) compute primary environmental dominance based on tile column spans. This allows `PlayState` to perform real-time area `WorldType` change detection during pipe transitions and dynamically switch background music tracks without violating MVC boundary rules.
+
+### 3.6.5 World Select Carousel & Cached Render Pipeline
+The `WorldSelectState` implements a high-performance 3D-card carousel interface:
+- **Interpolated Carousel Motion**: Smooth horizontal sliding is computed using a cubic easing `LerpAnimator` (`OutCubic`), dynamically centering focused world banners while scaling and dimming adjacent cards based on normalized screen distance.
+- **Pre-computed State & Lock Caching**: To eliminate per-frame heap allocations and text layout calculations during rendering, `WorldSelectState` pre-computes unlock status vectors (`m_isUnlocked`) during `onEnter()`. Locked visual indicators (dimmed shader tinting and `LOCKED` overlay text) are rendered with zero redundant string-to-glyph generation overhead.
 
 ## 3.7 Game entities and Mechanics
 
